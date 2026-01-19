@@ -8,11 +8,12 @@ import json
 from force_plate_visualizer import ForcePlateVisualizer
 
 class CustomInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
-    def __init__(self, picker, ren, marker_actors, callback):
+    def __init__(self, picker, ren, marker_actors, label_actors, callback):
         super().__init__()
         self.picker = picker
         self.ren = ren
         self.marker_actors = marker_actors
+        self.label_actors = label_actors
         self.callback = callback
 
     def OnLeftButtonDown(self):
@@ -21,9 +22,12 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
         actor = self.picker.GetActor()
         if actor in self.marker_actors:
             marker_index = self.marker_actors.index(actor)
-            self.callback(marker_index)
+        elif actor in self.label_actors:
+            marker_index = self.label_actors.index(actor)
         else:
             super().OnLeftButtonDown()
+            return
+        self.callback(marker_index)
 
 class C3DViewer(QWidget):
     markers_selected = pyqtSignal(list)
@@ -56,6 +60,12 @@ class C3DViewer(QWidget):
         self.ren = vtk.vtkRenderer()
         self.vtk_widget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtk_widget.GetRenderWindow().GetInteractor()
+
+        # Set camera view up to Z axis
+        camera = self.ren.GetActiveCamera()
+        camera.SetViewUp(0, 0, 1)
+        camera.SetPosition(0, 1000, 500)
+        camera.SetFocalPoint(0, 0, 0)
 
         self.ren.SetBackground(0.1, 0.1, 0.1)  # Dark background
 
@@ -91,7 +101,7 @@ class C3DViewer(QWidget):
         # Initialize interactor and picker
         self.iren.Initialize()
         self.picker = vtk.vtkPicker()
-        self.custom_style = CustomInteractorStyle(self.picker, self.ren, self.marker_actors, self.handle_marker_click)
+        self.custom_style = CustomInteractorStyle(self.picker, self.ren, self.marker_actors, self.label_actors, self.handle_marker_click)
         self.iren.SetInteractorStyle(self.custom_style)
 
         # Initialize force plate visualizer
@@ -278,7 +288,7 @@ class C3DViewer(QWidget):
                 follower = vtk.vtkFollower()
                 follower.SetMapper(text_mapper)
                 follower.GetProperty().SetColor(0.8, 0.8, 0.8)
-                follower.SetScale(1, 1, 1)
+                follower.SetScale(2, 2, 2)
                 follower.SetPosition(x, y, z + 20)
                 follower.SetCamera(self.ren.GetActiveCamera())
                 self.label_actors.append(follower)
@@ -330,6 +340,9 @@ class C3DViewer(QWidget):
                         self.ren.AddActor(actor)
 
             self.ren.ResetCamera()
+            # Ensure camera view up remains Z axis after reset
+            camera = self.ren.GetActiveCamera()
+            camera.SetViewUp(0, 0, 1)
             self.vtk_widget.GetRenderWindow().Render()
 
         except Exception as e:
@@ -452,8 +465,8 @@ class C3DViewer(QWidget):
         if not hasattr(self, 'trajectory_points'):
             return
 
-        recent_frames = 50
-        ahead_frames = 50
+        recent_frames = 100
+        ahead_frames = 100
         start_frame = max(0, frame_index - recent_frames)
         end_frame = min(self.markers_data.shape[0] - 1, frame_index + ahead_frames)
 
