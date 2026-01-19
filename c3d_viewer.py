@@ -7,6 +7,24 @@ import numpy as np
 import json
 from force_plate_visualizer import ForcePlateVisualizer
 
+class CustomInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
+    def __init__(self, picker, ren, marker_actors, callback):
+        super().__init__()
+        self.picker = picker
+        self.ren = ren
+        self.marker_actors = marker_actors
+        self.callback = callback
+
+    def OnLeftButtonDown(self):
+        click_pos = self.GetInteractor().GetEventPosition()
+        self.picker.Pick(click_pos[0], click_pos[1], 0, self.ren)
+        actor = self.picker.GetActor()
+        if actor in self.marker_actors:
+            marker_index = self.marker_actors.index(actor)
+            self.callback(marker_index)
+        else:
+            super().OnLeftButtonDown()
+
 class C3DViewer(QWidget):
     markers_selected = pyqtSignal(list)
 
@@ -39,12 +57,6 @@ class C3DViewer(QWidget):
         self.vtk_widget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtk_widget.GetRenderWindow().GetInteractor()
 
-        # Initialize interactor and picker
-        self.iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
-        self.iren.Initialize()
-        self.picker = vtk.vtkPicker()
-        self.iren.AddObserver("RightButtonPressEvent", self.pick_marker)
-
         self.ren.SetBackground(0.1, 0.1, 0.1)  # Dark background
 
         # Add axes as orientation marker in bottom left corner
@@ -75,6 +87,12 @@ class C3DViewer(QWidget):
         self.events_data = None  # Store event data for timeline
         self.force_plate_actors = []  # Store force plate actors
         self.segments = [] # Store segment data for drawing lines
+
+        # Initialize interactor and picker
+        self.iren.Initialize()
+        self.picker = vtk.vtkPicker()
+        self.custom_style = CustomInteractorStyle(self.picker, self.ren, self.marker_actors, self.handle_marker_click)
+        self.iren.SetInteractorStyle(self.custom_style)
 
         # Initialize force plate visualizer
         self.force_plate_visualizer = ForcePlateVisualizer(self.ren)
@@ -125,6 +143,16 @@ class C3DViewer(QWidget):
         self.grid_actor.GetProperty().SetOpacity(0.5)  # Semi-transparent
         self.grid_actor.GetProperty().SetRepresentationToWireframe()  # Wireframe mode
 
+    def handle_marker_click(self, marker_index):
+        if marker_index in self.selected_markers:
+            self.selected_markers.remove(marker_index)
+        else:
+            self.selected_markers.add(marker_index)
+
+        self.update_marker_colors()
+        self.markers_selected.emit(list(self.selected_markers))
+        self.vtk_widget.GetRenderWindow().Render()
+
     def pick_marker(self, obj, event):
         click_pos = self.iren.GetEventPosition()
         self.picker.Pick(click_pos[0], click_pos[1], 0, self.ren)
@@ -136,7 +164,7 @@ class C3DViewer(QWidget):
                 self.selected_markers.remove(marker_index)
             else:
                 self.selected_markers.add(marker_index)
-            
+
             self.update_marker_colors()
             self.markers_selected.emit(list(self.selected_markers))
             self.vtk_widget.GetRenderWindow().Render()
@@ -424,8 +452,10 @@ class C3DViewer(QWidget):
         if not hasattr(self, 'trajectory_points'):
             return
 
-        recent_frames = 15
-        start_frame = max(0, frame_index - recent_frames + 1)
+        recent_frames = 50
+        ahead_frames = 50
+        start_frame = max(0, frame_index - recent_frames)
+        end_frame = min(self.markers_data.shape[0] - 1, frame_index + ahead_frames)
 
         for i in marker_indices:
             if i not in self.trajectory_points:
@@ -439,14 +469,14 @@ class C3DViewer(QWidget):
 
             valid_points = [
                 (self.markers_data[f, i, 0], self.markers_data[f, i, 1], self.markers_data[f, i, 2])
-                for f in range(start_frame, frame_index + 1)
+                for f in range(start_frame, end_frame + 1)
                 if not (np.allclose(self.markers_data[f, i, :3], 0) or np.isnan(self.markers_data[f, i, :3]).any())
             ]
 
             if len(valid_points) > 1:
                 for p in valid_points:
                     self.trajectory_points[i].InsertNextPoint(p)
-                
+
                 for j in range(len(valid_points) - 1):
                     line = vtk.vtkLine()
                     line.GetPointIds().SetId(0, j)
