@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QLabel, QHBoxLayout, QAbstractItemView
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QLabel, QHBoxLayout, QAbstractItemView, QTreeWidgetItemIterator
 from PyQt5.QtCore import Qt, pyqtSignal
 import numpy as np
 
@@ -90,3 +90,18 @@ class MarkerOutliner(QWidget):
             if marker_index != -1:  # Only add actual markers, not group headers
                 selected_indices.append(marker_index)
         self.marker_selection_changed.emit(selected_indices)
+
+    def set_selected_markers(self, selected_indices):
+        """Set the selected markers in the tree."""
+        self.marker_list.blockSignals(True)
+        self.marker_list.clearSelection()
+        
+        iterator = QTreeWidgetItemIterator(self.marker_list)
+        while iterator.value():
+            item = iterator.value()
+            marker_index = item.data(0, Qt.UserRole)
+            if marker_index in selected_indices:
+                item.setSelected(True)
+            iterator += 1
+            
+        self.marker_list.blockSignals(False)

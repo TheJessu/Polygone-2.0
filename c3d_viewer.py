@@ -1,12 +1,15 @@
 import vtk
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
+from PyQt5.QtCore import pyqtSignal
 import c3d
 import numpy as np
 import json
 from force_plate_visualizer import ForcePlateVisualizer
 
 class C3DViewer(QWidget):
+    markers_selected = pyqtSignal(list)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
@@ -36,9 +39,12 @@ class C3DViewer(QWidget):
         self.vtk_widget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtk_widget.GetRenderWindow().GetInteractor()
 
-        # Initialize interactor
+        # Initialize interactor and picker
         self.iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
         self.iren.Initialize()
+        self.picker = vtk.vtkPicker()
+        self.iren.AddObserver("RightButtonPressEvent", self.pick_marker)
+
         self.ren.SetBackground(0.1, 0.1, 0.1)  # Dark background
 
         # Add axes as orientation marker in bottom left corner
@@ -55,7 +61,7 @@ class C3DViewer(QWidget):
         # Initialize data structures
         self.marker_actors = []
         self.marker_sources = []  # Store sphere sources for updating positions
-        self.trajectory_actors = []
+        self.trajectory_actors = {}
         self.label_actors = []  # Text labels for markers
         self.line_actors = []  # Actors for lines between markers
         self.line_sources = []  # Sources for lines
@@ -117,6 +123,22 @@ class C3DViewer(QWidget):
         self.grid_actor.GetProperty().SetColor(0.3, 0.3, 0.3)  # Dark grey grid
         self.grid_actor.GetProperty().SetOpacity(0.5)  # Semi-transparent
         self.grid_actor.GetProperty().SetRepresentationToWireframe()  # Wireframe mode
+
+    def pick_marker(self, obj, event):
+        click_pos = self.iren.GetEventPosition()
+        self.picker.Pick(click_pos[0], click_pos[1], 0, self.ren)
+        actor = self.picker.GetActor()
+
+        if actor in self.marker_actors:
+            marker_index = self.marker_actors.index(actor)
+            if marker_index in self.selected_markers:
+                self.selected_markers.remove(marker_index)
+            else:
+                self.selected_markers.add(marker_index)
+            
+            self.update_marker_colors()
+            self.markers_selected.emit(list(self.selected_markers))
+            self.vtk_widget.GetRenderWindow().Render()
 
     def load_c3d(self, file_path):
         """Load C3D file and display markers and trajectories."""
@@ -286,7 +308,7 @@ class C3DViewer(QWidget):
 
     def clear_data(self):
         """Clear all marker and trajectory actors."""
-        for actor in self.marker_actors + self.trajectory_actors + self.label_actors + self.line_actors:
+        for actor in self.marker_actors + list(self.trajectory_actors.values()) + self.label_actors + self.line_actors:
             self.ren.RemoveActor(actor)
         self.marker_actors.clear()
         self.marker_sources.clear()
@@ -314,16 +336,22 @@ class C3DViewer(QWidget):
         return self.events_data
 
     def toggle_trajectories(self):
-        """Toggle visibility of trajectory lines."""
+        """Toggle visibility of trajectory lines for selected markers."""
         self.trajectory_visible = not self.trajectory_visible
+        
+        for marker_index in self.selected_markers:
+            if marker_index in self.trajectory_actors:
+                actor = self.trajectory_actors[marker_index]
+                if self.trajectory_visible:
+                    self.ren.AddActor(actor)
+                else:
+                    self.ren.RemoveActor(actor)
+
         if self.trajectory_visible:
-            for actor in self.trajectory_actors:
-                self.ren.AddActor(actor)
             self.toggle_trajectory_button.setText("Hide Trajectories")
         else:
-            for actor in self.trajectory_actors:
-                self.ren.RemoveActor(actor)
             self.toggle_trajectory_button.setText("Show Trajectories")
+            
         self.vtk_widget.GetRenderWindow().Render()
 
     def set_frame(self, frame_index):
@@ -339,6 +367,9 @@ class C3DViewer(QWidget):
                     self.marker_sources[i].SetCenter(x, y, z)
                     if i < len(self.label_actors):
                         self.label_actors[i].SetPosition(x, y, z + 20)
+
+            # Update trajectories for selected markers
+            self.update_trajectories(frame_index, self.selected_markers)
 
             # Update line positions
             marker_label_to_index = {label: i for i, label in enumerate(self.marker_labels)}
@@ -360,44 +391,48 @@ class C3DViewer(QWidget):
                             
             self.vtk_widget.GetRenderWindow().Render()
 
-    def update_trajectories(self, frame_index):
-        """Update trajectory lines progressively with optimized performance."""
-        if not hasattr(self, 'trajectory_points'):
-            self.trajectory_points = {}
-            self.trajectory_lines = {}
-            self.trajectory_polydatas = {}
-            self.trajectory_mappers = {}
-            self.last_trajectory_frame = {}  # Track last updated frame per marker
+    def create_trajectory_actor(self, marker_index):
+        """Create a trajectory actor for a specific marker if it doesn't exist."""
+        if marker_index not in self.trajectory_actors:
+            if not hasattr(self, 'trajectory_points'):
+                self.trajectory_points = {}
+                self.trajectory_lines = {}
+                self.trajectory_polydatas = {}
+                self.trajectory_mappers = {}
+                self.last_trajectory_frame = {}
 
-        num_markers = self.markers_data.shape[1]
+            # Initialize data structures if not exists
+            if marker_index not in self.trajectory_points:
+                self.trajectory_points[marker_index] = vtk.vtkPoints()
+                self.trajectory_lines[marker_index] = vtk.vtkCellArray()
+                self.trajectory_polydatas[marker_index] = vtk.vtkPolyData()
+                self.trajectory_polydatas[marker_index].SetPoints(self.trajectory_points[marker_index])
+                self.trajectory_polydatas[marker_index].SetLines(self.trajectory_lines[marker_index])
+                self.trajectory_mappers[marker_index] = vtk.vtkPolyDataMapper()
+                self.trajectory_mappers[marker_index].SetInputData(self.trajectory_polydatas[marker_index])
+                self.last_trajectory_frame[marker_index] = -1
+
+            actor = vtk.vtkActor()
+            actor.SetMapper(self.trajectory_mappers[marker_index])
+            actor.GetProperty().SetColor(0.5, 0.5, 0.5)
+            actor.GetProperty().SetLineWidth(2)
+            self.trajectory_actors[marker_index] = actor
+
+    def update_trajectories(self, frame_index, marker_indices):
+        """Update trajectory lines for specified markers."""
+        if not hasattr(self, 'trajectory_points'):
+            return
+
         recent_frames = 15
         start_frame = max(0, frame_index - recent_frames + 1)
 
-        for i in range(num_markers):
+        for i in marker_indices:
             if i not in self.trajectory_points:
-                # Initialize trajectory data structures
-                self.trajectory_points[i] = vtk.vtkPoints()
-                self.trajectory_lines[i] = vtk.vtkCellArray()
-                self.trajectory_polydatas[i] = vtk.vtkPolyData()
-                self.trajectory_polydatas[i].SetPoints(self.trajectory_points[i])
-                self.trajectory_polydatas[i].SetLines(self.trajectory_lines[i])
-                self.trajectory_mappers[i] = vtk.vtkPolyDataMapper()
-                self.trajectory_mappers[i].SetInputData(self.trajectory_polydatas[i])
-                self.last_trajectory_frame[i] = -1
-
-                if i >= len(self.trajectory_actors):
-                    actor = vtk.vtkActor()
-                    actor.SetMapper(self.trajectory_mappers[i])
-                    actor.GetProperty().SetColor(0.5, 0.5, 0.5)
-                    actor.GetProperty().SetLineWidth(2)
-                    self.trajectory_actors.append(actor)
-                    if self.trajectory_visible:
-                        self.ren.AddActor(actor)
-
-            if self.last_trajectory_frame[i] == frame_index:
                 continue
 
-            # Efficiently rebuild trajectory for the marker
+            if self.last_trajectory_frame.get(i) == frame_index:
+                continue
+
             self.trajectory_points[i].Reset()
             self.trajectory_lines[i].Reset()
 
@@ -418,29 +453,34 @@ class C3DViewer(QWidget):
                     self.trajectory_lines[i].InsertNextCell(line)
 
                 self.trajectory_polydatas[i].Modified()
-                self.trajectory_actors[i].VisibilityOn()
+                if i in self.trajectory_actors:
+                    self.trajectory_actors[i].VisibilityOn()
             else:
-                self.trajectory_actors[i].VisibilityOff()
+                if i in self.trajectory_actors:
+                    self.trajectory_actors[i].VisibilityOff()
 
             self.last_trajectory_frame[i] = frame_index
             
     def update_marker_colors(self):
-        """Update marker colors based on selection state."""
+        """Update marker colors and size based on selection state."""
         if self.markers_data is None or not hasattr(self, 'marker_labels'):
             return
 
         for i in range(len(self.marker_actors)):
             actor = self.marker_actors[i]
+            source = self.marker_sources[i]
             label_text = self.marker_labels[i]
 
-            # If selected, color is green
+            # If selected, highlight by changing color and size
             if i in self.selected_markers:
                 actor.GetProperty().SetColor(self.vtk_colors['green'])
+                source.SetRadius(25)
                 actor.VisibilityOn()
                 if i < len(self.label_actors):
                     self.label_actors[i].VisibilityOn()
             else:
-                # Otherwise, use color from JSON group
+                # Otherwise, use default color and size from JSON group
+                source.SetRadius(15)
                 color_name = self.marker_group_colors.get(label_text)
                 if color_name and color_name in self.vtk_colors:
                     actor.GetProperty().SetColor(self.vtk_colors[color_name])
@@ -459,6 +499,17 @@ class C3DViewer(QWidget):
         """Set the selected marker indices and update visualization."""
         self.selected_markers = set(selected_indices)
         self.update_marker_colors()
+
+        # Update trajectory visibility based on selection
+        for i in range(len(self.marker_actors)):
+            if i in self.selected_markers:
+                self.create_trajectory_actor(i)
+                if self.trajectory_visible:
+                    self.ren.AddActor(self.trajectory_actors[i])
+            else:
+                if i in self.trajectory_actors:
+                    self.ren.RemoveActor(self.trajectory_actors[i])
+
         self.vtk_widget.GetRenderWindow().Render()
 
     def set_side_view(self):

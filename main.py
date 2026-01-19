@@ -41,6 +41,7 @@ class MainWindow(QMainWindow):
 
         # Connect marker selection signal to C3D viewer
         self.marker_outliner.marker_selection_changed.connect(self.c3d_viewer.set_selected_markers)
+        self.c3d_viewer.markers_selected.connect(self.marker_outliner.set_selected_markers)
 
         # Create tab widget for video player and data plots
         self.right_tabs = QTabWidget()
