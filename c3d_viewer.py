@@ -99,7 +99,8 @@ class C3DViewer(QWidget):
         self.vtk_colors = {
             'red': (1, 0, 0),
             'green': (0, 1, 0),
-            'purple': (0.5, 0, 0.5)
+            'purple': (0.5, 0, 0.5),
+            'yellow': (1, 1, 0) # Added yellow color
         }
 
 
@@ -473,11 +474,14 @@ class C3DViewer(QWidget):
 
             # If selected, highlight by changing color and size
             if i in self.selected_markers:
-                actor.GetProperty().SetColor(self.vtk_colors['green'])
+                actor.GetProperty().SetColor(self.vtk_colors['yellow']) # Changed to yellow
                 source.SetRadius(25)
                 actor.VisibilityOn()
                 if i < len(self.label_actors):
                     self.label_actors[i].VisibilityOn()
+                # Set trajectory color to yellow for selected markers
+                if i in self.trajectory_actors:
+                    self.trajectory_actors[i].GetProperty().SetColor(self.vtk_colors['yellow'])
             else:
                 # Otherwise, use default color and size from JSON group
                 source.SetRadius(15)
