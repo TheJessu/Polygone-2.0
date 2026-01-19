@@ -1,0 +1,142 @@
+{
+  "groups": {
+    "hips": {
+      "side": "middle",
+      "color": "purple",
+      "markers": ["RASI", "RPSI", "LPSI", "LASI"]
+    },
+
+    "left_leg": {
+      "side": "left",
+      "color": "red",
+      "markers": [
+        "LTHAP", "LTHI", "LTHAD",
+        "LKNM", "LKNE",
+        "LTIAP", "LTIB", "LTIAD",
+        "LMED", "LHEE", "LANK", "LTOE"
+      ]
+    },
+
+    "right_leg": {
+      "side": "right",
+      "color": "green",
+      "markers": [
+        "RTHAP", "RTHI", "RTHAD",
+        "RKNM", "RKNE",
+        "RTIAP", "RTIB", "RTIAD",
+        "RMED", "RHEE", "RANK", "RTOE"
+      ]
+    },
+
+    "left_arm": {
+      "side": "left",
+      "color": "red",
+      "markers": ["LSHO", "LELB", "LWRA", "LWRB", "LFIN"]
+    },
+
+    "right_arm": {
+      "side": "right",
+      "color": "green",
+      "markers": ["RSHO", "RELB", "RWRA", "RWRB", "RFIN"]
+    },
+
+    "spine": {
+      "side": "middle",
+      "color": "purple",
+      "markers": ["CLAV", "STRN", "T10", "C7"]
+    },
+
+    "head": {
+      "side": "middle",
+      "color": "purple",
+      "markers": ["LBHD", "RBHD"]
+    }
+  },
+
+  "segments": {
+    "pelvis": {
+      "color": "purple",
+      "links": [
+        ["LASI", "RASI"],
+        ["LPSI", "RPSI"],
+        ["LASI", "LPSI"],
+        ["RASI", "RPSI"]
+      ]
+    },
+
+    "spine": {
+      "color": "purple",
+      "links": [
+        ["T10", "STRN"],
+        ["STRN", "CLAV"],
+        ["CLAV", "C7"]
+      ]
+    },
+
+    "left_leg": {
+      "color": "red",
+      "links": [
+        ["LASI", "LTHAP"],
+        ["LTHAP", "LKNE"],
+        ["LKNE", "LANK"],
+        ["LANK", "LHEE"],
+        ["LANK", "LTOE"]
+      ]
+    },
+
+    "right_leg": {
+      "color": "green",
+      "links": [
+        ["RASI", "RTHAP"],
+        ["RTHAP", "RKNE"],
+        ["RKNE", "RANK"],
+        ["RANK", "RHEE"],
+        ["RANK", "RTOE"]
+      ]
+    },
+
+    "left_arm": {
+      "color": "red",
+      "links": [
+        ["CLAV", "LSHO"],
+        ["LSHO", "LELB"],
+        ["LELB", "LWRA"],
+        ["LWRA", "LFIN"]
+      ]
+    },
+
+    "right_arm": {
+      "color": "green",
+      "links": [
+        ["CLAV", "RSHO"],
+        ["RSHO", "RELB"],
+        ["RELB", "RWRA"],
+        ["RWRA", "RFIN"]
+      ]
+    },
+
+    "head": {
+      "color": "purple",
+      "links": [
+        ["C7", "LBHD"],
+        ["C7", "RBHD"],
+        ["LBHD", "RBHD"]
+      ]
+    }
+  },
+
+  "side_rules": {
+    "left": {
+      "name_prefix": "L",
+      "color": "red"
+    },
+    "right": {
+      "name_prefix": "R",
+      "color": "green"
+    },
+    "middle": {
+      "name_prefix": null,
+      "color": "purple"
+    }
+  }
+}

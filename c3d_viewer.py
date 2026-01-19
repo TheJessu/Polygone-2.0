@@ -3,6 +3,7 @@ from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 import c3d
 import numpy as np
+import json
 from force_plate_visualizer import ForcePlateVisualizer
 
 class C3DViewer(QWidget):
@@ -56,6 +57,8 @@ class C3DViewer(QWidget):
         self.marker_sources = []  # Store sphere sources for updating positions
         self.trajectory_actors = []
         self.label_actors = []  # Text labels for markers
+        self.line_actors = []  # Actors for lines between markers
+        self.line_sources = []  # Sources for lines
         self.markers_data = None  # Store marker data for outliner
         self.marker_types = []  # Store marker type for each marker
         self.trajectory_visible = True  # Track trajectory visibility
@@ -65,20 +68,34 @@ class C3DViewer(QWidget):
         self.angle_units = 'degrees'  # Default angle units
         self.events_data = None  # Store event data for timeline
         self.force_plate_actors = []  # Store force plate actors
+        self.segments = [] # Store segment data for drawing lines
 
         # Initialize force plate visualizer
         self.force_plate_visualizer = ForcePlateVisualizer(self.ren)
 
-        # Define marker type colors
-        self.marker_type_colors = {
-            'ANGLES': (0, 0, 1),        # Blue
-            'FORCES': (0, 1, 0),        # Green
-            'MOMENTS': (1, 1, 0),       # Yellow
-            'POWERS': (1, 0, 1),        # Magenta
-            'MODELED_MARKERS': (0, 1, 1),  # Cyan
-            'OTHER': (1, 0.5, 0),       # Orange
-            'DEFAULT': (1, 0, 0)        # Red
+        # Load marker group info from JSON
+        self.marker_group_colors = {}
+        try:
+            with open('marker_group_info.JSON', 'r') as f:
+                data = json.load(f)
+                for group in data.get('groups', {}).values():
+                    color = group.get('color')
+                    for marker in group.get('markers', []):
+                        self.marker_group_colors[marker] = color
+                for segment in data.get('segments', {}).values():
+                    self.segments.append(segment)
+        except FileNotFoundError:
+            print("marker_group_info.JSON not found.")
+        except json.JSONDecodeError:
+            print("Error decoding marker_group_info.JSON.")
+
+        # Define VTK colors
+        self.vtk_colors = {
+            'red': (1, 0, 0),
+            'green': (0, 1, 0),
+            'purple': (0.5, 0, 0.5)
         }
+
 
         # Create toggle button for trajectories
         self.toggle_trajectory_button = QPushButton("Hide Trajectories")
@@ -111,46 +128,44 @@ class C3DViewer(QWidget):
             reader = c3d.Reader(open(file_path, 'rb'))
             frames = reader.read_frames()
 
-            # Get marker data - C3D frames contain [frame_num, marker_array, analog_array]
+            # Get marker data
             all_markers = []
             max_markers = 0
             for frame in frames:
-                # Extract marker data from the second element (index 1)
-                marker_data = frame[1]  # Shape: (num_markers, 5) - x, y, z, residual, ?
-
-                frame_markers = []
-                for marker in marker_data:
-                    # Each marker has at least 4 values: x, y, z, residual
-                    if len(marker) >= 4:
-                        frame_markers.append([float(marker[0]), float(marker[1]), float(marker[2]), float(marker[3])])
-
+                marker_data = frame[1]
+                frame_markers = [[float(m[0]), float(m[1]), float(m[2]), float(m[3])] for m in marker_data if len(m) >= 4]
                 all_markers.append(frame_markers)
                 max_markers = max(max_markers, len(frame_markers))
 
             # Create a consistent 3D array
             num_frames = len(all_markers)
             markers = np.zeros((num_frames, max_markers, 4), dtype=float)
-
             for i, frame in enumerate(all_markers):
                 for j, marker in enumerate(frame):
                     if j < max_markers:
                         markers[i, j] = marker
 
-            # Store marker data and labels for outliner
+            # Store marker data and labels
             self.markers_data = markers
-            self.marker_labels = reader.point_labels[:max_markers]  # Get marker labels
+            self.marker_labels = [label.strip() for label in reader.point_labels[:max_markers]]
 
-            # Extract angle units from C3D file
-            self.angle_units = 'degrees'  # Default
-            try:
-                point_group = reader.get('POINT')
-                if point_group:
-                    angle_units_param = point_group.get('ANGLE_UNITS')
-                    if angle_units_param:
-                        self.angle_units = angle_units_param.string_value.strip().lower()
-            except Exception as e:
-                print(f"Error extracting angle units: {e}")
-                self.angle_units = 'degrees'
+            # Determine marker types based on labels for outliner and plotter grouping
+            self.marker_types = []
+            for label in self.marker_labels:
+                label_upper = label.upper()
+                if 'ANGLE' in label_upper:
+                    marker_type = 'ANGLES'
+                elif 'FORCE' in label_upper:
+                    marker_type = 'FORCES'
+                elif 'MOMENT' in label_upper:
+                    marker_type = 'MOMENTS'
+                elif 'POWER' in label_upper:
+                    marker_type = 'POWERS'
+                elif 'MODEL' in label_upper or 'MARKER' in label_upper:
+                    marker_type = 'MODELED_MARKERS'
+                else:
+                    marker_type = 'DEFAULT'
+                self.marker_types.append(marker_type)
 
             # Extract event data for timeline
             self.events_data = []
@@ -160,152 +175,110 @@ class C3DViewer(QWidget):
                 if used > 0:
                     labels = event_group.get('LABELS').string_array[:used]
                     times = event_group.get('TIMES').float_array[:used]
-                    contexts = event_group.get('CONTEXTS').string_array[:used] if 'CONTEXTS' in event_group.param_keys() else [''] * used
-
                     for i in range(used):
                         label = labels[i].strip()
-                        time = times[i][1]  # Second column is the time
-                        context = contexts[i].strip() if i < len(contexts) else ''
-
-                        # Determine event type and foot
-                        if 'STRIKE' in label.upper():
-                            event_type = 'strike'
-                            foot = 'left' if 'LEFT' in context.upper() else 'right'
-                        elif 'OFF' in label.upper():
-                            event_type = 'off'
-                            foot = 'left' if 'LEFT' in context.upper() else 'right'
-                        else:
-                            event_type = 'other'
-                            foot = 'unknown'
-
-                        self.events_data.append({
-                            'label': label,
-                            'time': time,
-                            'context': context,
-                            'type': event_type,
-                            'foot': foot
-                        })
+                        time = times[i][1]
+                        self.events_data.append({'label': label, 'time': time})
             except Exception as e:
                 print(f"Error extracting events: {e}")
-                self.events_data = []
 
             # Extract force plate data
             self.force_plate_data = []
             try:
                 force_platform_group = reader.get('FORCE_PLATFORM')
-                if force_platform_group:
-                    used = force_platform_group.get('USED').int16_value
-                    if used > 0:
-                        corners_param = force_platform_group.get('CORNERS')
-                        if corners_param:
-                            corners_data = corners_param.float_array
-                            # corners_data is shape (used, 4, 3) - plates, corners, xyz
-                            for plate_idx in range(used):
-                                plate_corners = []
-                                for corner_idx in range(4):
-                                    x, y, z = corners_data[plate_idx][corner_idx]
-                                    plate_corners.append([x, y, z])
-                                self.force_plate_data.append(plate_corners)
+                used = force_platform_group.get('USED').int16_value
+                if used > 0:
+                    corners_data = force_platform_group.get('CORNERS').float_array
+                    for plate_idx in range(used):
+                        plate_corners = [[corners_data[plate_idx][c][i] for i in range(3)] for c in range(4)]
+                        self.force_plate_data.append(plate_corners)
             except Exception as e:
                 print(f"Error extracting force plate data: {e}")
-                self.force_plate_data = []
 
-            # Determine marker types based on labels
-            self.marker_types = []
-            for label in self.marker_labels:
-                if label:
-                    label_upper = label.upper()
-                    if 'ANGLE' in label_upper:
-                        marker_type = 'ANGLES'
-                    elif 'FORCE' in label_upper:
-                        marker_type = 'FORCES'
-                    elif 'MOMENT' in label_upper:
-                        marker_type = 'MOMENTS'
-                    elif 'POWER' in label_upper:
-                        marker_type = 'POWERS'
-                    elif 'MODEL' in label_upper or 'MARKER' in label_upper:
-                        marker_type = 'MODELED_MARKERS'
-                    else:
-                        marker_type = 'DEFAULT'
-                else:
-                    marker_type = 'DEFAULT'
-                self.marker_types.append(marker_type)
-
-            num_frames = markers.shape[0]
-            num_markers = markers.shape[1]
-
-            # Add grid plane to the scene
+            # Add grid plane and force plates to the scene
             self.ren.AddActor(self.grid_actor)
-
-            # Create force plate visualizations using the visualizer
             self.force_plate_visualizer.create_force_plates(self.force_plate_data)
 
-            # Create spheres for markers at first frame
-            for i in range(num_markers):
+            # Create spheres and labels for markers
+            for i in range(max_markers):
+                label_text = self.marker_labels[i]
                 x, y, z = markers[0, i, 0], markers[0, i, 1], markers[0, i, 2]
-
-                # Skip if marker is invalid (all zeros or NaN)
-                if np.allclose([x, y, z], 0) or np.isnan([x, y, z]).any():
-                    continue
 
                 # Create sphere
                 sphere = vtk.vtkSphereSource()
                 sphere.SetRadius(15)
                 sphere.SetCenter(x, y, z)
+                self.marker_sources.append(sphere)
 
                 mapper = vtk.vtkPolyDataMapper()
                 mapper.SetInputConnection(sphere.GetOutputPort())
 
-                # Get marker type and corresponding color
-                marker_type = self.marker_types[i] if i < len(self.marker_types) else 'DEFAULT'
-                color = self.marker_type_colors.get(marker_type, self.marker_type_colors['DEFAULT'])
-
                 actor = vtk.vtkActor()
                 actor.SetMapper(mapper)
-                actor.GetProperty().SetColor(color[0], color[1], color[2])
-
                 self.marker_actors.append(actor)
-                self.marker_sources.append(sphere)  # Store sphere source for updating
+
+                # Create text label
+                text_source = vtk.vtkTextSource()
+                text_source.SetText(label_text)
+                
+                text_mapper = vtk.vtkPolyDataMapper()
+                text_mapper.SetInputConnection(text_source.GetOutputPort())
+
+                follower = vtk.vtkFollower()
+                follower.SetMapper(text_mapper)
+                follower.GetProperty().SetColor(0.8, 0.8, 0.8)
+                follower.SetScale(1, 1, 1)
+                follower.SetPosition(x, y, z + 20)
+                follower.SetCamera(self.ren.GetActiveCamera())
+                self.label_actors.append(follower)
+
+                # Set color and visibility based on JSON group
+                color_name = self.marker_group_colors.get(label_text)
+                if color_name and color_name in self.vtk_colors:
+                    actor.GetProperty().SetColor(self.vtk_colors[color_name])
+                    actor.VisibilityOn()
+                    follower.VisibilityOn()
+                else:
+                    actor.VisibilityOff()
+                    follower.VisibilityOff()
+
                 self.ren.AddActor(actor)
+                self.ren.AddActor(follower)
 
-                # Create text label for marker
-                if self.marker_labels is not None and i < len(self.marker_labels):
-                    label_text = self.marker_labels[i].strip()
-                    if label_text:
-                        # Create text source
-                        text_source = vtk.vtkTextSource()
-                        text_source.SetText(label_text)
+            # Create lines between markers based on segments
+            marker_label_to_index = {label: i for i, label in enumerate(self.marker_labels)}
+            for segment in self.segments:
+                color_name = segment.get('color')
+                if not color_name or color_name not in self.vtk_colors:
+                    continue
+                
+                color = self.vtk_colors[color_name]
+                for link in segment.get('links', []):
+                    marker1_label, marker2_label = link
+                    marker1_index = marker_label_to_index.get(marker1_label)
+                    marker2_index = marker_label_to_index.get(marker2_label)
 
-                        # Create mapper and actor
+                    if marker1_index is not None and marker2_index is not None:
+                        p1 = markers[0, marker1_index, :3]
+                        p2 = markers[0, marker2_index, :3]
+
+                        line_source = vtk.vtkLineSource()
+                        line_source.SetPoint1(p1)
+                        line_source.SetPoint2(p2)
+                        self.line_sources.append(line_source)
+
                         mapper = vtk.vtkPolyDataMapper()
-                        mapper.SetInputConnection(text_source.GetOutputPort())
+                        mapper.SetInputConnection(line_source.GetOutputPort())
 
-                        follower = vtk.vtkFollower()
-                        follower.SetMapper(mapper)
-                        follower.GetProperty().SetColor(0.5, 0.5, 0.5)  # Grey text
-                        follower.SetScale(1, 1, 1)  # Font size 1
-                        follower.SetPosition(x, y, z + 50)  # Position above marker in 3D space
-                        follower.SetCamera(self.ren.GetActiveCamera())
+                        actor = vtk.vtkActor()
+                        actor.SetMapper(mapper)
+                        actor.GetProperty().SetColor(color)
+                        actor.GetProperty().SetLineWidth(3)
+                        
+                        self.line_actors.append(actor)
+                        self.ren.AddActor(actor)
 
-                        self.label_actors.append(follower)
-                        self.ren.AddActor(follower)
-
-
-
-            # Reset camera to fit all actors
             self.ren.ResetCamera()
-
-            # Set default view: X as depth, Y as sides, Z as height
-            camera = self.ren.GetActiveCamera()
-            # Look along X-axis (depth), Y horizontal, Z vertical
-            bounds = self.ren.ComputeVisiblePropBounds()
-            center = [(bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2, (bounds[4] + bounds[5]) / 2]
-            distance = max(bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]) * 2
-            camera.SetPosition(center[0] + distance, center[1], center[2])
-            camera.SetFocalPoint(center[0], center[1], center[2])
-            camera.SetViewUp(0, 0, 1)  # Z up
-
-            # Render
             self.vtk_widget.GetRenderWindow().Render()
 
         except Exception as e:
@@ -313,12 +286,14 @@ class C3DViewer(QWidget):
 
     def clear_data(self):
         """Clear all marker and trajectory actors."""
-        for actor in self.marker_actors + self.trajectory_actors + self.label_actors:
+        for actor in self.marker_actors + self.trajectory_actors + self.label_actors + self.line_actors:
             self.ren.RemoveActor(actor)
         self.marker_actors.clear()
         self.marker_sources.clear()
         self.trajectory_actors.clear()
         self.label_actors.clear()
+        self.line_actors.clear()
+        self.line_sources.clear()
         self.force_plate_visualizer.clear()  # Clear force plate actors
         self.ren.RemoveActor(self.grid_actor)
         self.markers_data = None
@@ -356,86 +331,33 @@ class C3DViewer(QWidget):
         if self.markers_data is not None and 0 <= frame_index < self.markers_data.shape[0]:
             num_markers = self.markers_data.shape[1]
 
-            # MARKER POSITION UPDATING SECTION: Update marker positions for the current frame
-            marker_idx = 0
             for i in range(num_markers):
-                x, y, z = self.markers_data[frame_index, i, 0], self.markers_data[frame_index, i, 1], self.markers_data[frame_index, i, 2]
+                if i < len(self.marker_sources):
+                    x, y, z = self.markers_data[frame_index, i, 0], self.markers_data[frame_index, i, 1], self.markers_data[frame_index, i, 2]
+                    
+                    # Update sphere and label positions
+                    self.marker_sources[i].SetCenter(x, y, z)
+                    if i < len(self.label_actors):
+                        self.label_actors[i].SetPosition(x, y, z + 20)
 
-                # Skip if marker is invalid (all zeros or NaN)
-                if np.allclose([x, y, z], 0) or np.isnan([x, y, z]).any():
-                    continue
+            # Update line positions
+            marker_label_to_index = {label: i for i, label in enumerate(self.marker_labels)}
+            line_idx = 0
+            for segment in self.segments:
+                for link in segment.get('links', []):
+                    marker1_label, marker2_label = link
+                    marker1_index = marker_label_to_index.get(marker1_label)
+                    marker2_index = marker_label_to_index.get(marker2_label)
 
-                # Update existing actor or create new one if needed
-                if marker_idx < len(self.marker_actors):
-                    # Update existing sphere center
-                    self.marker_sources[marker_idx].SetCenter(x, y, z)
-                else:
-                    # Create new sphere if we don't have enough actors
-                    sphere = vtk.vtkSphereSource()
-                    sphere.SetRadius(15)
-                    sphere.SetCenter(x, y, z)
-
-                    mapper = vtk.vtkPolyDataMapper()
-                    mapper.SetInputConnection(sphere.GetOutputPort())
-
-                    # Get marker type and corresponding color
-                    marker_type = self.marker_types[i] if i < len(self.marker_types) else 'DEFAULT'
-                    color = self.marker_type_colors.get(marker_type, self.marker_type_colors['DEFAULT'])
-
-                    actor = vtk.vtkActor()
-                    actor.SetMapper(mapper)
-                    actor.GetProperty().SetColor(color[0], color[1], color[2])
-
-                    self.marker_actors.append(actor)
-                    self.marker_sources.append(sphere)  # Store sphere source for updating
-                    self.ren.AddActor(actor)
-
-                # Update text label position
-                if marker_idx < len(self.label_actors):
-                    self.label_actors[marker_idx].SetPosition(x, y, z + 50)
-                elif self.marker_labels is not None and i < len(self.marker_labels):
-                    # Create new label if needed
-                    label_text = self.marker_labels[i].strip()
-                    if label_text:
-                        text_source = vtk.vtkTextSource()
-                        text_source.SetText(label_text)
-
-                        mapper = vtk.vtkPolyDataMapper()
-                        mapper.SetInputConnection(text_source.GetOutputPort())
-
-                        follower = vtk.vtkFollower()
-                        follower.SetMapper(mapper)
-                        follower.GetProperty().SetColor(1, 1, 1)  # White text
-                        follower.SetScale(1, 1, 1)  # Font size 1
-                        follower.SetPosition(x, y, z + 50)  # Position above marker in 3D space
-                        follower.SetCamera(self.ren.GetActiveCamera())
-
-                        self.label_actors.append(follower)
-                        self.ren.AddActor(follower)
-
-                marker_idx += 1
-
-            # Hide unused markers and labels
-            for i in range(marker_idx, len(self.marker_actors)):
-                self.marker_actors[i].VisibilityOff()
-            for i in range(marker_idx, len(self.label_actors)):
-                self.label_actors[i].VisibilityOff()
-
-            # Show used markers and labels
-            for i in range(marker_idx):
-                self.marker_actors[i].VisibilityOn()
-                self.label_actors[i].VisibilityOn()
-
-            # Update marker colors based on selection
-            self.update_marker_colors()
-
-            # Update trajectories progressively (less frequently for performance)
-            self.trajectory_update_counter += 1
-            if self.trajectory_update_counter >= self.trajectory_update_interval:
-                #self.update_trajectories(frame_index)
-                self.trajectory_update_counter = 0
-
-            # Render
+                    if marker1_index is not None and marker2_index is not None:
+                        p1 = self.markers_data[frame_index, marker1_index, :3]
+                        p2 = self.markers_data[frame_index, marker2_index, :3]
+                        
+                        if line_idx < len(self.line_sources):
+                            self.line_sources[line_idx].SetPoint1(p1)
+                            self.line_sources[line_idx].SetPoint2(p2)
+                            line_idx += 1
+                            
             self.vtk_widget.GetRenderWindow().Render()
 
     def update_trajectories(self, frame_index):
@@ -448,12 +370,12 @@ class C3DViewer(QWidget):
             self.last_trajectory_frame = {}  # Track last updated frame per marker
 
         num_markers = self.markers_data.shape[1]
-        recent_frames = 15  # Reduced from 20 to 15 for better performance
+        recent_frames = 15
         start_frame = max(0, frame_index - recent_frames + 1)
 
         for i in range(num_markers):
-            # Initialize trajectory data structures if not exists
             if i not in self.trajectory_points:
+                # Initialize trajectory data structures
                 self.trajectory_points[i] = vtk.vtkPoints()
                 self.trajectory_lines[i] = vtk.vtkCellArray()
                 self.trajectory_polydatas[i] = vtk.vtkPolyData()
@@ -466,35 +388,30 @@ class C3DViewer(QWidget):
                 if i >= len(self.trajectory_actors):
                     actor = vtk.vtkActor()
                     actor.SetMapper(self.trajectory_mappers[i])
-                    actor.GetProperty().SetColor(0.5, 0.5, 0.5)  # Grey trajectories
+                    actor.GetProperty().SetColor(0.5, 0.5, 0.5)
                     actor.GetProperty().SetLineWidth(2)
                     self.trajectory_actors.append(actor)
                     if self.trajectory_visible:
                         self.ren.AddActor(actor)
 
-            # Only update if frame has changed significantly
             if self.last_trajectory_frame[i] == frame_index:
                 continue
 
-            # Clear and rebuild trajectory for this marker (optimized: only rebuild when necessary)
+            # Efficiently rebuild trajectory for the marker
             self.trajectory_points[i].Reset()
             self.trajectory_lines[i].Reset()
 
-            valid_points = []
-            for frame in range(start_frame, frame_index + 1):
-                x, y, z = self.markers_data[frame, i, 0], self.markers_data[frame, i, 1], self.markers_data[frame, i, 2]
-                if not (np.allclose([x, y, z], 0) or np.isnan([x, y, z]).any()):
-                    valid_points.append((x, y, z))
+            valid_points = [
+                (self.markers_data[f, i, 0], self.markers_data[f, i, 1], self.markers_data[f, i, 2])
+                for f in range(start_frame, frame_index + 1)
+                if not (np.allclose(self.markers_data[f, i, :3], 0) or np.isnan(self.markers_data[f, i, :3]).any())
+            ]
 
             if len(valid_points) > 1:
-                # Batch insert points for better performance
-                points_array = np.array(valid_points, dtype=np.float64)
-                for point in points_array:
-                    self.trajectory_points[i].InsertNextPoint(point[0], point[1], point[2])
-
-                # Create line cells more efficiently
-                num_points = len(valid_points)
-                for j in range(num_points - 1):
+                for p in valid_points:
+                    self.trajectory_points[i].InsertNextPoint(p)
+                
+                for j in range(len(valid_points) - 1):
                     line = vtk.vtkLine()
                     line.GetPointIds().SetId(0, j)
                     line.GetPointIds().SetId(1, j + 1)
@@ -506,32 +423,37 @@ class C3DViewer(QWidget):
                 self.trajectory_actors[i].VisibilityOff()
 
             self.last_trajectory_frame[i] = frame_index
-
+            
     def update_marker_colors(self):
-        """Update marker colors based on selection state and marker type."""
-        if self.markers_data is None:
+        """Update marker colors based on selection state."""
+        if self.markers_data is None or not hasattr(self, 'marker_labels'):
             return
 
-        num_markers = self.markers_data.shape[1]
-        marker_idx = 0
+        for i in range(len(self.marker_actors)):
+            actor = self.marker_actors[i]
+            label_text = self.marker_labels[i]
 
-        for i in range(num_markers):
-            # Skip invalid markers
-            x, y, z = self.markers_data[0, i, 0], self.markers_data[0, i, 1], self.markers_data[0, i, 2]
-            if np.allclose([x, y, z], 0) or np.isnan([x, y, z]).any():
-                continue
-
-            if marker_idx < len(self.marker_actors):
-                actor = self.marker_actors[marker_idx]
-                if i in self.selected_markers:
-                    actor.GetProperty().SetColor(0, 1, 0)  # Green for selected
+            # If selected, color is green
+            if i in self.selected_markers:
+                actor.GetProperty().SetColor(self.vtk_colors['green'])
+                actor.VisibilityOn()
+                if i < len(self.label_actors):
+                    self.label_actors[i].VisibilityOn()
+            else:
+                # Otherwise, use color from JSON group
+                color_name = self.marker_group_colors.get(label_text)
+                if color_name and color_name in self.vtk_colors:
+                    actor.GetProperty().SetColor(self.vtk_colors[color_name])
+                    actor.VisibilityOn()
+                    if i < len(self.label_actors):
+                        self.label_actors[i].VisibilityOn()
                 else:
-                    # Use marker type color
-                    marker_type = self.marker_types[i] if i < len(self.marker_types) else 'DEFAULT'
-                    color = self.marker_type_colors.get(marker_type, self.marker_type_colors['DEFAULT'])
-                    actor.GetProperty().SetColor(color[0], color[1], color[2])
-
-            marker_idx += 1
+                    # Hide if not in any group
+                    actor.VisibilityOff()
+                    if i < len(self.label_actors):
+                        self.label_actors[i].VisibilityOff()
+        
+        self.vtk_widget.GetRenderWindow().Render()
 
     def set_selected_markers(self, selected_indices):
         """Set the selected marker indices and update visualization."""
