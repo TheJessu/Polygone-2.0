@@ -85,29 +85,26 @@ class ForcePlateVisualizer:
             if i < len(self.force_data[frame_index]):
                 force_vector = self.force_data[frame_index][i]['F']
                 cop = self.force_data[frame_index][i]['CoP']
+                moment_value = self.force_data[frame_index][i]['M']
                 
-                if np.linalg.norm(force_vector) > 0:
+                force_magnitude = np.linalg.norm(force_vector)
+
+                # Use a threshold for visibility
+                if force_magnitude > 20:  # Threshold for visibility
                     arrow_actor.VisibilityOn()
-                    
-                    # Force is a vector, CoP is the point of application
-                    start_point = cop
-                    end_point = [cop[0] + force_vector[0], cop[1] + force_vector[1], cop[2] + force_vector[2]]
-                    
-                    # Arrow direction
-                    direction = np.array(end_point) - np.array(start_point)
-                    norm = np.linalg.norm(direction)
-                    direction = direction / norm
-                    
-                    # Arrow rotation
-                    v_up = [0, 0, 1]
-                    cross = np.cross(v_up, direction)
-                    angle = np.degrees(np.arccos(np.dot(v_up, direction)))
-                    
+
+                    # The arrow source points along the X axis. We want it to point up (Z axis).
+                    # So we need to rotate it.
                     transform = vtk.vtkTransform()
-                    transform.Translate(start_point)
-                    transform.RotateWXYZ(angle, cross[0], cross[1], cross[2])
-                    transform.Scale(1, norm, 1) # Scale arrow length by force magnitude
+                    transform.Translate(cop)
+                    transform.RotateWXYZ(90, 0, 1, 0)  # Rotate around Y-axis to point up (Z)
                     
+                    # Scale the arrow. The default arrow is 1 unit long.
+                    # We scale in the direction of the arrow (now Z, but X for the source)
+                    # and by the moment value.
+                    scale_factor = abs(moment_value) * 0.01 # Adjust this factor as needed
+                    transform.Scale(scale_factor, scale_factor, scale_factor)
+
                     arrow_actor.SetUserTransform(transform)
 
                 else:

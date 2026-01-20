@@ -187,18 +187,18 @@ class C3DViewer(QWidget):
 
             # Read C3D file
             reader = c3d.Reader(open(file_path, 'rb'))
-            frames = reader.read_frames()
-
-            # Get marker data
+            
             all_markers = []
+            all_analog = []
             max_markers = 0
-            for frame in frames:
-                marker_data = frame[1]
-                frame_markers = [[float(m[0]), float(m[1]), float(m[2]), float(m[3])] for m in marker_data if len(m) >= 4]
+
+            for i, points, analog in reader.read_frames():
+                frame_markers = [[float(m[0]), float(m[1]), float(m[2]), float(m[3])] for m in points if len(m) >= 4]
                 all_markers.append(frame_markers)
+                all_analog.append(analog)
                 max_markers = max(max_markers, len(frame_markers))
 
-            # Create a consistent 3D array
+            # Create a consistent 3D array for markers
             num_frames = len(all_markers)
             markers = np.zeros((num_frames, max_markers, 4), dtype=float)
             for i, frame in enumerate(all_markers):
@@ -255,37 +255,52 @@ class C3DViewer(QWidget):
                         plate_corners = [[corners_data[plate_idx][c][i] for i in range(3)] for c in range(4)]
                         self.force_plate_data.append(plate_corners)
 
-                    # Extract force data for all frames
-                    num_frames = self.markers_data.shape[0]
-                    analog_rate = reader.header.analog_rate
-                    point_rate = reader.header.frame_rate
-                    analog_per_frame = int(analog_rate / point_rate) if point_rate > 0 else 1
-
-
+                    analog_labels = [l.strip() for l in reader.analog_labels]
+                    
                     all_frames_force_data = []
                     for frame_index in range(num_frames):
                         frame_force_data = []
-                        start_analog_index = frame_index * analog_per_frame
-                        end_analog_index = start_analog_index + analog_per_frame
+                        analog_data_frame = all_analog[frame_index]
 
                         for plate_idx in range(used):
                             force_channels = []
                             for i in range(3):  # Fx, Fy, Fz
-                                channel_index = plate_idx * 6 + i
-                                if channel_index < reader.analog_channels:
-                                     force_channels.append(np.mean(reader.analog_data[channel_index][start_analog_index:end_analog_index]))
-                                else:
-                                    force_channels.append(0)
-                            
+                                # Assuming channels are named like 'Force.Fx1', 'Force.Fy1', etc.
+                                # This part might need adjustment based on actual channel names in the C3D file.
+                                try:
+                                    channel_name = f'Force.F{["x", "y", "z"][i]}{plate_idx+1}'
+                                    channel_index = analog_labels.index(channel_name)
+                                    force_channels.append(np.mean(analog_data_frame[:, channel_index]))
+                                except (ValueError, IndexError):
+                                    # Fallback if labels are not as expected
+                                    channel_index = plate_idx * 6 + i
+                                    if channel_index < len(analog_labels):
+                                        force_channels.append(np.mean(analog_data_frame[:, channel_index]))
+                                    else:
+                                        force_channels.append(0)
+
                             cop_channels = []
                             for i in range(3): # CoPx, CoPy, CoPz
-                                channel_index = plate_idx * 6 + 3 + i
-                                if channel_index < reader.analog_channels:
-                                    cop_channels.append(np.mean(reader.analog_data[channel_index][start_analog_index:end_analog_index]))
-                                else:
-                                    cop_channels.append(0)
+                                try:
+                                    channel_name = f'Force.C{["x", "y", "z"][i]}{plate_idx+1}'
+                                    channel_index = analog_labels.index(channel_name)
+                                    cop_channels.append(np.mean(analog_data_frame[:, channel_index]))
+                                except (ValueError, IndexError):
+                                     channel_index = plate_idx * 6 + 3 + i
+                                     if channel_index < len(analog_labels):
+                                        cop_channels.append(np.mean(analog_data_frame[:, channel_index]))
+                                     else:
+                                        cop_channels.append(0)
+                            
+                            moment_value = 0
+                            label = 'LGroundReactionMoment' if 'L' in analog_labels[plate_idx*6] else 'RGroundReactionMoment'
+                            try:
+                                channel_index = analog_labels.index(label)
+                                moment_value = np.mean(analog_data_frame[:, channel_index])
+                            except (ValueError, IndexError):
+                                pass
 
-                            frame_force_data.append({'F': force_channels, 'CoP': cop_channels})
+                            frame_force_data.append({'F': force_channels, 'CoP': cop_channels, 'M': moment_value})
                         all_frames_force_data.append(frame_force_data)
                     self.force_data = all_frames_force_data
 
@@ -466,7 +481,10 @@ class C3DViewer(QWidget):
                             self.line_sources[line_idx].SetPoint1(p1)
                             self.line_sources[line_idx].SetPoint2(p2)
                             line_idx += 1
-                            
+
+            # Update force plate visualization
+            self.force_plate_visualizer.update_force_visualization(frame_index)
+
             self.vtk_widget.GetRenderWindow().Render()
 
     def create_trajectory_actor(self, marker_index):
