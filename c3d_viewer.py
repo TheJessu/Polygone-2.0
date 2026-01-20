@@ -245,6 +245,7 @@ class C3DViewer(QWidget):
 
             # Extract force plate data
             self.force_plate_data = []
+            self.force_data = []
             try:
                 force_platform_group = reader.get('FORCE_PLATFORM')
                 used = force_platform_group.get('USED').int16_value
@@ -253,12 +254,47 @@ class C3DViewer(QWidget):
                     for plate_idx in range(used):
                         plate_corners = [[corners_data[plate_idx][c][i] for i in range(3)] for c in range(4)]
                         self.force_plate_data.append(plate_corners)
+
+                    # Extract force data for all frames
+                    num_frames = self.markers_data.shape[0]
+                    analog_rate = reader.header.analog_rate
+                    point_rate = reader.header.frame_rate
+                    analog_per_frame = int(analog_rate / point_rate) if point_rate > 0 else 1
+
+
+                    all_frames_force_data = []
+                    for frame_index in range(num_frames):
+                        frame_force_data = []
+                        start_analog_index = frame_index * analog_per_frame
+                        end_analog_index = start_analog_index + analog_per_frame
+
+                        for plate_idx in range(used):
+                            force_channels = []
+                            for i in range(3):  # Fx, Fy, Fz
+                                channel_index = plate_idx * 6 + i
+                                if channel_index < reader.analog_channels:
+                                     force_channels.append(np.mean(reader.analog_data[channel_index][start_analog_index:end_analog_index]))
+                                else:
+                                    force_channels.append(0)
+                            
+                            cop_channels = []
+                            for i in range(3): # CoPx, CoPy, CoPz
+                                channel_index = plate_idx * 6 + 3 + i
+                                if channel_index < reader.analog_channels:
+                                    cop_channels.append(np.mean(reader.analog_data[channel_index][start_analog_index:end_analog_index]))
+                                else:
+                                    cop_channels.append(0)
+
+                            frame_force_data.append({'F': force_channels, 'CoP': cop_channels})
+                        all_frames_force_data.append(frame_force_data)
+                    self.force_data = all_frames_force_data
+
             except Exception as e:
                 print(f"Error extracting force plate data: {e}")
 
             # Add grid plane and force plates to the scene
             self.ren.AddActor(self.grid_actor)
-            self.force_plate_visualizer.create_force_plates(self.force_plate_data)
+            self.force_plate_visualizer.create_force_plates(self.force_plate_data, self.force_data)
 
             # Create spheres and labels for markers
             for i in range(max_markers):
