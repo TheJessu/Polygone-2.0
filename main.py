@@ -117,6 +117,8 @@ class MainWindow(QMainWindow):
                     events_data = self.c3d_viewer.get_events_data()
                     if events_data:
                         self.timeline_widget.set_events_data(events_data)
+                        # Set gait info for data plotter
+                        self.data_plotter.set_gait_info(events_data)
                 self.status_bar.showMessage(f"Loaded C3D file: {file_path}")
             elif file_path.lower().endswith(('.avi', '.mp4')):
                 self.video_player.load_video(file_path)

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QGraphicsView, QGraphicsScene, QHBoxLayout, QPushButton
+from PyQt5.QtWidgets import QWidget, QGraphicsView, QGraphicsScene, QHBoxLayout, QPushButton, QGraphicsRectItem, QLabel, QVBoxLayout
 from PyQt5.QtCore import Qt, QPointF, QRectF, pyqtSignal
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPolygonF
 
@@ -160,8 +160,10 @@ class TimelineWidget(QWidget):
             if 0 <= start_frame < self.total_frames and 0 <= end_frame < self.total_frames:
                 x_start = (start_frame / self.total_frames) * width
                 x_end = (end_frame / self.total_frames) * width
-                rect = QRectF(x_start, height - 20, x_end - x_start, 10)
-                self.scene.addRect(rect, QPen(QColor(255, 0, 0)), QBrush(QColor(255, 0, 0, 128)))
+                rect_item = QGraphicsRectItem(x_start, height - 20, x_end - x_start, 10)
+                rect_item.setPen(QPen(QColor(255, 0, 0)))
+                rect_item.setBrush(QBrush(QColor(255, 0, 0, 128)))
+                self.scene.addItem(rect_item)
 
         # Draw block for first right gait cycle (green)
         if len(right_strikes) >= 2:
@@ -171,8 +173,10 @@ class TimelineWidget(QWidget):
             if 0 <= start_frame < self.total_frames and 0 <= end_frame < self.total_frames:
                 x_start = (start_frame / self.total_frames) * width
                 x_end = (end_frame / self.total_frames) * width
-                rect = QRectF(x_start, height - 30, x_end - x_start, 10)
-                self.scene.addRect(rect, QPen(QColor(0, 255, 0)), QBrush(QColor(0, 255, 0, 128)))
+                rect_item = QGraphicsRectItem(x_start, height - 30, x_end - x_start, 10)
+                rect_item.setPen(QPen(QColor(0, 255, 0)))
+                rect_item.setBrush(QBrush(QColor(0, 255, 0, 128)))
+                self.scene.addItem(rect_item)
         
         # --- 2. Draw Symbols for all events ---
         # Triangle settings
@@ -213,6 +217,8 @@ class TimelineWidget(QWidget):
                 p3 = QPointF(x_pos, y_base - tri_height)
                 triangle = QPolygonF([p1, p2, p3])
                 self.scene.addPolygon(triangle, pen, brush)
+
+
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

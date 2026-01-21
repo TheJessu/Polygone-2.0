@@ -38,6 +38,7 @@ class DataPlotter(QWidget):
         self.dropdowns = {}
         self.group_options = {}
         self.value_labels = {}
+        self.gait_info_labels = {}
         self.lines = {}
 
         for plot_type in self.plot_types:
@@ -76,6 +77,11 @@ class DataPlotter(QWidget):
 
             # Add value label below the canvas
             tab_layout.addWidget(self.value_labels[plot_type])
+
+            # Add gait info label below the value label
+            self.gait_info_labels[plot_type] = QLabel("")
+            self.gait_info_labels[plot_type].setWordWrap(True)
+            tab_layout.addWidget(self.gait_info_labels[plot_type])
 
     def load_data(self, markers_data, marker_types, marker_labels, angle_units='degrees'):
         """Load marker data for plotting."""
@@ -330,6 +336,51 @@ class DataPlotter(QWidget):
         else:
             self.value_labels['FORCES'].setText(f"{label}: Frame {frame} out of range")
 
+    def set_gait_info(self, events_data):
+        """Set the gait info for display in all tabs."""
+        if not events_data:
+            for plot_type in self.plot_types:
+                self.gait_info_labels[plot_type].setText("")
+            return
+
+        # Categorize events similar to the original infobox logic
+        left_strikes = sorted([e['time'] for e in events_data if e.get('foot') == 'left' and e.get('type') == 'strike'])
+        right_strikes = sorted([e['time'] for e in events_data if e.get('foot') == 'right' and e.get('type') == 'strike'])
+
+        left_cycle_start = left_cycle_end = -1
+        if len(left_strikes) >= 2:
+            left_cycle_start, left_cycle_end = left_strikes[0], left_strikes[1]
+
+        right_cycle_start = right_cycle_end = -1
+        if len(right_strikes) >= 2:
+            right_cycle_start, right_cycle_end = right_strikes[0], right_strikes[1]
+
+        # Categorize all events
+        left_cycle_events = []
+        right_cycle_events = []
+        other_events = []
+
+        for event in events_data:
+            t = event['time']
+            frame = int(t * 100)  # Assuming frame_rate = 100 Hz
+            event_str = f"  {event.get('foot', 'N/A').capitalize()} {event.get('type', 'N/A').capitalize()}: Frame {frame}"
+
+            if left_cycle_start != -1 and left_cycle_start <= t <= left_cycle_end:
+                left_cycle_events.append(event_str)
+            elif right_cycle_start != -1 and right_cycle_start <= t <= right_cycle_end:
+                right_cycle_events.append(event_str)
+            else:
+                other_events.append(event_str)
+
+        # Format text
+        info_text = "<b>Left Cycle Events:</b>\n" + ("\n".join(sorted(left_cycle_events)) or "  None")
+        info_text += "\n\n<b>Right Cycle Events:</b>\n" + ("\n".join(sorted(right_cycle_events)) or "  None")
+        info_text += "\n\n<b>Other Events:</b>\n" + ("\n".join(sorted(other_events)) or "  None")
+
+        # Set the same text for all tabs
+        for plot_type in self.plot_types:
+            self.gait_info_labels[plot_type].setText(info_text)
+
     def clear_data(self):
         """Clear the plot data."""
         self.markers_data = None
@@ -345,4 +396,5 @@ class DataPlotter(QWidget):
             self.vlines[plot_type] = []
             self.lines[plot_type] = []
             self.value_labels[plot_type].setText("")
+            self.gait_info_labels[plot_type].setText("")
             self.canvases[plot_type].draw()
