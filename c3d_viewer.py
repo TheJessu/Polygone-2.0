@@ -187,6 +187,7 @@ class C3DViewer(QWidget):
 
             # Read C3D file
             reader = c3d.Reader(open(file_path, 'rb'))
+            print(dir(reader))
             
             all_markers = []
             all_analog = []
@@ -304,6 +305,8 @@ class C3DViewer(QWidget):
                         all_frames_force_data.append(frame_force_data)
                     self.force_data = all_frames_force_data
 
+            except (KeyError, AttributeError) as e:
+                print(f"Warning: Could not extract force plate data: {e}")
             except Exception as e:
                 print(f"Error extracting force plate data: {e}")
 
