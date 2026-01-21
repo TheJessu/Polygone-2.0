@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QGraphicsView, QGraphicsScene, QHBoxLayout, QPushButton
 from PyQt5.QtCore import Qt, QPointF, QRectF, pyqtSignal
-from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont
+from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPolygonF
 
 class TimelineWidget(QWidget):
     frame_changed = pyqtSignal(int)
@@ -144,51 +144,75 @@ class TimelineWidget(QWidget):
         self.frame_changed.emit(frame)
 
     def draw_events(self, width, height):
-        """Draw contact periods as green blocks for left foot and red blocks for right foot."""
+        """Draw event blocks and symbols on the timeline."""
         if not self.events_data:
             return
 
-        # Collect strike and off times for left foot
-        left_contact_periods = []
-        current_strike = None
-        for event in self.events_data:
-            if event.get('foot') == 'left':
-                if event['type'] == 'strike':
-                    current_strike = event['time']
-                elif event['type'] == 'off' and current_strike is not None:
-                    left_contact_periods.append((current_strike, event['time']))
-                    current_strike = None
+        # --- 1. Draw Blocks for first gait cycle ---
+        left_strikes = sorted([e['time'] for e in self.events_data if e.get('foot') == 'left' and e.get('type') == 'strike'])
+        right_strikes = sorted([e['time'] for e in self.events_data if e.get('foot') == 'right' and e.get('type') == 'strike'])
 
-        # Collect strike and off times for right foot
-        right_contact_periods = []
-        current_strike = None
-        for event in self.events_data:
-            if event.get('foot') == 'right':
-                if event['type'] == 'strike':
-                    current_strike = event['time']
-                elif event['type'] == 'off' and current_strike is not None:
-                    right_contact_periods.append((current_strike, event['time']))
-                    current_strike = None
-
-        # Draw red rectangles for left foot contact periods (bottom layer)
-        for start_time, end_time in left_contact_periods:
+        # Draw block for first left gait cycle (red)
+        if len(left_strikes) >= 2:
+            start_time, end_time = left_strikes[0], left_strikes[1]
             start_frame = int(start_time * self.frame_rate)
             end_frame = int(end_time * self.frame_rate)
             if 0 <= start_frame < self.total_frames and 0 <= end_frame < self.total_frames:
                 x_start = (start_frame / self.total_frames) * width
                 x_end = (end_frame / self.total_frames) * width
-                rect = QRectF(x_start, height - 20, x_end - x_start, 10)  # On the timeline bar
-                self.scene.addRect(rect, QPen(QColor(255, 0, 0)), QBrush(QColor(255, 0, 0, 128)))  # Semi-transparent red
+                rect = QRectF(x_start, height - 20, x_end - x_start, 10)
+                self.scene.addRect(rect, QPen(QColor(255, 0, 0)), QBrush(QColor(255, 0, 0, 128)))
 
-        # Draw green rectangles for right foot contact periods (above red)
-        for start_time, end_time in right_contact_periods:
+        # Draw block for first right gait cycle (green)
+        if len(right_strikes) >= 2:
+            start_time, end_time = right_strikes[0], right_strikes[1]
             start_frame = int(start_time * self.frame_rate)
             end_frame = int(end_time * self.frame_rate)
             if 0 <= start_frame < self.total_frames and 0 <= end_frame < self.total_frames:
                 x_start = (start_frame / self.total_frames) * width
                 x_end = (end_frame / self.total_frames) * width
-                rect = QRectF(x_start, height - 30, x_end - x_start, 10)  # Above the red blocks
-                self.scene.addRect(rect, QPen(QColor(0, 255, 0)), QBrush(QColor(0, 255, 0, 128)))  # Semi-transparent green
+                rect = QRectF(x_start, height - 30, x_end - x_start, 10)
+                self.scene.addRect(rect, QPen(QColor(0, 255, 0)), QBrush(QColor(0, 255, 0, 128)))
+        
+        # --- 2. Draw Symbols for all events ---
+        # Triangle settings
+        tri_height = 8
+        tri_width = 8
+
+        for event in self.events_data:
+            event_time = event.get('time')
+            event_type = event.get('type')
+            
+            if event_time is None or event_type is None:
+                continue
+
+            event_frame = int(event_time * self.frame_rate)
+            if not (0 <= event_frame <= self.total_frames):
+                continue
+            
+            x_pos = (event_frame / self.total_frames) * width
+            
+            if event_type == 'strike':
+                # Down-facing triangle (black)
+                pen = QPen(Qt.black)
+                brush = QBrush(Qt.black)
+                y_base = height - 35
+                p1 = QPointF(x_pos - tri_width / 2, y_base)
+                p2 = QPointF(x_pos + tri_width / 2, y_base)
+                p3 = QPointF(x_pos, y_base + tri_height)
+                triangle = QPolygonF([p1, p2, p3])
+                self.scene.addPolygon(triangle, pen, brush)
+
+            elif event_type == 'off':
+                # Up-facing triangle (white)
+                pen = QPen(Qt.black) # Black border
+                brush = QBrush(Qt.white) # White fill
+                y_base = height - 5
+                p1 = QPointF(x_pos - tri_width / 2, y_base)
+                p2 = QPointF(x_pos + tri_width / 2, y_base)
+                p3 = QPointF(x_pos, y_base - tri_height)
+                triangle = QPolygonF([p1, p2, p3])
+                self.scene.addPolygon(triangle, pen, brush)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

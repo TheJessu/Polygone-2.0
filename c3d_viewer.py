@@ -1,5 +1,5 @@
 import vtk
-from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
+from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt5.QtCore import pyqtSignal
 import c3d
@@ -237,10 +237,31 @@ class C3DViewer(QWidget):
                 if used > 0:
                     labels = event_group.get('LABELS').string_array[:used]
                     times = event_group.get('TIMES').float_array[:used]
+                    contexts = event_group.get('CONTEXTS').string_array[:used]
+
                     for i in range(used):
-                        label = labels[i].strip()
                         time = times[i][1]
-                        self.events_data.append({'label': label, 'time': time})
+                        label = labels[i].strip().upper()
+                        context = contexts[i].strip().upper()
+
+                        foot = None
+                        if context == 'LEFT':
+                            foot = 'left'
+                        elif context == 'RIGHT':
+                            foot = 'right'
+
+                        event_type = None
+                        if 'STRIKE' in label or 'HS' in label or 'ON' in label:
+                            event_type = 'strike'
+                        elif 'OFF' in label or 'TO' in label:
+                            event_type = 'off'
+                        
+                        if foot and event_type:
+                            self.events_data.append({
+                                'time': time,
+                                'foot': foot,
+                                'type': event_type
+                            })
             except Exception as e:
                 print(f"Error extracting events: {e}")
 
@@ -275,7 +296,7 @@ class C3DViewer(QWidget):
                                 except (ValueError, IndexError):
                                     # Fallback if labels are not as expected
                                     channel_index = plate_idx * 6 + i
-                                    if channel_index < len(analog_labels):
+                                    if channel_index < analog_data_frame.shape[1]:
                                         force_channels.append(np.mean(analog_data_frame[:, channel_index]))
                                     else:
                                         force_channels.append(0)
@@ -288,18 +309,22 @@ class C3DViewer(QWidget):
                                     cop_channels.append(np.mean(analog_data_frame[:, channel_index]))
                                 except (ValueError, IndexError):
                                      channel_index = plate_idx * 6 + 3 + i
-                                     if channel_index < len(analog_labels):
+                                     if channel_index < analog_data_frame.shape[1]:
                                         cop_channels.append(np.mean(analog_data_frame[:, channel_index]))
                                      else:
                                         cop_channels.append(0)
                             
                             moment_value = 0
-                            label = 'LGroundReactionMoment' if 'L' in analog_labels[plate_idx*6] else 'RGroundReactionMoment'
-                            try:
-                                channel_index = analog_labels.index(label)
-                                moment_value = np.mean(analog_data_frame[:, channel_index])
-                            except (ValueError, IndexError):
-                                pass
+                            label = ''
+                            if plate_idx * 6 < len(analog_labels):
+                                label = 'LGroundReactionMoment' if 'L' in analog_labels[plate_idx*6] else 'RGroundReactionMoment'
+                            
+                            if label:
+                                try:
+                                    channel_index = analog_labels.index(label)
+                                    moment_value = np.mean(analog_data_frame[:, channel_index])
+                                except (ValueError, IndexError):
+                                    pass
 
                             frame_force_data.append({'F': force_channels, 'CoP': cop_channels, 'M': moment_value})
                         all_frames_force_data.append(frame_force_data)
