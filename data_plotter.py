@@ -23,6 +23,11 @@ class DataPlotter(QWidget):
         self.selected_line = None  # Track the currently selected line
         self.selected_data = None  # Track the selected line's data (marker_idx, label, magnitude_data)
         self.selected_force_data = None  # Track the selected force line's data
+        self.selected_force_line = None  # Track the currently selected force line
+        self.selected_moment_data = None  # Track the selected moment line's data
+        self.selected_moment_line = None  # Track the currently selected moment line
+        self.selected_power_data = None  # Track the selected power line's data
+        self.selected_power_line = None  # Track the currently selected power line
 
         # Initialize force data plotter
         self.force_plotter = ForceDataPlotter()
@@ -132,6 +137,13 @@ class DataPlotter(QWidget):
                 self.selected_data = None
             elif plot_type == 'FORCES':
                 self.selected_force_data = None
+                self.selected_force_line = None
+            elif plot_type == 'MOMENTS':
+                self.selected_moment_data = None
+                self.selected_moment_line = None
+            elif plot_type == 'POWERS':
+                self.selected_power_data = None
+                self.selected_power_line = None
 
         for plot_type in self.plot_types:
             # Get markers of this type
@@ -205,9 +217,33 @@ class DataPlotter(QWidget):
                         y_data = np.degrees(y_data)
                         z_data = np.degrees(z_data)
 
-                    # For angles, plot the magnitude (single line per marker) instead of x,y,z components
+                    # For angles, moments, and powers, plot the magnitude (single line per marker) instead of x,y,z components
                     if plot_type == 'ANGLES':
                         # Compute magnitude of the angle vector
+                        magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
+                        # Only plot valid data (not NaN or all close to zero)
+                        valid_mask = ~(np.isnan(magnitude_data) | np.isclose(magnitude_data, 0))
+                        if np.any(valid_mask):
+                            # Set color: red for left (L), green for right (R)
+                            color = 'red' if label.startswith('L') else 'green'
+                            line, = ax.plot(frames[valid_mask], magnitude_data[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
+                            self.lines[plot_type].append((line, marker_idx, label, magnitude_data))
+                    elif plot_type == 'MOMENTS':
+                        # Convert to Nmm (assuming data is in Nm, multiply by 1000)
+                        x_data = x_data * 1000
+                        y_data = y_data * 1000
+                        z_data = z_data * 1000
+                        # Compute magnitude of the moment vector
+                        magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
+                        # Only plot valid data (not NaN or all close to zero)
+                        valid_mask = ~(np.isnan(magnitude_data) | np.isclose(magnitude_data, 0))
+                        if np.any(valid_mask):
+                            # Set color: red for left (L), green for right (R)
+                            color = 'red' if label.startswith('L') else 'green'
+                            line, = ax.plot(frames[valid_mask], magnitude_data[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
+                            self.lines[plot_type].append((line, marker_idx, label, magnitude_data))
+                    elif plot_type == 'POWERS':
+                        # Compute magnitude of the power vector (assuming data is in Watt)
                         magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
                         # Only plot valid data (not NaN or all close to zero)
                         valid_mask = ~(np.isnan(magnitude_data) | np.isclose(magnitude_data, 0))
@@ -238,11 +274,15 @@ class DataPlotter(QWidget):
             figure.tight_layout()
             canvas.draw()
 
-            # Connect pick event for ANGLES and FORCES tabs
+            # Connect pick event for ANGLES, FORCES, MOMENTS, and POWERS tabs
             if plot_type == 'ANGLES':
                 canvas.mpl_connect('pick_event', lambda event, pt=plot_type: self.on_line_pick(event, pt))
             elif plot_type == 'FORCES':
                 canvas.mpl_connect('pick_event', lambda event, pt=plot_type: self.on_force_line_pick(event, pt))
+            elif plot_type == 'MOMENTS':
+                canvas.mpl_connect('pick_event', lambda event, pt=plot_type: self.on_moment_line_pick(event, pt))
+            elif plot_type == 'POWERS':
+                canvas.mpl_connect('pick_event', lambda event, pt=plot_type: self.on_power_line_pick(event, pt))
 
     def on_group_selected(self, plot_type, group_name):
         """Handle group selection change."""
@@ -265,6 +305,14 @@ class DataPlotter(QWidget):
         # Update force value display if a force line is selected
         if hasattr(self, 'selected_force_data') and self.selected_force_data is not None:
             self.update_selected_force_value()
+
+        # Update moment value display if a moment line is selected
+        if hasattr(self, 'selected_moment_data') and self.selected_moment_data is not None:
+            self.update_selected_moment_value()
+
+        # Update power value display if a power line is selected
+        if hasattr(self, 'selected_power_data') and self.selected_power_data is not None:
+            self.update_selected_power_value()
 
     def on_line_pick(self, event, plot_type):
         """Handle line pick event to display value at current frame and highlight selected line."""
@@ -291,18 +339,76 @@ class DataPlotter(QWidget):
         self.canvases[plot_type].draw()
 
     def on_force_line_pick(self, event, plot_type):
-        """Handle line pick event for FORCES tab to display value at current frame."""
+        """Handle line pick event for FORCES tab to display value at current frame and highlight selected line."""
         if plot_type != 'FORCES':
             return
+
+        # Reset previous selection
+        if self.selected_force_line is not None:
+            self.selected_force_line.set_linewidth(1)
 
         # Find the picked line in force plotter
         for marker_idx, (line, idx, label, magnitude_data) in self.force_plotter.lines.items():
             if event.artist == line:
+                # Highlight the selected line
+                line.set_linewidth(3)
+                self.selected_force_line = line
                 # Store selected force data
                 self.selected_force_data = (marker_idx, label, magnitude_data)
                 # Update value display for forces
                 self.update_selected_force_value()
                 break
+
+        # Redraw the canvas to show the highlight
+        self.canvases[plot_type].draw()
+
+    def on_moment_line_pick(self, event, plot_type):
+        """Handle line pick event for MOMENTS tab to display value at current frame and highlight selected line."""
+        if plot_type != 'MOMENTS':
+            return
+
+        # Reset previous selection
+        if self.selected_moment_line is not None:
+            self.selected_moment_line.set_linewidth(1)
+
+        # Find the picked line
+        for line, marker_idx, label, magnitude_data in self.lines[plot_type]:
+            if event.artist == line:
+                # Highlight the selected line
+                line.set_linewidth(3)
+                self.selected_moment_line = line
+                # Store selected moment data
+                self.selected_moment_data = (marker_idx, label, magnitude_data)
+                # Update value display for moments
+                self.update_selected_moment_value()
+                break
+
+        # Redraw the canvas to show the highlight
+        self.canvases[plot_type].draw()
+
+    def on_power_line_pick(self, event, plot_type):
+        """Handle line pick event for POWERS tab to display value at current frame and highlight selected line."""
+        if plot_type != 'POWERS':
+            return
+
+        # Reset previous selection
+        if self.selected_power_line is not None:
+            self.selected_power_line.set_linewidth(1)
+
+        # Find the picked line
+        for line, marker_idx, label, magnitude_data in self.lines[plot_type]:
+            if event.artist == line:
+                # Highlight the selected line
+                line.set_linewidth(3)
+                self.selected_power_line = line
+                # Store selected power data
+                self.selected_power_data = (marker_idx, label, magnitude_data)
+                # Update value display for powers
+                self.update_selected_power_value()
+                break
+
+        # Redraw the canvas to show the highlight
+        self.canvases[plot_type].draw()
 
     def update_selected_value(self):
         """Update the displayed value for the selected line at the current frame."""
@@ -335,6 +441,38 @@ class DataPlotter(QWidget):
                 self.value_labels['FORCES'].setText(f"{label}: No data at frame {frame}")
         else:
             self.value_labels['FORCES'].setText(f"{label}: Frame {frame} out of range")
+
+    def update_selected_moment_value(self):
+        """Update the displayed value for the selected moment line at the current frame."""
+        if self.selected_moment_data is None:
+            return
+
+        marker_idx, label, magnitude_data = self.selected_moment_data
+        frame = int(self.current_frame)
+        if frame < len(magnitude_data):
+            value = magnitude_data[frame]
+            if not np.isnan(value):
+                self.value_labels['MOMENTS'].setText(f"{label}: {value:.2f} Nmm at frame {frame}")
+            else:
+                self.value_labels['MOMENTS'].setText(f"{label}: No data at frame {frame}")
+        else:
+            self.value_labels['MOMENTS'].setText(f"{label}: Frame {frame} out of range")
+
+    def update_selected_power_value(self):
+        """Update the displayed value for the selected power line at the current frame."""
+        if self.selected_power_data is None:
+            return
+
+        marker_idx, label, magnitude_data = self.selected_power_data
+        frame = int(self.current_frame)
+        if frame < len(magnitude_data):
+            value = magnitude_data[frame]
+            if not np.isnan(value):
+                self.value_labels['POWERS'].setText(f"{label}: {value:.2f} W at frame {frame}")
+            else:
+                self.value_labels['POWERS'].setText(f"{label}: No data at frame {frame}")
+        else:
+            self.value_labels['POWERS'].setText(f"{label}: Frame {frame} out of range")
 
     def set_gait_info(self, events_data):
         """Set the gait info for display in all tabs."""
@@ -389,6 +527,11 @@ class DataPlotter(QWidget):
         self.selected_line = None
         self.selected_data = None
         self.selected_force_data = None
+        self.selected_force_line = None
+        self.selected_moment_data = None
+        self.selected_moment_line = None
+        self.selected_power_data = None
+        self.selected_power_line = None
         # Clear all figures and reset data structures
         for plot_type in self.plot_types:
             self.figures[plot_type].clear()

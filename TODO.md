@@ -1,7 +1,12 @@
-# TODO: Implement Gait Data Display in Data Plots
+# TODO: Adjust MOMENTS Data Plot
 
 ## Tasks
-- [x] Remove infobox code and click connections for gait blocks in `timeline_widget.py`
-- [x] Add `gait_info_label` for each tab in `data_plotter.py`, placed below `value_labels`
-- [x] Add `set_gait_info` method in `data_plotter.py` to update gait info labels with formatted gait data
-- [x] In `main.py`, call `data_plotter.set_gait_info(events_data)` when events_data is set to display gait info persistently
+- [ ] Modify plot_data() for MOMENTS to plot magnitude instead of x,y,z, with color coding (red for L, green for R)
+- [ ] Add unit conversion for MOMENTS to Nmm (multiply by 1000)
+- [ ] Add self.selected_moment_data and self.selected_moment_line for tracking selected moment line
+- [ ] Add on_moment_line_pick() method for handling pick events on MOMENTS tab
+- [ ] Add update_selected_moment_value() method for displaying selected moment value
+- [ ] Update __init__ to initialize self.lines['MOMENTS'] = []
+- [ ] Update clear_data() to clear moment selections
+- [ ] Connect pick event for MOMENTS tab in plot_data()
+- [ ] Update set_current_frame() to update selected moment value if selected
