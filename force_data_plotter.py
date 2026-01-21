@@ -5,7 +5,7 @@ class ForceDataPlotter:
     def __init__(self):
         self.lines = {}  # Store lines for picking
 
-    def plot_forces(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, angle_units):
+    def plot_forces(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, angle_units, max_plots=12):
         """Plot force data similar to angles - showing magnitude with L/R colors."""
         self.lines = {}
 
@@ -28,6 +28,9 @@ class ForceDataPlotter:
                         if group == selected_group:
                             filtered_indices.append(idx)
             type_indices = filtered_indices
+
+        # Limit the number of plots to max_plots
+        type_indices = type_indices[:max_plots]
 
         # Plot data for each marker
         for marker_idx in type_indices:

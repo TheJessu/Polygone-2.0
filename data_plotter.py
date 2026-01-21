@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QHBoxLayout, QLabel, QComboBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QHBoxLayout, QLabel, QComboBox, QSpinBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -34,6 +34,21 @@ class DataPlotter(QWidget):
 
         # Plot types to display as tabs
         self.plot_types = ['ANGLES', 'FORCES', 'MOMENTS', 'POWERS']
+
+        # Maximum number of plots to display
+        self.max_plots = 4
+
+        # Add spinbox for max plots
+        plots_layout = QHBoxLayout()
+        plots_layout.addWidget(QLabel("Max Plots:"))
+        self.plots_spinbox = QSpinBox()
+        self.plots_spinbox.setMinimum(1)
+        self.plots_spinbox.setMaximum(12)
+        self.plots_spinbox.setValue(self.max_plots)
+        self.plots_spinbox.valueChanged.connect(self.on_max_plots_changed)
+        plots_layout.addWidget(self.plots_spinbox)
+        plots_layout.addStretch()
+        self.layout.addLayout(plots_layout)
 
         # Create tabs and canvases for each plot type
         self.canvases = {}
@@ -177,6 +192,9 @@ class DataPlotter(QWidget):
             if not type_indices:
                 continue
 
+            # Limit the number of plots to max_plots
+            type_indices = type_indices[:self.max_plots]
+
             figure = self.figures[plot_type]
             canvas = self.canvases[plot_type]
 
@@ -196,7 +214,7 @@ class DataPlotter(QWidget):
             # Plot data for each marker in this type
             if plot_type == 'FORCES':
                 # Use force plotter for FORCES tab
-                self.force_plotter.plot_forces(ax, self.markers_data, self.marker_labels, self.marker_types, self.current_frame, selected_group, self.angle_units)
+                self.force_plotter.plot_forces(ax, self.markers_data, self.marker_labels, self.marker_types, self.current_frame, selected_group, self.angle_units, self.max_plots)
             else:
                 for marker_idx in type_indices:
                     if marker_idx >= self.markers_data.shape[1]:
@@ -286,6 +304,11 @@ class DataPlotter(QWidget):
 
     def on_group_selected(self, plot_type, group_name):
         """Handle group selection change."""
+        self.plot_data()
+
+    def on_max_plots_changed(self, value):
+        """Handle max plots change."""
+        self.max_plots = value
         self.plot_data()
 
     def set_current_frame(self, frame_index):
