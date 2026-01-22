@@ -31,25 +31,25 @@
     "left_arm": {
       "side": "left",
       "color": "red",
-      "markers": ["LSHO", "LELB", "LWRA", "LWRB", "LFIN"]
+      "markers": ["LSHO", "LELB", "LWRA", "LWRB", "LFIN", "LUPA", "LFRM"]
     },
 
     "right_arm": {
       "side": "right",
       "color": "green",
-      "markers": ["RSHO", "RELB", "RWRA", "RWRB", "RFIN"]
+      "markers": ["RSHO", "RELB", "RWRA", "RWRB", "RFIN", "RUPA", "RFRM"]
     },
 
     "spine": {
       "side": "middle",
       "color": "purple",
-      "markers": ["CLAV", "STRN", "T10", "C7"]
+      "markers": ["CLAV", "STRN", "T10", "C7", "RBAK"]
     },
 
     "head": {
       "side": "middle",
       "color": "purple",
-      "markers": ["LBHD", "RBHD"]
+      "markers": ["LBHD", "RBHD", "RFHD", "LFHD"]
     }
   },
 

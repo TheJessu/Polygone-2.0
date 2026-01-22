@@ -1,12 +1,8 @@
-# TODO: Adjust MOMENTS Data Plot
+# TODO: Merge powers_data_plotter.py into powers_tab.py
 
-## Tasks
-- [ ] Modify plot_data() for MOMENTS to plot magnitude instead of x,y,z, with color coding (red for L, green for R)
-- [ ] Add unit conversion for MOMENTS to Nmm (multiply by 1000)
-- [ ] Add self.selected_moment_data and self.selected_moment_line for tracking selected moment line
-- [ ] Add on_moment_line_pick() method for handling pick events on MOMENTS tab
-- [ ] Add update_selected_moment_value() method for displaying selected moment value
-- [ ] Update __init__ to initialize self.lines['MOMENTS'] = []
-- [ ] Update clear_data() to clear moment selections
-- [ ] Connect pick event for MOMENTS tab in plot_data()
-- [ ] Update set_current_frame() to update selected moment value if selected
+- [x] Add PowersDataPlotter class to powers_tab.py
+- [x] Update PowersTab.__init__ to instantiate PowersDataPlotter internally
+- [x] Update data_plotter.py to remove PowersDataPlotter import and instantiation
+- [x] Change PowersTab instantiation in data_plotter.py to PowersTab()
+- [ ] Delete powers_data_plotter.py
+- [ ] Verify no other files reference powers_data_plotter.py
