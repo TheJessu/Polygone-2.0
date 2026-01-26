@@ -81,27 +81,36 @@ class ForcesTab:
 
         selected_group = self.dropdown.currentText()
 
-        # Create subplot
-        ax = self.figure.add_subplot(111)
-        title = 'FORCES Data'
         if selected_group != "All":
-            title += f' - {selected_group}'
-        ax.set_title(title)
-        ax.set_xlabel('Frame')
-        ax.set_ylabel('Value')
-        self.axes.append(ax)
+            # Plot only the selected group
+            ax = self.figure.add_subplot(111)
+            ax.set_title(f'FORCES Data - {selected_group}')
+            ax.set_xlabel('Frame')
+            ax.set_ylabel('Value')
+            self.axes.append(ax)
+            self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, selected_group)
+            vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+            self.vlines.append(vline)
+        else:
+            # Plot multiple groups based on max_plots
+            groups = [g for g in self.group_options if g != "All"]
+            num_plots = min(max_plots, len(groups))
 
-        # Plot force data similar to angles - showing magnitude with L/R colors
-        self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, 'degrees', max_plots)
-
-        # Add vertical line for current frame
-        vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-        self.vlines.append(vline)
+            for i in range(num_plots):
+                group = groups[i]
+                ax = self.figure.add_subplot(num_plots, 1, i + 1)
+                ax.set_title(f'FORCES Data - {group}')
+                ax.set_xlabel('Frame')
+                ax.set_ylabel('Value')
+                self.axes.append(ax)
+                self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, group)
+                vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+                self.vlines.append(vline)
 
         self.figure.tight_layout()
         self.canvas.draw()
 
-    def plot_forces(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, angle_units, max_plots=12):
+    def plot_forces(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group):
         """Plot force data similar to angles - showing magnitude with L/R colors."""
         self.lines = {}
 
@@ -124,9 +133,6 @@ class ForcesTab:
                         if group == selected_group:
                             filtered_indices.append(idx)
             type_indices = filtered_indices
-
-        # Limit the number of plots to max_plots
-        type_indices = type_indices[:max_plots]
 
         # Plot data for each marker
         for marker_idx in type_indices:
