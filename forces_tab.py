@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+import math
 import numpy as np
 
 class ForcesTab:
@@ -44,8 +45,16 @@ class ForcesTab:
         self.selected_force_line = None
         self.selected_force_data = None
 
+        # New members for zoom
+        self.zoomed_in_group = None
+        self.ax_to_group = {}
+        self.markers_data = None
+        self.marker_types = None
+        self.marker_labels = None
+
         # Connect pick event
         self.canvas.mpl_connect('pick_event', self.on_force_line_pick)
+        self.canvas.mpl_connect('button_press_event', self.on_button_press)
 
     def load_data(self, markers_data, marker_types, marker_labels):
         """Load marker data for this tab."""
@@ -68,6 +77,9 @@ class ForcesTab:
 
     def plot_data(self, markers_data, marker_types, marker_labels, current_frame, max_plots):
         """Plot the forces data."""
+        self.markers_data = markers_data
+        self.marker_types = marker_types
+        self.marker_labels = marker_labels
         self.current_frame = current_frame
         self.max_plots = max_plots
 
@@ -75,37 +87,59 @@ class ForcesTab:
         self.figure.clear()
         self.axes = []
         self.vlines = []
+        self.ax_to_group = {}
         self.value_label.setText("")
         self.selected_force_line = None
         self.selected_force_data = None
 
         selected_group = self.dropdown.currentText()
 
-        if selected_group != "All":
+        if self.zoomed_in_group:
+            ax = self.figure.add_subplot(111)
+            group = self.zoomed_in_group
+            ax.set_title(f'FORCES Data - {group}')
+            ax.set_xlabel('Frame')
+            ax.set_ylabel('Value')
+            ax.set_box_aspect(1)
+            self.axes.append(ax)
+            self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, group)
+            vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1)
+            self.vlines.append(vline)
+
+        elif selected_group != "All":
             # Plot only the selected group
             ax = self.figure.add_subplot(111)
             ax.set_title(f'FORCES Data - {selected_group}')
             ax.set_xlabel('Frame')
             ax.set_ylabel('Value')
+            ax.set_box_aspect(1)
             self.axes.append(ax)
             self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, selected_group)
             vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
             self.vlines.append(vline)
+            self.ax_to_group[ax] = selected_group
+
         else:
             # Plot multiple groups based on max_plots
             groups = [g for g in self.group_options if g != "All"]
             num_plots = min(max_plots, len(groups))
 
-            for i in range(num_plots):
-                group = groups[i]
-                ax = self.figure.add_subplot(num_plots, 1, i + 1)
-                ax.set_title(f'FORCES Data - {group}')
-                ax.set_xlabel('Frame')
-                ax.set_ylabel('Value')
-                self.axes.append(ax)
-                self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, group)
-                vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                self.vlines.append(vline)
+            if num_plots > 0:
+                cols = int(math.ceil(math.sqrt(num_plots)))
+                rows = int(math.ceil(num_plots / float(cols)))
+
+                for i in range(num_plots):
+                    group = groups[i]
+                    ax = self.figure.add_subplot(rows, cols, i + 1)
+                    ax.set_box_aspect(1)
+                    ax.set_title(f'FORCES Data - {group}')
+                    ax.set_xlabel('Frame')
+                    ax.set_ylabel('Value')
+                    self.axes.append(ax)
+                    self.ax_to_group[ax] = group
+                    self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, group)
+                    vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+                    self.vlines.append(vline)
 
         self.figure.tight_layout()
         self.canvas.draw()
@@ -188,6 +222,20 @@ class ForcesTab:
 
         # Redraw the canvas
         self.canvas.draw()
+
+    def on_button_press(self, event):
+        if not event.dblclick:
+            return
+
+        if self.zoomed_in_group is None:
+            if event.inaxes in self.ax_to_group:
+                self.zoomed_in_group = self.ax_to_group[event.inaxes]
+        else:
+            self.zoomed_in_group = None
+
+        if self.markers_data is not None:
+            self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots)
+
 
     def update_selected_force_value(self):
         """Update the displayed value for the selected force line at the current frame."""
