@@ -61,9 +61,7 @@ class MomentsDataPlotter:
                 line, = ax.plot(frames[valid_mask], magnitude_data[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
                 self.lines[marker_idx] = (line, marker_idx, label, magnitude_data)
 
-        # Add legend if there are multiple markers
-        if len(type_indices) <= 5:  # Only show legend if not too many markers
-            ax.legend(fontsize='small', loc='upper right')
+
 
         return self.lines
 

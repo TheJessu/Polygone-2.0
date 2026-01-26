@@ -66,9 +66,7 @@ class AnglesDataPlotter:
                 line, = ax.plot(frames[valid_mask], magnitude_data[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
                 self.lines[marker_idx] = (line, marker_idx, label, magnitude_data)
 
-        # Add legend if there are multiple markers
-        if len(type_indices) <= 5:  # Only show legend if not too many markers
-            ax.legend(fontsize='small', loc='upper right')
+
 
         return self.lines
 
@@ -235,11 +233,22 @@ class AnglesTab:
 
     def on_line_pick(self, event):
         """Handle line pick event."""
+        # Reset previous selection
+        if self.selected_line is not None:
+            self.selected_line.set_linewidth(1)
+
         # Find the picked line
         for marker_idx, (line, idx, label, magnitude_data) in self.angles_plotter.lines.items():
             if event.artist == line:
-                self.parent.highlight_marker(marker_idx, self.plot_type)
+                # Highlight the selected line
+                line.set_linewidth(3)
+                self.selected_line = line
+                self.selected_data = (marker_idx, label, magnitude_data)
+                self.update_selected_value(marker_idx)
                 break
+
+        # Redraw the canvas
+        self.canvas.draw()
 
     def on_button_press(self, event):
         if not event.dblclick:
@@ -293,7 +302,7 @@ class AnglesTab:
 
         # Update selected value display if a line is selected
         if self.selected_data is not None:
-            self.update_selected_value()
+            self.update_selected_value(self.selected_data[0])
 
     def set_gait_info(self, info_text):
         """Set the gait info text."""

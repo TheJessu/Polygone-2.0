@@ -210,11 +210,22 @@ class ForcesTab:
 
     def on_force_line_pick(self, event):
         """Handle line pick event for forces."""
+        # Reset previous selection
+        if self.selected_force_line is not None:
+            self.selected_force_line.set_linewidth(1)
+
         # Find the picked line
         for marker_idx, (line, idx, label, magnitude_data) in self.lines.items():
             if event.artist == line:
-                self.parent.highlight_marker(marker_idx, self.plot_type)
+                # Highlight the selected line
+                line.set_linewidth(3)
+                self.selected_force_line = line
+                self.selected_force_data = (marker_idx, label, magnitude_data)
+                self.update_selected_force_value()
                 break
+
+        # Redraw the canvas
+        self.canvas.draw()
 
     def on_button_press(self, event):
         if not event.dblclick:

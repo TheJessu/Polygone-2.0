@@ -299,7 +299,7 @@ class DataPlotter(QWidget):
         for event in events_data:
             t = event['time']
             frame = int(t * 100)  # Assuming frame_rate = 100 Hz
-            event_str = f"  {event.get('foot', 'N/A').capitalize()} {event.get('type', 'N/A').capitalize()}: Frame {frame}"
+            event_str = f"{event.get('foot', 'N/A').capitalize()} {event.get('type', 'N/A').capitalize()}: Frame {frame}"
 
             if left_cycle_start != -1 and left_cycle_start <= t <= left_cycle_end:
                 left_cycle_events.append(event_str)
@@ -308,14 +308,20 @@ class DataPlotter(QWidget):
             else:
                 other_events.append(event_str)
 
-        # Format text
-        info_text = "<b>Left Cycle Events:</b>\n" + ("\n".join(sorted(left_cycle_events)) or "  None")
-        info_text += "\n\n<b>Right Cycle Events:</b>\n" + ("\n".join(sorted(right_cycle_events)) or "  None")
-        info_text += "\n\n<b>Other Events:</b>\n" + ("\n".join(sorted(other_events)) or "  None")
+        # Format as compact inline text
+        left_text = "<b>Left Cycle:</b> " + ("; ".join(sorted(left_cycle_events)) or "None")
+        right_text = "<b>Right Cycle:</b> " + ("; ".join(sorted(right_cycle_events)) or "None")
+        other_text = "<b>Other:</b> " + ("; ".join(sorted(other_events)) or "None")
+
+        info_text = f"{left_text} | {right_text} | {other_text}"
+
+        # Prepend color info
+        color_info = "Red: Left, Green: Right\n\n"
+        full_info_text = color_info + info_text
 
         # Set the same text for all tabs
         for plot_type in self.plot_types:
-            self.tabs[plot_type].set_gait_info(info_text)
+            self.tabs[plot_type].set_gait_info(full_info_text)
 
     def clear_data(self):
         """Clear the plot data."""
