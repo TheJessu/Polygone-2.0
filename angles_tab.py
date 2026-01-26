@@ -223,7 +223,9 @@ class AnglesTab:
                     vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
                     self.vlines.append(vline)
 
+        import matplotlib.pyplot as plt
         self.figure.tight_layout()
+        plt.subplots_adjust(hspace=0.4, wspace=0.4)
         self.canvas.draw()
 
     def on_group_selected(self, group_name):
@@ -233,22 +235,11 @@ class AnglesTab:
 
     def on_line_pick(self, event):
         """Handle line pick event."""
-        # Reset previous selection
-        if self.selected_line is not None:
-            self.selected_line.set_linewidth(1)
-
         # Find the picked line
         for marker_idx, (line, idx, label, magnitude_data) in self.angles_plotter.lines.items():
             if event.artist == line:
-                # Highlight the selected line
-                line.set_linewidth(3)
-                self.selected_line = line
-                self.selected_data = (marker_idx, label, magnitude_data)
-                self.update_selected_value()
+                self.parent.highlight_marker(marker_idx, self.plot_type)
                 break
-
-        # Redraw the canvas
-        self.canvas.draw()
 
     def on_button_press(self, event):
         if not event.dblclick:
@@ -307,6 +298,37 @@ class AnglesTab:
     def set_gait_info(self, info_text):
         """Set the gait info text."""
         self.gait_info_label.setText(info_text)
+
+    def clear_highlight(self):
+        """Clear all highlights."""
+        for marker_idx, (line, idx, label, magnitude_data) in self.angles_plotter.lines.items():
+            line.set_linewidth(1)
+        self.selected_marker = None
+        self.canvas.draw()
+
+    def reset_highlight(self, marker_idx):
+        """Reset highlight for a specific marker."""
+        if marker_idx in self.angles_plotter.lines:
+            line, idx, label, magnitude_data = self.angles_plotter.lines[marker_idx]
+            line.set_linewidth(1)
+
+    def set_highlight(self, marker_idx):
+        """Set highlight for a specific marker."""
+        if marker_idx in self.angles_plotter.lines:
+            line, idx, label, magnitude_data = self.angles_plotter.lines[marker_idx]
+            line.set_linewidth(3)
+            self.selected_marker = marker_idx
+
+    def update_selected_value(self, marker_idx):
+        """Update the displayed value for the selected marker at the current frame."""
+        if marker_idx in self.angles_plotter.lines:
+            line, idx, label, magnitude_data = self.angles_plotter.lines[marker_idx]
+            frame = int(self.current_frame)
+            value_text = self.angles_plotter.get_value_at_frame(marker_idx, frame)
+            if value_text:
+                self.value_label.setText(value_text)
+            else:
+                self.value_label.setText(f"{label}: Frame {frame} out of range")
 
     def clear_data(self):
         """Clear the plot data."""

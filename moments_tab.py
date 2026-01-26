@@ -80,8 +80,8 @@ class MomentsDataPlotter:
         return ""
 
 class MomentsTab:
-    def __init__(self, moments_plotter):
-        self.moments_plotter = moments_plotter
+    def __init__(self):
+        self.moments_plotter = MomentsDataPlotter()
 
         # Create tab widget
         self.widget = QWidget()
@@ -117,8 +117,7 @@ class MomentsTab:
         self.group_options = ["All"]
         self.current_frame = 0
         self.max_plots = 4
-        self.selected_moment_line = None
-        self.selected_moment_data = None
+        self.selected_marker = None
 
         # New members for zoom
         self.zoomed_in_group = None
@@ -218,7 +217,9 @@ class MomentsTab:
                     vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
                     self.vlines.append(vline)
 
+        import matplotlib.pyplot as plt
         self.figure.tight_layout()
+        plt.subplots_adjust(hspace=0.4, wspace=0.4)
         self.canvas.draw()
 
     def on_group_selected(self, group_name):

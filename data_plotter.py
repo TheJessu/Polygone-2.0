@@ -44,7 +44,7 @@ class DataPlotter(QWidget):
         self.tabs = {
             'ANGLES': AnglesTab(),
             'FORCES': ForcesTab(),
-            'MOMENTS': MomentsTab(self.moments_plotter),
+            'MOMENTS': MomentsTab(),
             'POWERS': PowersTab()
         }
 
