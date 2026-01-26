@@ -100,7 +100,7 @@ class MomentsTab:
         # Create figure and canvas
         self.figure = Figure(figsize=(8, 6), dpi=100)
         self.canvas = FigureCanvas(self.figure)
-        self.layout.addWidget(self.canvas)
+        self.layout.addWidget(self.canvas, 1)
 
         # Add value label below the canvas
         self.value_label = QLabel("")
@@ -123,6 +123,7 @@ class MomentsTab:
         # New members for zoom
         self.zoomed_in_group = None
         self.ax_to_group = {}
+        self.hovered_ax = None
         self.markers_data = None
         self.marker_types = None
         self.marker_labels = None
@@ -130,6 +131,7 @@ class MomentsTab:
         # Connect pick event
         self.canvas.mpl_connect('pick_event', self.on_moment_line_pick)
         self.canvas.mpl_connect('button_press_event', self.on_button_press)
+        self.canvas.mpl_connect('motion_notify_event', self.on_hover)
 
     def load_data(self, markers_data, marker_types, marker_labels):
         """Load marker data for this tab."""
@@ -255,6 +257,21 @@ class MomentsTab:
 
         if self.markers_data is not None:
             self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots)
+
+    def on_hover(self, event):
+        ax = event.inaxes
+        if ax != self.hovered_ax:
+            if self.hovered_ax is not None:
+                self.hovered_ax.patch.set_edgecolor('none')
+                self.hovered_ax.patch.set_linewidth(0)
+
+            self.hovered_ax = ax
+
+            if self.hovered_ax is not None and self.hovered_ax in self.axes:
+                self.hovered_ax.patch.set_edgecolor('grey')
+                self.hovered_ax.patch.set_linewidth(2)
+
+            self.canvas.draw_idle()
 
 
     def update_selected_moment_value(self):
