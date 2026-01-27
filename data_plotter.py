@@ -28,6 +28,7 @@ class DataPlotter(QWidget):
         self.selected_moment_line = None  # Track the currently selected moment line
         self.selected_power_data = None  # Track the selected power line's data
         self.selected_power_line = None  # Track the currently selected power line
+        self.gait_frame_range = None  # Track the frame range for gait cycles
 
         # Initialize angles data plotter
         self.angles_plotter = AnglesDataPlotter()
@@ -98,7 +99,7 @@ class DataPlotter(QWidget):
 
         # Plot data for each tab
         for plot_type in self.plot_types:
-            self.tabs[plot_type].plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots)
+            self.tabs[plot_type].plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.gait_frame_range)
 
     def on_group_selected(self, plot_type, group_name):
         """Handle group selection change."""
@@ -290,6 +291,14 @@ class DataPlotter(QWidget):
         right_cycle_start = right_cycle_end = -1
         if len(right_strikes) >= 2:
             right_cycle_start, right_cycle_end = right_strikes[0], right_strikes[1]
+
+        # Calculate gait frame range for plotting (from first foot strike to last foot strike)
+        self.gait_frame_range = None
+        all_strikes = left_strikes + right_strikes
+        if len(all_strikes) >= 2:
+            min_start = min(all_strikes)
+            max_end = max(all_strikes)
+            self.gait_frame_range = (int(min_start * 100), int(max_end * 100))  # Convert to frames assuming 100 Hz
 
         # Categorize all events
         left_cycle_events = []

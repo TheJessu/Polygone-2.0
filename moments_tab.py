@@ -8,7 +8,7 @@ class MomentsDataPlotter:
     def __init__(self):
         self.lines = {}  # Store lines for picking
 
-    def plot_moments(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group):
+    def plot_moments(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range=None):
         """Plot moment data - showing magnitude with L/R colors."""
         self.lines = {}
 
@@ -52,6 +52,13 @@ class MomentsDataPlotter:
             z_data = z_data * 1000
             # Compute magnitude of the moment vector
             magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
+
+            # Slice data to gait cycle range if provided
+            if frame_range is not None:
+                start_frame, end_frame = frame_range
+                frame_mask = (frames >= start_frame) & (frames <= end_frame)
+                frames = frames[frame_mask]
+                magnitude_data = magnitude_data[frame_mask]
 
             # Only plot valid data (not NaN or all close to zero)
             valid_mask = ~(np.isnan(magnitude_data) | np.isclose(magnitude_data, 0))
@@ -149,13 +156,21 @@ class MomentsTab:
         self.dropdown.clear()
         self.dropdown.addItems(self.group_options)
 
-    def plot_data(self, markers_data, marker_types, marker_labels, current_frame, max_plots):
+    def plot_data(self, markers_data, marker_types, marker_labels, current_frame, max_plots, frame_range=None):
         """Plot the moments data."""
         self.markers_data = markers_data
         self.marker_types = marker_types
         self.marker_labels = marker_labels
         self.current_frame = current_frame
         self.max_plots = max_plots
+        self.frame_range = frame_range
+
+        # Adjust current_frame for plotting if frame_range is provided
+        plot_current_frame = current_frame
+        if frame_range is not None:
+            start_frame, end_frame = frame_range
+            if not (start_frame <= current_frame <= end_frame):
+                plot_current_frame = None  # Current frame is outside the range
 
         # Clear figure
         self.figure.clear()
@@ -176,9 +191,10 @@ class MomentsTab:
             ax.set_ylabel('Moment (Nmm)')
             ax.set_box_aspect(1)
             self.axes.append(ax)
-            self.moments_plotter.plot_moments(ax, markers_data, marker_labels, marker_types, current_frame, group)
-            vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1)
-            self.vlines.append(vline)
+            self.moments_plotter.plot_moments(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
+            if plot_current_frame is not None:
+                vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1)
+                self.vlines.append(vline)
 
         elif selected_group != "All":
             # Plot only the selected group
@@ -188,9 +204,10 @@ class MomentsTab:
             ax.set_ylabel('Moment (Nmm)')
             ax.set_box_aspect(1)
             self.axes.append(ax)
-            self.moments_plotter.plot_moments(ax, markers_data, marker_labels, marker_types, current_frame, selected_group)
-            vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-            self.vlines.append(vline)
+            self.moments_plotter.plot_moments(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range)
+            if plot_current_frame is not None:
+                vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+                self.vlines.append(vline)
             self.ax_to_group[ax] = selected_group
 
         else:
@@ -211,9 +228,10 @@ class MomentsTab:
                     ax.set_ylabel('Moment (Nmm)')
                     self.axes.append(ax)
                     self.ax_to_group[ax] = group
-                    self.moments_plotter.plot_moments(ax, markers_data, marker_labels, marker_types, current_frame, group)
-                    vline = ax.axvline(x=current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                    self.vlines.append(vline)
+                    self.moments_plotter.plot_moments(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
+                    if plot_current_frame is not None:
+                        vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+                        self.vlines.append(vline)
 
         import matplotlib.pyplot as plt
         self.figure.tight_layout()
@@ -255,7 +273,7 @@ class MomentsTab:
             self.zoomed_in_group = None
 
         if self.markers_data is not None:
-            self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots)
+            self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
 
     def on_hover(self, event):
         ax = event.inaxes
@@ -289,8 +307,23 @@ class MomentsTab:
     def set_current_frame(self, frame_index):
         """Update the current frame indicator."""
         self.current_frame = frame_index
+
+        # Adjust current_frame for plotting if frame_range is provided
+        plot_current_frame = frame_index
+        if self.frame_range is not None:
+            start_frame, end_frame = self.frame_range
+            if start_frame <= frame_index <= end_frame:
+                plot_current_frame = frame_index - start_frame
+            else:
+                plot_current_frame = None  # Current frame is outside the range
+
         for vline in self.vlines:
-            vline.set_xdata([frame_index, frame_index])
+            if plot_current_frame is not None:
+                vline.set_xdata([plot_current_frame, plot_current_frame])
+            else:
+                # Hide the vline if current frame is outside range
+                vline.set_xdata([0, 0])
+                vline.set_visible(False)
         if self.canvas:
             self.canvas.draw_idle()
 
