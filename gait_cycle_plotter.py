@@ -8,7 +8,7 @@ class GaitCyclePlotter:
     def __init__(self):
         self.lines = {}
 
-    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, unit_conversion_factor=1, angle_units='degrees'):
+    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, current_frame=None, unit_conversion_factor=1, angle_units='degrees'):
         """Plot data normalized over gait cycles."""
 
         type_indices = [i for i, t in enumerate(marker_types) if t == plot_type]
@@ -78,4 +78,17 @@ class GaitCyclePlotter:
 
         ax.set_xlabel('Gait Cycle (%)')
         ax.set_ylabel(y_label)
-        ax.legend()
+
+        # Add marker for current frame position in gait cycle
+        if current_frame is not None:
+            # Find which gait cycle the current frame belongs to
+            for side in ['left', 'right']:
+                cycles = gait_cycles.get(side, [])
+                for start_frame, end_frame in cycles:
+                    if start_frame <= current_frame <= end_frame:
+                        # Calculate percentage within the cycle
+                        cycle_length = end_frame - start_frame
+                        if cycle_length > 0:
+                            percentage = ((current_frame - start_frame) / cycle_length) * 100
+                            ax.axvline(x=percentage, color='red', linestyle='--', linewidth=2, label='Current Position')
+                        break

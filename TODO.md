@@ -1,15 +1,9 @@
-# Refactor Tab Files to Reduce Duplication
-
-## Overview
-Centralize common plotting functionality in `data_plotter.py` and simplify tab files to use generic functions.
+# TODO: Remove Legends and Add Gait Cycle Marker
 
 ## Tasks
-- [ ] Create GenericDataPlotter class in data_plotter.py
-- [ ] Implement plot_data method for generic plotting
-- [ ] Implement get_value_at_frame method for value display
-- [ ] Update moments_tab.py to use GenericDataPlotter
-- [ ] Update forces_tab.py to use GenericDataPlotter
-- [ ] Update angles_tab.py to use GenericDataPlotter
-- [ ] Update powers_tab.py to use GenericDataPlotter
-- [ ] Ensure correct units and formatting for each marker type
-- [ ] Test functionality
+- [ ] Remove ax.legend() from gait_cycle_plotter.py
+- [ ] Modify plot_gait_cycle_data to accept current_frame parameter
+- [ ] Add logic to calculate gait cycle percentage for current frame
+- [ ] Add vertical line marker at the calculated percentage
+- [ ] Update calls in angles_tab.py, forces_tab.py, moments_tab.py, powers_tab.py to pass current_frame
+- [ ] Test the changes
