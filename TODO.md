@@ -1,12 +1,15 @@
-# Refactor Plot Configuration for Gait Cycle Normalization
+# Refactor Tab Files to Reduce Duplication
 
-## Objective
-Standardize plot configuration across powers_tab, angles_tab, moments_tab, and forces_tab to use gait_cycle_plotter.py for 0-100% gait cycle timeframe with left/right line overlap.
+## Overview
+Centralize common plotting functionality in `data_plotter.py` and simplify tab files to use generic functions.
 
 ## Tasks
-- [x] Modify powers_tab.py to import and use GaitCyclePlotter instead of its own plot_gait_cycle_data method
-- [x] Add gait cycle plotting to angles_tab.py using GaitCyclePlotter
-- [x] Add gait cycle plotting to moments_tab.py using GaitCyclePlotter
-- [x] Ensure consistent y-labels: Power (W), Angle (degrees), Moment (Nmm), Force (N).
-- [x] Handle unit conversions appropriately (e.g., moments to Nmm)
-- [x] Test the changes to ensure plots display correctly with overlap and 0-100% normalization
+- [ ] Create GenericDataPlotter class in data_plotter.py
+- [ ] Implement plot_data method for generic plotting
+- [ ] Implement get_value_at_frame method for value display
+- [ ] Update moments_tab.py to use GenericDataPlotter
+- [ ] Update forces_tab.py to use GenericDataPlotter
+- [ ] Update angles_tab.py to use GenericDataPlotter
+- [ ] Update powers_tab.py to use GenericDataPlotter
+- [ ] Ensure correct units and formatting for each marker type
+- [ ] Test functionality

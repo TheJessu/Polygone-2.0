@@ -5,6 +5,7 @@ from moments_tab import MomentsTab
 from powers_tab import PowersTab
 from gait_cycle_plotter import GaitCyclePlotter
 import math
+import numpy as np
 
 class DataPlotter(QWidget):
     def __init__(self, parent=None):

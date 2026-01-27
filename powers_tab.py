@@ -4,6 +4,7 @@ from matplotlib.figure import Figure
 import math
 import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
+from generic_plotter import GenericDataPlotter
 
 class PowersDataPlotter:
     def __init__(self):
@@ -202,7 +203,7 @@ class PowersTab:
                 ax.set_title(f'POWERS Data - {group} (Gait Cycle Normalized)')
                 ax.set_ylabel('Value')
                 self.axes.append(ax)
-                self.powers_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles)
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)')
             elif selected_group != "All":
                 ax = self.figure.add_subplot(111)
                 ax.set_title(f'POWERS Data - {selected_group} (Gait Cycle Normalized)')

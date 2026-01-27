@@ -4,107 +4,11 @@ from matplotlib.figure import Figure
 import math
 import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
-
-class AnglesDataPlotter:
-    def __init__(self):
-        self.lines = {}  # Store lines for picking
-
-    def plot_angles(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, angle_units, frame_range=None):
-        """Plot angle data - showing magnitude with L/R colors."""
-        self.lines = {}
-
-        # Get ANGLES markers
-        type_indices = [i for i, t in enumerate(marker_types) if t == 'ANGLES']
-
-        # For ANGLES, sort markers with R before L
-        type_indices.sort(key=lambda idx: (0 if marker_labels[idx].startswith('R') else 1, marker_labels[idx]))
-
-        # Filter by selected group
-        if selected_group != "All":
-            filtered_indices = []
-            for idx in type_indices:
-                if idx < len(marker_labels) and marker_labels[idx]:
-                    label = marker_labels[idx]
-                    # Check if this marker belongs to the selected group
-                    if label.startswith('L') or label.startswith('R'):
-                        group = label[1:-len('ANGLES')].lower().capitalize()
-                        if group == selected_group:
-                            filtered_indices.append(idx)
-                    else:
-                        group = label[:-len('ANGLES')].lower().capitalize() if label.endswith('ANGLES') else label.lower().capitalize()
-                        if group == selected_group:
-                            filtered_indices.append(idx)
-            type_indices = filtered_indices
-
-        # Plot data for each marker
-        for marker_idx in type_indices:
-            if marker_idx >= markers_data.shape[1]:
-                continue
-
-            # Get label
-            label = marker_labels[marker_idx] if marker_idx < len(marker_labels) and marker_labels[marker_idx] else f'Marker {marker_idx+1}'
-
-            # Plot x, y, z values over time
-            frames = np.arange(markers_data.shape[0])
-            x_data = markers_data[:, marker_idx, 0]
-            y_data = markers_data[:, marker_idx, 1]
-            z_data = markers_data[:, marker_idx, 2]
-
-            # Convert angles to degrees if necessary
-            if angle_units.lower() == 'radians':
-                x_data = np.degrees(x_data)
-                y_data = np.degrees(y_data)
-                z_data = np.degrees(z_data)
-
-            # Compute magnitude of the angle vector
-            magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
-
-            # Slice data to gait cycle range if provided
-            if frame_range is not None:
-                start_frame, end_frame = frame_range
-                frame_mask = (frames >= start_frame) & (frames <= end_frame)
-                sliced_frames = frames[frame_mask]
-                sliced_magnitude = magnitude_data[frame_mask]
-
-                # Use relative x-axis starting from 0, with tick labels as frame numbers
-                x_values = np.arange(len(sliced_frames))
-                valid_mask = ~(np.isnan(sliced_magnitude) | np.isclose(sliced_magnitude, 0))
-                if np.any(valid_mask):
-                    # Set color: red for left (L), green for right (R)
-                    color = 'red' if label.startswith('L') else 'green'
-                    line, = ax.plot(x_values[valid_mask], sliced_magnitude[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
-                    self.lines[marker_idx] = (line, marker_idx, label, magnitude_data)  # Store full magnitude_data
-                    # Set tick labels to frame numbers
-                    ax.set_xticks(x_values)
-                    ax.set_xticklabels(sliced_frames.astype(int))
-            else:
-                # No slicing, plot all data
-                valid_mask = ~(np.isnan(magnitude_data) | np.isclose(magnitude_data, 0))
-                if np.any(valid_mask):
-                    # Set color: red for left (L), green for right (R)
-                    color = 'red' if label.startswith('L') else 'green'
-                    line, = ax.plot(frames[valid_mask], magnitude_data[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
-                    self.lines[marker_idx] = (line, marker_idx, label, magnitude_data)
-
-
-
-        return self.lines
-
-    def get_value_at_frame(self, marker_idx, frame):
-        """Get the angle magnitude value at a specific frame for display."""
-        if marker_idx in self.lines:
-            line, idx, label, magnitude_data = self.lines[marker_idx]
-            if frame < len(magnitude_data):
-                value = magnitude_data[frame]
-                if not np.isnan(value):
-                    return f"{label}: {value:.2f}° at frame {frame}"
-                else:
-                    return f"{label}: No data at frame {frame}"
-        return ""
+from generic_plotter import GenericDataPlotter
 
 class AnglesTab:
     def __init__(self):
-        self.angles_plotter = AnglesDataPlotter()
+        self.angles_plotter = GenericDataPlotter('ANGLES')
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
         self.frame_range = None
@@ -247,7 +151,7 @@ class AnglesTab:
             ax.set_ylabel('Angle (degrees)')
             ax.set_box_aspect(1)
             self.axes.append(ax)
-            self.angles_plotter.plot_angles(ax, markers_data, marker_labels, marker_types, current_frame, group, 'degrees', frame_range)
+            self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees')
             if plot_current_frame is not None:
                 vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1)
                 self.vlines.append(vline)
@@ -260,7 +164,7 @@ class AnglesTab:
             ax.set_ylabel('Angle (degrees)')
             ax.set_box_aspect(1)
             self.axes.append(ax)
-            self.angles_plotter.plot_angles(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, 'degrees', frame_range)
+            self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range)
             if plot_current_frame is not None:
                 vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
                 self.vlines.append(vline)
@@ -284,7 +188,7 @@ class AnglesTab:
                     ax.set_ylabel('Angle (degrees)')
                     self.axes.append(ax)
                     self.ax_to_group[ax] = group
-                    self.angles_plotter.plot_angles(ax, markers_data, marker_labels, marker_types, current_frame, group, 'degrees', frame_range)
+                    self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees')
                     if plot_current_frame is not None:
                         vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
                         self.vlines.append(vline)
