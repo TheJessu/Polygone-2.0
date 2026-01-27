@@ -3,6 +3,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import math
 import numpy as np
+from gait_cycle_plotter import GaitCyclePlotter
 
 class AnglesDataPlotter:
     def __init__(self):
@@ -104,6 +105,9 @@ class AnglesDataPlotter:
 class AnglesTab:
     def __init__(self):
         self.angles_plotter = AnglesDataPlotter()
+        self.gait_cycle_plotter = GaitCyclePlotter()
+        self.gait_cycles = None
+        self.frame_range = None
 
         # Create tab widget
         self.widget = QWidget()
@@ -155,6 +159,9 @@ class AnglesTab:
         self.canvas.mpl_connect('button_press_event', self.on_button_press)
         self.canvas.mpl_connect('motion_notify_event', self.on_hover)
 
+    def set_gait_cycles(self, gait_cycles):
+        self.gait_cycles = gait_cycles
+
     def load_data(self, markers_data, marker_types, marker_labels):
         """Load marker data for this tab."""
         # Extract group names from labels
@@ -201,7 +208,38 @@ class AnglesTab:
 
         selected_group = self.dropdown.currentText()
 
-        if self.zoomed_in_group:
+        if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
+            if self.zoomed_in_group:
+                ax = self.figure.add_subplot(111)
+                group = self.zoomed_in_group
+                ax.set_title(f'ANGLES Data - {group} (Gait Cycle Normalized)')
+                ax.set_ylabel('Angle (degrees)')
+                self.axes.append(ax)
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)')
+            elif selected_group != "All":
+                ax = self.figure.add_subplot(111)
+                ax.set_title(f'ANGLES Data - {selected_group} (Gait Cycle Normalized)')
+                ax.set_ylabel('Angle (degrees)')
+                self.axes.append(ax)
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_group, self.gait_cycles, 'ANGLES', 'Angle (degrees)')
+                self.ax_to_group[ax] = selected_group
+            else:
+                groups = [g for g in self.group_options if g != "All"]
+                num_plots = min(max_plots, len(groups))
+                if num_plots > 0:
+                    cols = int(math.ceil(math.sqrt(num_plots)))
+                    rows = int(math.ceil(num_plots / float(cols)))
+                    for i in range(num_plots):
+                        group = groups[i]
+                        ax = self.figure.add_subplot(rows, cols, i + 1)
+                        ax.set_box_aspect(1)
+                        ax.set_title(f'ANGLES Data - {group} (Gait Cycle Normalized)')
+                        ax.set_ylabel('Angle (degrees)')
+                        self.axes.append(ax)
+                        self.ax_to_group[ax] = group
+                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)')
+
+        elif self.zoomed_in_group:
             ax = self.figure.add_subplot(111)
             group = self.zoomed_in_group
             ax.set_title(f'ANGLES Data - {group}')

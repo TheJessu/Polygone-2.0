@@ -3,6 +3,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import math
 import numpy as np
+from gait_cycle_plotter import GaitCyclePlotter
 
 class PowersDataPlotter:
     def __init__(self):
@@ -80,71 +81,7 @@ class PowersDataPlotter:
 
         return self.lines
 
-    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles):
-        """Plot power data normalized over gait cycles."""
-        self.lines = {}
 
-        # Get POWERS markers for the selected group
-        type_indices = [i for i, t in enumerate(marker_types) if t == 'POWERS']
-        if selected_group != "All":
-            filtered_indices = []
-            for idx in type_indices:
-                if idx < len(marker_labels) and marker_labels[idx]:
-                    label = marker_labels[idx]
-                    if label.startswith('L') or label.startswith('R'):
-                        group = label[1:-len('POWERS')].lower().capitalize()
-                        if group == selected_group:
-                            filtered_indices.append(idx)
-                    else:
-                        group = label[:-len('POWERS')].lower().capitalize() if label.endswith('POWERS') else label.lower().capitalize()
-                        if group == selected_group:
-                            filtered_indices.append(idx)
-            type_indices = filtered_indices
-
-        all_left_cycles_norm = []
-        all_right_cycles_norm = []
-
-        for marker_idx in type_indices:
-            if marker_idx >= markers_data.shape[1]:
-                continue
-
-            label = marker_labels[marker_idx] if marker_idx < len(marker_labels) and marker_labels[marker_idx] else f'Marker {marker_idx+1}'
-            x_data = markers_data[:, marker_idx, 0]
-            y_data = markers_data[:, marker_idx, 1]
-            z_data = markers_data[:, marker_idx, 2]
-            magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
-
-            side = 'left' if label.startswith('L') else 'right'
-            cycles = gait_cycles.get(side, [])
-
-            for start_frame, end_frame in cycles:
-                cycle_data = magnitude_data[start_frame:end_frame]
-                
-                # Normalize time to 0-100
-                x_norm = np.linspace(0, 100, len(cycle_data))
-                
-                # Store normalized data for mean/std calculation
-                if side == 'left':
-                    all_left_cycles_norm.append(np.interp(np.linspace(0, 100, 101), x_norm, cycle_data))
-                else:
-                    all_right_cycles_norm.append(np.interp(np.linspace(0, 100, 101), x_norm, cycle_data))
-
-        x_axis_norm = np.linspace(0, 100, 101)
-        if all_left_cycles_norm:
-            mean_left = np.mean(all_left_cycles_norm, axis=0)
-            std_left = np.std(all_left_cycles_norm, axis=0)
-            ax.plot(x_axis_norm, mean_left, color='red', linewidth=2, label='Mean Left')
-            ax.fill_between(x_axis_norm, mean_left - std_left, mean_left + std_left, color='red', alpha=0.2)
-
-        if all_right_cycles_norm:
-            mean_right = np.mean(all_right_cycles_norm, axis=0)
-            std_right = np.std(all_right_cycles_norm, axis=0)
-            ax.plot(x_axis_norm, mean_right, color='green', linewidth=2, label='Mean Right')
-            ax.fill_between(x_axis_norm, mean_right - std_right, mean_right + std_right, color='green', alpha=0.2)
-        
-        ax.set_xlabel('Gait Cycle (%)')
-        ax.legend()
-        return self.lines
 
 
     def get_value_at_frame(self, marker_idx, frame):
@@ -162,6 +99,7 @@ class PowersDataPlotter:
 class PowersTab:
     def __init__(self):
         self.powers_plotter = PowersDataPlotter()
+        self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
         self.frame_range = None
 
@@ -200,6 +138,7 @@ class PowersTab:
         self.current_frame = 0
         self.max_plots = 4
         self.selected_marker = None
+        self.selected_power_data = None
 
         # New members for zoom
         self.zoomed_in_group = None
@@ -237,6 +176,8 @@ class PowersTab:
 
     def plot_data(self, markers_data, marker_types, marker_labels, current_frame, max_plots, frame_range=None):
         """Plot the powers data."""
+        if markers_data is None or marker_types is None or marker_labels is None:
+            return
         self.markers_data = markers_data
         self.marker_types = marker_types
         self.marker_labels = marker_labels
@@ -265,9 +206,9 @@ class PowersTab:
             elif selected_group != "All":
                 ax = self.figure.add_subplot(111)
                 ax.set_title(f'POWERS Data - {selected_group} (Gait Cycle Normalized)')
-                ax.set_ylabel('Value')
+                ax.set_ylabel('Power (W)')
                 self.axes.append(ax)
-                self.powers_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_group, self.gait_cycles)
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_group, self.gait_cycles, 'POWERS', 'Power (W)')
                 self.ax_to_group[ax] = selected_group
             else:
                 groups = [g for g in self.group_options if g != "All"]
@@ -280,10 +221,10 @@ class PowersTab:
                         ax = self.figure.add_subplot(rows, cols, i + 1)
                         ax.set_box_aspect(1)
                         ax.set_title(f'POWERS Data - {group} (Gait Cycle Normalized)')
-                        ax.set_ylabel('Value')
+                        ax.set_ylabel('Power (W)')
                         self.axes.append(ax)
                         self.ax_to_group[ax] = group
-                        self.powers_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles)
+                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)')
 
         else: # Original plotting logic
             plot_current_frame = current_frame

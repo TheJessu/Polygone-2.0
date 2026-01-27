@@ -8,9 +8,9 @@ class GaitCyclePlotter:
     def __init__(self):
         self.lines = {}
 
-    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, unit_conversion_factor=1):
+    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, unit_conversion_factor=1, angle_units='degrees'):
         """Plot data normalized over gait cycles."""
-        
+
         type_indices = [i for i, t in enumerate(marker_types) if t == plot_type]
         if selected_group != "All":
             filtered_indices = []
@@ -39,6 +39,13 @@ class GaitCyclePlotter:
             x_data = markers_data[:, marker_idx, 0] * unit_conversion_factor
             y_data = markers_data[:, marker_idx, 1] * unit_conversion_factor
             z_data = markers_data[:, marker_idx, 2] * unit_conversion_factor
+
+            # Convert angles to degrees if necessary
+            if plot_type == 'ANGLES' and angle_units.lower() == 'radians':
+                x_data = np.degrees(x_data)
+                y_data = np.degrees(y_data)
+                z_data = np.degrees(z_data)
+
             magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
 
             side = 'left' if label.startswith('L') else 'right'
@@ -46,10 +53,10 @@ class GaitCyclePlotter:
 
             for start_frame, end_frame in cycles:
                 cycle_data = magnitude_data[start_frame:end_frame]
-                
+
                 # Normalize time to 0-100
                 x_norm = np.linspace(0, 100, len(cycle_data))
-                
+
                 # Store normalized data for mean/std calculation
                 if side == 'left':
                     all_left_cycles_norm.append(np.interp(np.linspace(0, 100, 101), x_norm, cycle_data))
@@ -68,7 +75,7 @@ class GaitCyclePlotter:
             std_right = np.std(all_right_cycles_norm, axis=0)
             ax.plot(x_axis_norm, mean_right, color='green', linewidth=2, label='Mean Right')
             ax.fill_between(x_axis_norm, mean_right - std_right, mean_right + std_right, color='green', alpha=0.2)
-        
+
         ax.set_xlabel('Gait Cycle (%)')
         ax.set_ylabel(y_label)
         ax.legend()

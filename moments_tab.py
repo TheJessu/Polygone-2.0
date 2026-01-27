@@ -3,6 +3,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import math
 import numpy as np
+from gait_cycle_plotter import GaitCyclePlotter
 
 class MomentsDataPlotter:
     def __init__(self):
@@ -87,6 +88,8 @@ class MomentsDataPlotter:
 class MomentsTab:
     def __init__(self):
         self.moments_plotter = MomentsDataPlotter()
+        self.gait_cycles = None
+        self.frame_range = None
 
         # Create tab widget
         self.widget = QWidget()
@@ -123,6 +126,7 @@ class MomentsTab:
         self.current_frame = 0
         self.max_plots = 4
         self.selected_marker = None
+        self.selected_moment_data = None
 
         # New members for zoom
         self.zoomed_in_group = None
@@ -183,7 +187,38 @@ class MomentsTab:
 
         selected_group = self.dropdown.currentText()
 
-        if self.zoomed_in_group:
+        if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
+            if self.zoomed_in_group:
+                ax = self.figure.add_subplot(111)
+                group = self.zoomed_in_group
+                ax.set_title(f'MOMENTS Data - {group} (Gait Cycle Normalized)')
+                ax.set_ylabel('Moment (Nmm)')
+                self.axes.append(ax)
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', 1000)
+            elif selected_group != "All":
+                ax = self.figure.add_subplot(111)
+                ax.set_title(f'MOMENTS Data - {selected_group} (Gait Cycle Normalized)')
+                ax.set_ylabel('Moment (Nmm)')
+                self.axes.append(ax)
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', 1000)
+                self.ax_to_group[ax] = selected_group
+            else:
+                groups = [g for g in self.group_options if g != "All"]
+                num_plots = min(max_plots, len(groups))
+                if num_plots > 0:
+                    cols = int(math.ceil(math.sqrt(num_plots)))
+                    rows = int(math.ceil(num_plots / float(cols)))
+                    for i in range(num_plots):
+                        group = groups[i]
+                        ax = self.figure.add_subplot(rows, cols, i + 1)
+                        ax.set_box_aspect(1)
+                        ax.set_title(f'MOMENTS Data - {group} (Gait Cycle Normalized)')
+                        ax.set_ylabel('Moment (Nmm)')
+                        self.axes.append(ax)
+                        self.ax_to_group[ax] = group
+                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', 1000)
+
+        elif self.zoomed_in_group:
             ax = self.figure.add_subplot(111)
             group = self.zoomed_in_group
             ax.set_title(f'MOMENTS Data - {group}')
@@ -330,6 +365,9 @@ class MomentsTab:
         # Update selected value display if a line is selected
         if self.selected_moment_data is not None:
             self.update_selected_moment_value()
+
+    def set_gait_cycles(self, gait_cycles):
+        self.gait_cycles = gait_cycles
 
     def set_gait_info(self, info_text):
         """Set the gait info text."""

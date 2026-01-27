@@ -10,6 +10,7 @@ class ForcesTab:
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.lines = {}  # Store lines for picking
         self.gait_cycles = None
+        self.frame_range = None
 
 
         # Create tab widget

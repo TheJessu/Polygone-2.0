@@ -57,32 +57,7 @@ class DataPlotter(QWidget):
 
         for plot_type, config in self.plot_types_config.items():
             tab = config['tab']
-            tab.figure.clear()
-            
-            selected_group = tab.dropdown.currentText()
-
-            if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
-                groups = [g for g in tab.group_options if g != "All"]
-                if selected_group != "All":
-                    groups = [selected_group]
-                
-                num_plots = min(self.max_plots, len(groups))
-                if num_plots > 0:
-                    cols = int(math.ceil(math.sqrt(num_plots)))
-                    rows = int(math.ceil(num_plots / float(cols)))
-                    for i, group in enumerate(groups[:num_plots]):
-                        ax = tab.figure.add_subplot(rows, cols, i + 1)
-                        ax.set_title(f'{plot_type} Data - {group} (Gait Cycle Normalized)')
-                        self.gait_cycle_plotter.plot_gait_cycle_data(
-                            ax, self.markers_data, self.marker_labels, self.marker_types,
-                            group, self.gait_cycles, plot_type, config['y_label'], config['unit_conversion']
-                        )
-            else:
-                # Original plotting logic can be added here if needed
-                pass
-
-            tab.figure.tight_layout()
-            tab.canvas.draw()
+            tab.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots)
 
     def on_max_plots_changed(self, value):
         self.max_plots = value
