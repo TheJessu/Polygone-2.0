@@ -42,7 +42,7 @@ class DataPlotter(QWidget):
         self.layout.addLayout(plots_layout)
 
         for plot_type, config in self.plot_types_config.items():
-            self.tab_widget.addTab(config['tab'].widget, plot_type)
+            self.tab_widget.addTab(config['tab'], plot_type)
 
     def load_data(self, markers_data, marker_types, marker_labels, angle_units='degrees'):
         self.markers_data = markers_data

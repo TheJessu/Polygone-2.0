@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import math
@@ -6,16 +6,27 @@ import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
 from generic_plotter import GenericDataPlotter
 
-class MomentsTab:
+class PatchedFigureCanvas(FigureCanvas):
+    def resizeEvent(self, event):
+        try:
+            super().resizeEvent(event)
+        except ValueError as e:
+            if "figure size must be positive finite" in str(e):
+                # Skip the resize if it would cause negative size
+                pass
+            else:
+                raise
+
+class MomentsTab(QWidget):
     def __init__(self):
+        super().__init__()
         self.moments_plotter = GenericDataPlotter('MOMENTS')
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
         self.frame_range = None
 
         # Create tab widget
-        self.widget = QWidget()
-        self.layout = QVBoxLayout(self.widget)
+        self.layout = QVBoxLayout(self)
 
         # Add dropdown for group selection
         dropdown_layout = QHBoxLayout()
@@ -27,9 +38,13 @@ class MomentsTab:
         dropdown_layout.addStretch()
         self.layout.addLayout(dropdown_layout)
 
+        # Add buttons layout for group visibility
+        self.buttons_layout = QVBoxLayout()
+        self.layout.addLayout(self.buttons_layout)
+
         # Create figure and canvas
         self.figure = Figure(figsize=(8, 6), dpi=100)
-        self.canvas = FigureCanvas(self.figure)
+        self.canvas = PatchedFigureCanvas(self.figure)
         self.layout.addWidget(self.canvas, 1)
 
         # Add value label below the canvas
@@ -50,6 +65,10 @@ class MomentsTab:
         self.selected_marker = None
         self.selected_moment_data = None
 
+        # Group visibility controls
+        self.group_visibility = {}
+        self.group_buttons = {}
+
         # New members for zoom
         self.zoomed_in_group = None
         self.ax_to_group = {}
@@ -62,6 +81,40 @@ class MomentsTab:
         self.canvas.mpl_connect('pick_event', self.on_moment_line_pick)
         self.canvas.mpl_connect('button_press_event', self.on_button_press)
         self.canvas.mpl_connect('motion_notify_event', self.on_hover)
+
+    def resizeEvent(self, event):
+        """Handle resize event to rearrange buttons."""
+        super().resizeEvent(event)
+        self.arrange_buttons()
+
+    def arrange_buttons(self):
+        """Arrange buttons in rows based on widget width."""
+        if not self.group_buttons:
+            return
+
+        # Clear current layout
+        for i in reversed(range(self.buttons_layout.count())):
+            widget = self.buttons_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        # Calculate number of buttons per row
+        button_width = 60  # Smaller button width
+        spacing = 5
+        available_width = self.width() - 20  # Account for margins
+        buttons_per_row = max(1, available_width // (button_width + spacing))
+
+        # Create rows
+        button_list = list(self.group_buttons.values())
+        for i in range(0, len(button_list), buttons_per_row):
+            row_layout = QHBoxLayout()
+            for j in range(buttons_per_row):
+                if i + j < len(button_list):
+                    button = button_list[i + j]
+                    button.setFixedSize(button_width, 25)  # Smaller size
+                    row_layout.addWidget(button)
+            row_layout.addStretch()
+            self.buttons_layout.addLayout(row_layout)
 
     def load_data(self, markers_data, marker_types, marker_labels):
         """Load marker data for this tab."""
@@ -81,6 +134,24 @@ class MomentsTab:
         self.group_options = ["All"] + sorted(list(groups))
         self.dropdown.clear()
         self.dropdown.addItems(self.group_options)
+
+        # Create visibility buttons for each group
+        # Clear existing buttons
+        for button in self.group_buttons.values():
+            button.setParent(None)
+        self.group_buttons.clear()
+        self.group_visibility.clear()
+
+        for group in sorted(list(groups)):
+            button = QPushButton(group)
+            button.setCheckable(True)
+            button.setChecked(True)  # Default to visible
+            button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
+            self.group_buttons[group] = button
+            self.group_visibility[group] = True
+            self.update_button_style(button, True)
+
+        self.arrange_buttons()
 
     def plot_data(self, markers_data, marker_types, marker_labels, current_frame, max_plots, frame_range=None):
         """Plot the moments data."""
@@ -125,7 +196,7 @@ class MomentsTab:
                 self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', 1000)
                 self.ax_to_group[ax] = selected_group
             else:
-                groups = [g for g in self.group_options if g != "All"]
+                groups = [g for g in self.group_options if g != "All" and self.group_visibility.get(g, True)]
                 num_plots = min(max_plots, len(groups))
                 if num_plots > 0:
                     cols = int(math.ceil(math.sqrt(num_plots)))
@@ -169,7 +240,7 @@ class MomentsTab:
 
         else:
             # Plot multiple groups based on max_plots
-            groups = [g for g in self.group_options if g != "All"]
+            groups = [g for g in self.group_options if g != "All" and self.group_visibility.get(g, True)]
             num_plots = min(max_plots, len(groups))
 
             if num_plots > 0:
@@ -294,6 +365,23 @@ class MomentsTab:
     def set_gait_info(self, info_text):
         """Set the gait info text."""
         self.gait_info_label.setText(info_text)
+
+    def toggle_group_visibility(self, group):
+        """Toggle the visibility of a group."""
+        if group in self.group_visibility:
+            self.group_visibility[group] = not self.group_visibility[group]
+            button = self.group_buttons[group]
+            button.setChecked(self.group_visibility[group])
+            self.update_button_style(button, self.group_visibility[group])
+            if self.markers_data is not None:
+                self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
+
+    def update_button_style(self, button, visible):
+        """Update the button style based on visibility."""
+        if visible:
+            button.setStyleSheet("QPushButton { background-color: white; color: black; }")
+        else:
+            button.setStyleSheet("QPushButton { background-color: grey; color: white; }")
 
     def clear_data(self):
         """Clear the plot data."""
