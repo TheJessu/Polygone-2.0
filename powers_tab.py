@@ -80,6 +80,73 @@ class PowersDataPlotter:
 
         return self.lines
 
+    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles):
+        """Plot power data normalized over gait cycles."""
+        self.lines = {}
+
+        # Get POWERS markers for the selected group
+        type_indices = [i for i, t in enumerate(marker_types) if t == 'POWERS']
+        if selected_group != "All":
+            filtered_indices = []
+            for idx in type_indices:
+                if idx < len(marker_labels) and marker_labels[idx]:
+                    label = marker_labels[idx]
+                    if label.startswith('L') or label.startswith('R'):
+                        group = label[1:-len('POWERS')].lower().capitalize()
+                        if group == selected_group:
+                            filtered_indices.append(idx)
+                    else:
+                        group = label[:-len('POWERS')].lower().capitalize() if label.endswith('POWERS') else label.lower().capitalize()
+                        if group == selected_group:
+                            filtered_indices.append(idx)
+            type_indices = filtered_indices
+
+        all_left_cycles_norm = []
+        all_right_cycles_norm = []
+
+        for marker_idx in type_indices:
+            if marker_idx >= markers_data.shape[1]:
+                continue
+
+            label = marker_labels[marker_idx] if marker_idx < len(marker_labels) and marker_labels[marker_idx] else f'Marker {marker_idx+1}'
+            x_data = markers_data[:, marker_idx, 0]
+            y_data = markers_data[:, marker_idx, 1]
+            z_data = markers_data[:, marker_idx, 2]
+            magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
+
+            side = 'left' if label.startswith('L') else 'right'
+            cycles = gait_cycles.get(side, [])
+
+            for start_frame, end_frame in cycles:
+                cycle_data = magnitude_data[start_frame:end_frame]
+                
+                # Normalize time to 0-100
+                x_norm = np.linspace(0, 100, len(cycle_data))
+                
+                # Store normalized data for mean/std calculation
+                if side == 'left':
+                    all_left_cycles_norm.append(np.interp(np.linspace(0, 100, 101), x_norm, cycle_data))
+                else:
+                    all_right_cycles_norm.append(np.interp(np.linspace(0, 100, 101), x_norm, cycle_data))
+
+        x_axis_norm = np.linspace(0, 100, 101)
+        if all_left_cycles_norm:
+            mean_left = np.mean(all_left_cycles_norm, axis=0)
+            std_left = np.std(all_left_cycles_norm, axis=0)
+            ax.plot(x_axis_norm, mean_left, color='red', linewidth=2, label='Mean Left')
+            ax.fill_between(x_axis_norm, mean_left - std_left, mean_left + std_left, color='red', alpha=0.2)
+
+        if all_right_cycles_norm:
+            mean_right = np.mean(all_right_cycles_norm, axis=0)
+            std_right = np.std(all_right_cycles_norm, axis=0)
+            ax.plot(x_axis_norm, mean_right, color='green', linewidth=2, label='Mean Right')
+            ax.fill_between(x_axis_norm, mean_right - std_right, mean_right + std_right, color='green', alpha=0.2)
+        
+        ax.set_xlabel('Gait Cycle (%)')
+        ax.legend()
+        return self.lines
+
+
     def get_value_at_frame(self, marker_idx, frame):
         """Get the power magnitude value at a specific frame for display."""
         if marker_idx in self.lines:
@@ -95,6 +162,8 @@ class PowersDataPlotter:
 class PowersTab:
     def __init__(self):
         self.powers_plotter = PowersDataPlotter()
+        self.gait_cycles = None
+        self.frame_range = None
 
         # Create tab widget
         self.widget = QWidget()
@@ -144,6 +213,9 @@ class PowersTab:
         self.canvas.mpl_connect('pick_event', self.on_power_line_pick)
         self.canvas.mpl_connect('button_press_event', self.on_button_press)
 
+    def set_gait_cycles(self, gait_cycles):
+        self.gait_cycles = gait_cycles
+
     def load_data(self, markers_data, marker_types, marker_labels):
         """Load marker data for this tab."""
         # Extract group names from labels
@@ -172,16 +244,6 @@ class PowersTab:
         self.max_plots = max_plots
         self.frame_range = frame_range
 
-        # Adjust current_frame for plotting if frame_range is provided
-        plot_current_frame = current_frame
-        if frame_range is not None:
-            start_frame, end_frame = frame_range
-            if start_frame <= current_frame <= end_frame:
-                plot_current_frame = current_frame - start_frame
-            else:
-                plot_current_frame = None  # Current frame is outside the range
-
-        # Clear figure
         self.figure.clear()
         self.axes = []
         self.vlines = []
@@ -192,55 +254,93 @@ class PowersTab:
 
         selected_group = self.dropdown.currentText()
 
-        if self.zoomed_in_group:
-            ax = self.figure.add_subplot(111)
-            group = self.zoomed_in_group
-            ax.set_title(f'POWERS Data - {group}')
-            ax.set_xlabel('Frame')
-            ax.set_ylabel('Value')
-            ax.set_box_aspect(1)
-            self.axes.append(ax)
-            self.powers_plotter.plot_powers(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
-            if plot_current_frame is not None:
-                vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1)
-                self.vlines.append(vline)
+        if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
+            if self.zoomed_in_group:
+                ax = self.figure.add_subplot(111)
+                group = self.zoomed_in_group
+                ax.set_title(f'POWERS Data - {group} (Gait Cycle Normalized)')
+                ax.set_ylabel('Value')
+                self.axes.append(ax)
+                self.powers_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles)
+            elif selected_group != "All":
+                ax = self.figure.add_subplot(111)
+                ax.set_title(f'POWERS Data - {selected_group} (Gait Cycle Normalized)')
+                ax.set_ylabel('Value')
+                self.axes.append(ax)
+                self.powers_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_group, self.gait_cycles)
+                self.ax_to_group[ax] = selected_group
+            else:
+                groups = [g for g in self.group_options if g != "All"]
+                num_plots = min(max_plots, len(groups))
+                if num_plots > 0:
+                    cols = int(math.ceil(math.sqrt(num_plots)))
+                    rows = int(math.ceil(num_plots / float(cols)))
+                    for i in range(num_plots):
+                        group = groups[i]
+                        ax = self.figure.add_subplot(rows, cols, i + 1)
+                        ax.set_box_aspect(1)
+                        ax.set_title(f'POWERS Data - {group} (Gait Cycle Normalized)')
+                        ax.set_ylabel('Value')
+                        self.axes.append(ax)
+                        self.ax_to_group[ax] = group
+                        self.powers_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles)
 
-        elif selected_group != "All":
-            # Plot only the selected group
-            ax = self.figure.add_subplot(111)
-            ax.set_title(f'POWERS Data - {selected_group}')
-            ax.set_xlabel('Frame')
-            ax.set_ylabel('Value')
-            ax.set_box_aspect(1)
-            self.axes.append(ax)
-            self.powers_plotter.plot_powers(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range)
-            if plot_current_frame is not None:
-                vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                self.vlines.append(vline)
-            self.ax_to_group[ax] = selected_group
+        else: # Original plotting logic
+            plot_current_frame = current_frame
+            if frame_range is not None:
+                start_frame, end_frame = frame_range
+                if start_frame <= current_frame <= end_frame:
+                    plot_current_frame = current_frame - start_frame
+                else:
+                    plot_current_frame = None
 
-        else:
-            # Plot multiple groups based on max_plots
-            groups = [g for g in self.group_options if g != "All"]
-            num_plots = min(max_plots, len(groups))
+            if self.zoomed_in_group:
+                ax = self.figure.add_subplot(111)
+                group = self.zoomed_in_group
+                ax.set_title(f'POWERS Data - {group}')
+                ax.set_xlabel('Frame')
+                ax.set_ylabel('Value')
+                ax.set_box_aspect(1)
+                self.axes.append(ax)
+                self.powers_plotter.plot_powers(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
+                if plot_current_frame is not None:
+                    vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1)
+                    self.vlines.append(vline)
 
-            if num_plots > 0:
-                cols = int(math.ceil(math.sqrt(num_plots)))
-                rows = int(math.ceil(num_plots / float(cols)))
+            elif selected_group != "All":
+                ax = self.figure.add_subplot(111)
+                ax.set_title(f'POWERS Data - {selected_group}')
+                ax.set_xlabel('Frame')
+                ax.set_ylabel('Value')
+                ax.set_box_aspect(1)
+                self.axes.append(ax)
+                self.powers_plotter.plot_powers(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range)
+                if plot_current_frame is not None:
+                    vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+                    self.vlines.append(vline)
+                self.ax_to_group[ax] = selected_group
 
-                for i in range(num_plots):
-                    group = groups[i]
-                    ax = self.figure.add_subplot(rows, cols, i + 1)
-                    ax.set_box_aspect(1)
-                    ax.set_title(f'POWERS Data - {group}')
-                    ax.set_xlabel('Frame')
-                    ax.set_ylabel('Value')
-                    self.axes.append(ax)
-                    self.ax_to_group[ax] = group
-                    self.powers_plotter.plot_powers(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
-                    if plot_current_frame is not None:
-                        vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                        self.vlines.append(vline)
+            else:
+                groups = [g for g in self.group_options if g != "All"]
+                num_plots = min(max_plots, len(groups))
+
+                if num_plots > 0:
+                    cols = int(math.ceil(math.sqrt(num_plots)))
+                    rows = int(math.ceil(num_plots / float(cols)))
+
+                    for i in range(num_plots):
+                        group = groups[i]
+                        ax = self.figure.add_subplot(rows, cols, i + 1)
+                        ax.set_box_aspect(1)
+                        ax.set_title(f'POWERS Data - {group}')
+                        ax.set_xlabel('Frame')
+                        ax.set_ylabel('Value')
+                        self.axes.append(ax)
+                        self.ax_to_group[ax] = group
+                        self.powers_plotter.plot_powers(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
+                        if plot_current_frame is not None:
+                            vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+                            self.vlines.append(vline)
 
         import matplotlib.pyplot as plt
         self.figure.tight_layout()
@@ -249,8 +349,8 @@ class PowersTab:
 
     def on_group_selected(self, group_name):
         """Handle group selection change."""
-        # This will be called by parent to replot
-        pass
+        self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
+
 
     def on_power_line_pick(self, event):
         """Handle line pick event for powers."""
@@ -319,6 +419,8 @@ class PowersTab:
     def set_current_frame(self, frame_index):
         """Update the current frame indicator."""
         self.current_frame = frame_index
+        if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
+            return # No red line for now in gait cycle mode
 
         # Adjust for frame_range if provided
         plot_frame = frame_index
@@ -353,3 +455,4 @@ class PowersTab:
         self.gait_info_label.setText("")
         self.canvas.draw()
         self.powers_plotter.lines = {}
+        self.gait_cycles = None

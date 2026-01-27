@@ -3,10 +3,14 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import math
 import numpy as np
+from gait_cycle_plotter import GaitCyclePlotter
 
 class ForcesTab:
     def __init__(self):
+        self.gait_cycle_plotter = GaitCyclePlotter()
         self.lines = {}  # Store lines for picking
+        self.gait_cycles = None
+
 
         # Create tab widget
         self.widget = QWidget()
@@ -58,6 +62,9 @@ class ForcesTab:
         self.canvas.mpl_connect('button_press_event', self.on_button_press)
         self.canvas.mpl_connect('motion_notify_event', self.on_hover)
 
+    def set_gait_cycles(self, gait_cycles):
+        self.gait_cycles = gait_cycles
+
     def load_data(self, markers_data, marker_types, marker_labels):
         """Load marker data for this tab."""
         # Extract group names from labels
@@ -78,7 +85,6 @@ class ForcesTab:
         self.dropdown.addItems(self.group_options)
 
     def plot_data(self, markers_data, marker_types, marker_labels, current_frame, max_plots, frame_range=None):
-        """Plot the forces data."""
         self.markers_data = markers_data
         self.marker_types = marker_types
         self.marker_labels = marker_labels
@@ -86,14 +92,6 @@ class ForcesTab:
         self.max_plots = max_plots
         self.frame_range = frame_range
 
-        # Adjust current_frame for plotting if frame_range is provided
-        plot_current_frame = current_frame
-        if frame_range is not None:
-            start_frame, end_frame = frame_range
-            if not (start_frame <= current_frame <= end_frame):
-                plot_current_frame = None  # Current frame is outside the range
-
-        # Clear figure
         self.figure.clear()
         self.axes = []
         self.vlines = []
@@ -104,56 +102,85 @@ class ForcesTab:
 
         selected_group = self.dropdown.currentText()
 
-        if self.zoomed_in_group:
-            ax = self.figure.add_subplot(111)
-            group = self.zoomed_in_group
-            ax.set_title(f'FORCES Data - {group}')
-            ax.set_xlabel('Frame')
-            ax.set_ylabel('Value')
-            ax.set_box_aspect(1)
-            self.axes.append(ax)
-            self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
-            if plot_current_frame is not None:
-                vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1)
-                self.vlines.append(vline)
-
-        elif selected_group != "All":
-            # Plot only the selected group
-            ax = self.figure.add_subplot(111)
-            ax.set_title(f'FORCES Data - {selected_group}')
-            ax.set_xlabel('Frame')
-            ax.set_ylabel('Value')
-            ax.set_box_aspect(1)
-            self.axes.append(ax)
-            self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range)
-            if plot_current_frame is not None:
-                vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                self.vlines.append(vline)
-            self.ax_to_group[ax] = selected_group
-
+        if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
+            if self.zoomed_in_group:
+                ax = self.figure.add_subplot(111)
+                group = self.zoomed_in_group
+                ax.set_title(f'Forces Data - {group} (Gait Cycle Normalized)')
+                ax.set_ylabel('Force (N)')
+                self.axes.append(ax)
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'FORCES', 'Force (N)')
+            elif selected_group != "All":
+                ax = self.figure.add_subplot(111)
+                ax.set_title(f'Forces Data - {selected_group} (Gait Cycle Normalized)')
+                ax.set_ylabel('Force (N)')
+                self.axes.append(ax)
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_group, self.gait_cycles, 'FORCES', 'Force (N)')
+                self.ax_to_group[ax] = selected_group
+            else:
+                groups = [g for g in self.group_options if g != "All"]
+                num_plots = min(max_plots, len(groups))
+                if num_plots > 0:
+                    cols = int(math.ceil(math.sqrt(num_plots)))
+                    rows = int(math.ceil(num_plots / float(cols)))
+                    for i in range(num_plots):
+                        group = groups[i]
+                        ax = self.figure.add_subplot(rows, cols, i + 1)
+                        ax.set_box_aspect(1)
+                        ax.set_title(f'Forces Data - {group} (Gait Cycle Normalized)')
+                        ax.set_ylabel('Force (N)')
+                        self.axes.append(ax)
+                        self.ax_to_group[ax] = group
+                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'FORCES', 'Force (N)')
         else:
-            # Plot multiple groups based on max_plots
-            groups = [g for g in self.group_options if g != "All"]
-            num_plots = min(max_plots, len(groups))
-
-            if num_plots > 0:
-                cols = int(math.ceil(math.sqrt(num_plots)))
-                rows = int(math.ceil(num_plots / float(cols)))
-
-                for i in range(num_plots):
-                    group = groups[i]
-                    ax = self.figure.add_subplot(rows, cols, i + 1)
-                    ax.set_box_aspect(1)
-                    ax.set_title(f'FORCES Data - {group}')
-                    ax.set_xlabel('Frame')
-                    ax.set_ylabel('Value')
-                    self.axes.append(ax)
-                    self.ax_to_group[ax] = group
-                    self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
-                    if plot_current_frame is not None:
-                        vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                        self.vlines.append(vline)
-
+            plot_current_frame = current_frame
+            if frame_range is not None:
+                start_frame, end_frame = frame_range
+                if not (start_frame <= current_frame <= end_frame):
+                    plot_current_frame = None
+            if self.zoomed_in_group:
+                ax = self.figure.add_subplot(111)
+                group = self.zoomed_in_group
+                ax.set_title(f'FORCES Data - {group}')
+                ax.set_xlabel('Frame')
+                ax.set_ylabel('Value')
+                ax.set_box_aspect(1)
+                self.axes.append(ax)
+                # self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
+                if plot_current_frame is not None:
+                    vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1)
+                    self.vlines.append(vline)
+            elif selected_group != "All":
+                ax = self.figure.add_subplot(111)
+                ax.set_title(f'FORCES Data - {selected_group}')
+                ax.set_xlabel('Frame')
+                ax.set_ylabel('Value')
+                ax.set_box_aspect(1)
+                self.axes.append(ax)
+                # self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range)
+                if plot_current_frame is not None:
+                    vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+                    self.vlines.append(vline)
+                self.ax_to_group[ax] = selected_group
+            else:
+                groups = [g for g in self.group_options if g != "All"]
+                num_plots = min(max_plots, len(groups))
+                if num_plots > 0:
+                    cols = int(math.ceil(math.sqrt(num_plots)))
+                    rows = int(math.ceil(num_plots / float(cols)))
+                    for i in range(num_plots):
+                        group = groups[i]
+                        ax = self.figure.add_subplot(rows, cols, i + 1)
+                        ax.set_box_aspect(1)
+                        ax.set_title(f'FORCES Data - {group}')
+                        ax.set_xlabel('Frame')
+                        ax.set_ylabel('Value')
+                        self.axes.append(ax)
+                        self.ax_to_group[ax] = group
+                        # self.plot_forces(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
+                        if plot_current_frame is not None:
+                            vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+                            self.vlines.append(vline)
         import matplotlib.pyplot as plt
         self.figure.tight_layout()
         plt.subplots_adjust(hspace=0.4, wspace=0.4)
