@@ -40,11 +40,7 @@ class GaitCyclePlotter:
             y_data = markers_data[:, marker_idx, 1] * unit_conversion_factor
             z_data = markers_data[:, marker_idx, 2] * unit_conversion_factor
 
-            # Convert angles to degrees if necessary
-            if plot_type == 'ANGLES' and angle_units.lower() == 'radians':
-                x_data = np.degrees(x_data)
-                y_data = np.degrees(y_data)
-                z_data = np.degrees(z_data)
+            # No conversion for angles, display raw XYZ values
 
             magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
 

@@ -28,9 +28,9 @@ class AnglesTab(QWidget):
         # Create tab widget
         self.layout = QVBoxLayout(self)
 
-        # Add dropdown for group selection
+        # Add dropdown for component selection
         dropdown_layout = QHBoxLayout()
-        dropdown_layout.addWidget(QLabel("Select Group:"))
+        dropdown_layout.addWidget(QLabel("Select Component:"))
         self.dropdown = QComboBox()
         self.dropdown.addItem("All")
         self.dropdown.currentTextChanged.connect(self.on_group_selected)
@@ -134,27 +134,18 @@ class AnglesTab(QWidget):
                     group = label[:-len('ANGLES')].lower().capitalize() if label.endswith('ANGLES') else label.lower().capitalize()
                     groups.add(group)
 
-        self.group_options = ["All"] + sorted(list(groups))
+        self.groups = sorted(list(groups))
+
+        # Set dropdown to component options
+        self.group_options = ["All", "X", "Y", "Z"]
         self.dropdown.clear()
         self.dropdown.addItems(self.group_options)
 
-        # Create visibility buttons for each group
-        # Clear existing buttons
+        # Remove group visibility buttons
         for button in self.group_buttons.values():
             button.setParent(None)
         self.group_buttons.clear()
         self.group_visibility.clear()
-
-        for group in sorted(list(groups)):
-            button = QPushButton(group)
-            button.setCheckable(True)
-            button.setChecked(True)  # Default to visible
-            button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
-            self.group_buttons[group] = button
-            self.group_visibility[group] = True
-            self.update_button_style(button, True)
-
-        self.arrange_buttons()
 
     def plot_data(self, markers_data, marker_types, marker_labels, current_frame, max_plots, frame_range=None):
         """Plot the angles data."""
@@ -181,9 +172,10 @@ class AnglesTab(QWidget):
         self.selected_line = None
         self.selected_data = None
 
-        selected_group = self.dropdown.currentText()
+        selected_component = self.dropdown.currentText()
 
         if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
+            # Gait cycle plotting - need to handle differently, but for now, keep similar
             if self.zoomed_in_group:
                 ax = self.figure.add_subplot(111)
                 group = self.zoomed_in_group
@@ -191,15 +183,15 @@ class AnglesTab(QWidget):
                 ax.set_ylabel('Angle (degrees)')
                 self.axes.append(ax)
                 self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame)
-            elif selected_group != "All":
+            elif selected_component != "All":
                 ax = self.figure.add_subplot(111)
-                ax.set_title(f'ANGLES Data - {selected_group} (Gait Cycle Normalized)')
+                ax.set_title(f'ANGLES Data - {selected_component} (Gait Cycle Normalized)')
                 ax.set_ylabel('Angle (degrees)')
                 self.axes.append(ax)
-                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame)
-                self.ax_to_group[ax] = selected_group
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_component, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame)
+                self.ax_to_group[ax] = selected_component
             else:
-                groups = [g for g in self.group_options if g != "All" and self.group_visibility.get(g, True)]
+                groups = self.groups
                 num_plots = min(max_plots, len(groups))
                 if num_plots > 0:
                     cols = int(math.ceil(math.sqrt(num_plots)))
@@ -227,23 +219,38 @@ class AnglesTab(QWidget):
                 vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1)
                 self.vlines.append(vline)
 
-        elif selected_group != "All":
-            # Plot only the selected group
-            ax = self.figure.add_subplot(111)
-            ax.set_title(f'ANGLES Data - {selected_group}')
-            ax.set_xlabel('Frame')
-            ax.set_ylabel('Angle (degrees)')
-            ax.set_box_aspect(1)
-            self.axes.append(ax)
-            self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range)
-            if plot_current_frame is not None:
-                vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                self.vlines.append(vline)
-            self.ax_to_group[ax] = selected_group
+        elif selected_component == "All":
+            # Plot all groups, each with 3 subplots (X, Y, Z)
+            groups = self.groups
+            num_groups = len(groups)
+            if num_groups > 0:
+                cols = 3  # X, Y, Z
+                rows = num_groups
+                for i, group in enumerate(groups):
+                    for j, component in enumerate(['x', 'y', 'z']):
+                        ax = self.figure.add_subplot(rows, cols, i * cols + j + 1)
+                        ax.set_box_aspect(1)
+                        title = f'{group} - {component.upper()}'
+                        if group.lower() == 'spine':
+                            if component == 'x':
+                                title = f'{group} - Trunk Sway'
+                            elif component == 'y':
+                                title = f'{group} - Trunk Tilt'
+                            elif component == 'z':
+                                title = f'{group} - Trunk Rotation'
+                        ax.set_title(title)
+                        ax.set_xlabel('Frame')
+                        ax.set_ylabel('Angle (degrees)')
+                        self.axes.append(ax)
+                        self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
+                        if plot_current_frame is not None:
+                            vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
+                            self.vlines.append(vline)
 
         else:
-            # Plot multiple groups based on max_plots
-            groups = [g for g in self.group_options if g != "All" and self.group_visibility.get(g, True)]
+            # Plot selected component (X, Y, Z) for all groups, one plot per group
+            component = selected_component.lower()
+            groups = self.groups
             num_plots = min(max_plots, len(groups))
 
             if num_plots > 0:
@@ -254,12 +261,20 @@ class AnglesTab(QWidget):
                     group = groups[i]
                     ax = self.figure.add_subplot(rows, cols, i + 1)
                     ax.set_box_aspect(1)
-                    ax.set_title(f'ANGLES Data - {group}')
+                    title = f'{group} - {selected_component}'
+                    if group.lower() == 'spine':
+                        if component == 'x':
+                            title = f'{group} - Trunk Sway'
+                        elif component == 'y':
+                            title = f'{group} - Trunk Tilt'
+                        elif component == 'z':
+                            title = f'{group} - Trunk Rotation'
+                    ax.set_title(title)
                     ax.set_xlabel('Frame')
                     ax.set_ylabel('Angle (degrees)')
                     self.axes.append(ax)
                     self.ax_to_group[ax] = group
-                    self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees')
+                    self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
                     if plot_current_frame is not None:
                         vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
                         self.vlines.append(vline)
@@ -271,8 +286,9 @@ class AnglesTab(QWidget):
 
     def on_group_selected(self, group_name):
         """Handle group selection change."""
-        # This will be called by parent to replot
-        pass
+        # Replot the data
+        if self.markers_data is not None:
+            self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
 
     def on_line_pick(self, event):
         """Handle line pick event."""
