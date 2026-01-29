@@ -189,7 +189,15 @@ class PowersTab(QWidget):
             for group in groups:
                 for component in ['x', 'y', 'z']:
                     plot_widget = self.add_plot(row, col)
-                    plot_widget.ax.set_title(f'{group} - {component.upper()}')
+                    title = f'{group} - {component.upper()}'
+                    if component == 'z':
+                        if group.lower() == 'hip':
+                            title = f'{group} - Hip Power'
+                        elif group.lower() == 'knee':
+                            title = f'{group} - Knee Power'
+                        elif group.lower() == 'ankle':
+                            title = f'{group} - Ankle Power'
+                    plot_widget.ax.set_title(title)
                     plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                     plot_widget.ax.set_ylabel('Power (W)')
                     if use_gait_cycle:

@@ -75,14 +75,7 @@ class GenericDataPlotter:
             # Get label
             label = marker_labels[marker_idx] if marker_idx < len(marker_labels) and marker_labels[marker_idx] else f'Marker {marker_idx+1}'
 
-            # Rename labels for spine group
-            if self.marker_type == 'ANGLES' and 'Spine' in label:
-                if component == 'x':
-                    label = 'Trunk Sway'
-                elif component == 'y':
-                    label = 'Trunk Tilt'
-                elif component == 'z':
-                    label = 'Trunk Rotation'
+
 
             # Plot x, y, z values over time
             frames = np.arange(markers_data.shape[0])

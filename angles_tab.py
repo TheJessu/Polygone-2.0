@@ -190,6 +190,14 @@ class AnglesTab(QWidget):
                     title = f'{group} - {component.upper()}'
                     if group.lower() == 'spine':
                         title = f'{group} - {"Trunk Sway" if component == "x" else "Trunk Tilt" if component == "y" else "Trunk Rotation"}'
+                    elif group.lower() == 'pelvis':
+                        title = f'{group} - {"Pelvic Obliquity" if component == "x" else "Pelvic Tilt" if component == "y" else "Pelvic Rotation"}'
+                    elif group.lower() == 'hip':
+                        title = f'{group} - {"Hip Ab-Adduction" if component == "x" else "Hip Flexion-Extension" if component == "y" else "Hip Rotation"}'
+                    elif group.lower() == 'knee':
+                        title = f'{group} - {"Knee Flexion-Extension" if component == "y" else component.upper()}'
+                    elif group.lower() == 'footprogress':
+                        title = f'{group} - {"Dorsi-Plantarflexion" if component == "y" else "Foot Progression" if component == "z" else component.upper()}'
                     plot_widget.ax.set_title(title)
                     plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                     plot_widget.ax.set_ylabel('Angle')
@@ -212,6 +220,14 @@ class AnglesTab(QWidget):
                 title = f'{group} - {selected_component}'
                 if group.lower() == 'spine':
                     title = f'{group} - {"Trunk Sway" if component == "x" else "Trunk Tilt" if component == "y" else "Trunk Rotation"}'
+                elif group.lower() == 'pelvis':
+                    title = f'{group} - {"Pelvic Obliquity" if component == "x" else "Pelvic Tilt" if component == "y" else "Pelvic Rotation"}'
+                elif group.lower() == 'hip':
+                    title = f'{group} - {"Hip Ab-Adduction" if component == "x" else "Hip Flexion-Extension" if component == "y" else "Hip Rotation"}'
+                elif group.lower() == 'knee':
+                    title = f'{group} - {"Knee Flexion-Extension" if component == "y" else selected_component}'
+                elif group.lower() == 'foot':
+                    title = f'{group} - {"Dorsi-Plantarflexion" if component == "y" else "Foot Progression" if component == "z" else selected_component}'
                 plot_widget.ax.set_title(title)
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                 plot_widget.ax.set_ylabel('Angle (degrees)')
