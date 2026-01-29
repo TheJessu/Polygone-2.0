@@ -17,150 +17,56 @@ class PatchedFigureCanvas(FigureCanvas):
             else:
                 raise
 
-class PowersDataPlotter:
-    def __init__(self):
-        self.lines = {}  # Store lines for picking
-
-    def plot_powers(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range=None):
-        """Plot power data - showing magnitude with L/R colors."""
-        self.lines = {}
-
-        # Get POWERS markers
-        type_indices = [i for i, t in enumerate(marker_types) if t == 'POWERS']
-
-        # Filter by selected group
-        if selected_group != "All":
-            filtered_indices = []
-            for idx in type_indices:
-                if idx < len(marker_labels) and marker_labels[idx]:
-                    label = marker_labels[idx]
-                    # Check if this marker belongs to the selected group
-                    if label.startswith('L') or label.startswith('R'):
-                        group = label[1:-len('POWERS')].lower().capitalize()
-                        if group == selected_group:
-                            filtered_indices.append(idx)
-                    else:
-                        group = label[:-len('POWERS')].lower().capitalize() if label.endswith('POWERS') else label.lower().capitalize()
-                        if group == selected_group:
-                            filtered_indices.append(idx)
-            type_indices = filtered_indices
-
-        # Plot data for each marker
-        for marker_idx in type_indices:
-            if marker_idx >= markers_data.shape[1]:
-                continue
-
-            # Get label
-            label = marker_labels[marker_idx] if marker_idx < len(marker_labels) and marker_labels[marker_idx] else f'Marker {marker_idx+1}'
-
-            # Plot x, y, z values over time
-            frames = np.arange(markers_data.shape[0])
-            x_data = markers_data[:, marker_idx, 0]
-            y_data = markers_data[:, marker_idx, 1]
-            z_data = markers_data[:, marker_idx, 2]
-
-            # Compute magnitude of the power vector (assuming data is in Watt)
-            magnitude_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
-
-            # Slice data to gait cycle range if provided
-            if frame_range is not None:
-                start_frame, end_frame = frame_range
-                frame_mask = (frames >= start_frame) & (frames <= end_frame)
-                sliced_frames = frames[frame_mask]
-                sliced_magnitude = magnitude_data[frame_mask]
-
-                # Use relative x-axis starting from 0, with tick labels as frame numbers
-                x_values = np.arange(len(sliced_frames))
-                valid_mask = ~(np.isnan(sliced_magnitude) | np.isclose(sliced_magnitude, 0))
-                if np.any(valid_mask):
-                    # Set color: red for left (L), green for right (R)
-                    color = 'red' if label.startswith('L') else 'green'
-                    line, = ax.plot(x_values[valid_mask], sliced_magnitude[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
-                    self.lines[marker_idx] = (line, marker_idx, label, magnitude_data)  # Store full magnitude_data
-                    # Set tick labels to frame numbers
-                    ax.set_xticks(x_values)
-                    ax.set_xticklabels(sliced_frames.astype(int))
-            else:
-                # No slicing, plot all data
-                valid_mask = ~(np.isnan(magnitude_data) | np.isclose(magnitude_data, 0))
-                if np.any(valid_mask):
-                    # Set color: red for left (L), green for right (R)
-                    color = 'red' if label.startswith('L') else 'green'
-                    line, = ax.plot(frames[valid_mask], magnitude_data[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
-                    self.lines[marker_idx] = (line, marker_idx, label, magnitude_data)
-
-
-
-        return self.lines
-
-
-
-
-    def get_value_at_frame(self, marker_idx, frame):
-        """Get the power magnitude value at a specific frame for display."""
-        if marker_idx in self.lines:
-            line, idx, label, magnitude_data = self.lines[marker_idx]
-            if frame < len(magnitude_data):
-                value = magnitude_data[frame]
-                if not np.isnan(value):
-                    return f"{label}: {value:.2f} W at frame {frame}"
-                else:
-                    return f"{label}: No data at frame {frame}"
-        return ""
-
 class PowersTab(QWidget):
     def __init__(self):
         super().__init__()
-        self.powers_plotter = PowersDataPlotter()
+        self.powers_plotter = GenericDataPlotter('POWERS')
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
         self.frame_range = None
 
-        # Create tab widget
         self.layout = QVBoxLayout(self)
 
-        # Add dropdown for group selection
         dropdown_layout = QHBoxLayout()
         dropdown_layout.addWidget(QLabel("Select Group:"))
-        self.dropdown = QComboBox()
-        self.dropdown.addItem("All")
-        self.dropdown.currentTextChanged.connect(self.on_group_selected)
-        dropdown_layout.addWidget(self.dropdown)
+        self.group_dropdown = QComboBox()
+        self.group_dropdown.addItem("All")
+        self.group_dropdown.currentTextChanged.connect(self.on_selection_changed)
+        dropdown_layout.addWidget(self.group_dropdown)
+
+        dropdown_layout.addWidget(QLabel("Select Component:"))
+        self.component_dropdown = QComboBox()
+        self.component_dropdown.addItems(["All", "X", "Y", "Z"])
+        self.component_dropdown.currentTextChanged.connect(self.on_selection_changed)
+        dropdown_layout.addWidget(self.component_dropdown)
         dropdown_layout.addStretch()
         self.layout.addLayout(dropdown_layout)
 
-        # Add buttons layout for group visibility
         self.buttons_layout = QVBoxLayout()
         self.layout.addLayout(self.buttons_layout)
 
-        # Create figure and canvas
         self.figure = Figure(figsize=(8, 6), dpi=100)
         self.canvas = PatchedFigureCanvas(self.figure)
         self.layout.addWidget(self.canvas, 1)
 
-        # Add value label below the canvas
         self.value_label = QLabel("")
         self.layout.addWidget(self.value_label)
 
-        # Add gait info label below the value label
         self.gait_info_label = QLabel("")
         self.gait_info_label.setWordWrap(True)
         self.layout.addWidget(self.gait_info_label)
 
-        # Initialize data structures
         self.axes = []
         self.vlines = []
-        self.group_options = ["All"]
+        self.groups = []
         self.current_frame = 0
         self.max_plots = 4
-        self.selected_marker = None
-        self.selected_power_data = None
+        self.selected_line = None
+        self.selected_data = None
 
-        # Group visibility controls
         self.group_visibility = {}
         self.group_buttons = {}
 
-        # New members for zoom
         self.zoomed_in_group = None
         self.ax_to_group = {}
         self.hovered_ax = None
@@ -168,9 +74,9 @@ class PowersTab(QWidget):
         self.marker_types = None
         self.marker_labels = None
 
-        # Connect pick event
-        self.canvas.mpl_connect('pick_event', self.on_power_line_pick)
+        self.canvas.mpl_connect('pick_event', self.on_line_pick)
         self.canvas.mpl_connect('button_press_event', self.on_button_press)
+        self.canvas.mpl_connect('motion_notify_event', self.on_hover)
 
     def resizeEvent(self, event):
         """Handle resize event to rearrange buttons."""
@@ -210,8 +116,10 @@ class PowersTab(QWidget):
         self.gait_cycles = gait_cycles
 
     def load_data(self, markers_data, marker_types, marker_labels):
-        """Load marker data for this tab."""
-        # Extract group names from labels
+        self.markers_data = markers_data
+        self.marker_types = marker_types
+        self.marker_labels = marker_labels
+
         type_indices = [i for i, t in enumerate(marker_types) if t == 'POWERS']
         groups = set()
         for idx in type_indices:
@@ -224,12 +132,10 @@ class PowersTab(QWidget):
                     group = label[:-len('POWERS')].lower().capitalize() if label.endswith('POWERS') else label.lower().capitalize()
                     groups.add(group)
 
-        self.group_options = ["All"] + sorted(list(groups))
-        self.dropdown.clear()
-        self.dropdown.addItems(self.group_options)
+        self.groups = ["All"] + sorted(list(groups))
+        self.group_dropdown.clear()
+        self.group_dropdown.addItems(self.groups)
 
-        # Create visibility buttons for each group
-        # Clear existing buttons
         for button in self.group_buttons.values():
             button.setParent(None)
         self.group_buttons.clear()
@@ -238,7 +144,7 @@ class PowersTab(QWidget):
         for group in sorted(list(groups)):
             button = QPushButton(group)
             button.setCheckable(True)
-            button.setChecked(True)  # Default to visible
+            button.setChecked(True)
             button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
             self.group_buttons[group] = button
             self.group_visibility[group] = True
@@ -247,9 +153,6 @@ class PowersTab(QWidget):
         self.arrange_buttons()
 
     def plot_data(self, markers_data, marker_types, marker_labels, current_frame, max_plots, frame_range=None):
-        """Plot the powers data."""
-        if markers_data is None or marker_types is None or marker_labels is None:
-            return
         self.markers_data = markers_data
         self.marker_types = marker_types
         self.marker_labels = marker_labels
@@ -257,131 +160,95 @@ class PowersTab(QWidget):
         self.max_plots = max_plots
         self.frame_range = frame_range
 
+        plot_current_frame = current_frame
+        if frame_range and not (frame_range[0] <= current_frame <= frame_range[1]):
+            plot_current_frame = None
+
         self.figure.clear()
-        self.axes = []
-        self.vlines = []
-        self.ax_to_group = {}
+        self.axes, self.vlines, self.ax_to_group = [], [], {}
         self.value_label.setText("")
-        self.selected_power_line = None
-        self.selected_power_data = None
+        self.selected_line, self.selected_data = None, None
 
-        selected_group = self.dropdown.currentText()
+        selected_group = self.group_dropdown.currentText()
+        selected_component = self.component_dropdown.currentText()
+        
+        groups = [g for g in self.groups if g != "All" and self.group_visibility.get(g, True)]
+        if selected_group != "All":
+            groups = [selected_group]
 
-        if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
-            if self.zoomed_in_group:
-                ax = self.figure.add_subplot(111)
-                group = self.zoomed_in_group
-                ax.set_title(f'POWERS Data - {group} (Gait Cycle Normalized)')
-                ax.set_ylabel('Value')
-                self.axes.append(ax)
-                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)')
-            elif selected_group != "All":
-                ax = self.figure.add_subplot(111)
-                ax.set_title(f'POWERS Data - {selected_group} (Gait Cycle Normalized)')
-                ax.set_ylabel('Power (W)')
-                self.axes.append(ax)
-                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_group, self.gait_cycles, 'POWERS', 'Power (W)')
-                self.ax_to_group[ax] = selected_group
+        use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
+
+        if self.zoomed_in_group:
+            ax = self.figure.add_subplot(111)
+            group = self.zoomed_in_group
+            ax.set_title(f'POWERS Data - {group}')
+            ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+            ax.set_ylabel('Power (W)')
+            ax.set_box_aspect(1)
+            self.axes.append(ax)
+            if use_gait_cycle:
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)', current_frame)
             else:
-                groups = [g for g in self.group_options if g != "All" and self.group_visibility.get(g, True)]
-                num_plots = min(max_plots, len(groups))
-                if num_plots > 0:
-                    cols = int(math.ceil(math.sqrt(num_plots)))
-                    rows = int(math.ceil(num_plots / float(cols)))
-                    for i in range(num_plots):
-                        group = groups[i]
-                        ax = self.figure.add_subplot(rows, cols, i + 1)
-                        ax.set_box_aspect(1)
-                        ax.set_title(f'POWERS Data - {group} (Gait Cycle Normalized)')
+                self.powers_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
+                if plot_current_frame is not None:
+                    self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+
+        elif selected_component == "All":
+            if groups:
+                rows, cols = len(groups), 3
+                for i, group in enumerate(groups):
+                    for j, component in enumerate(['x', 'y', 'z']):
+                        ax = self.figure.add_subplot(rows, cols, i * cols + j + 1)
+                        ax.set_title(f'{group} - {component.upper()}')
+                        ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                         ax.set_ylabel('Power (W)')
                         self.axes.append(ax)
                         self.ax_to_group[ax] = group
-                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)')
-
-        else: # Original plotting logic
-            plot_current_frame = current_frame
-            if frame_range is not None:
-                start_frame, end_frame = frame_range
-                if start_frame <= current_frame <= end_frame:
-                    plot_current_frame = current_frame - start_frame
-                else:
-                    plot_current_frame = None
-
-            if self.zoomed_in_group:
-                ax = self.figure.add_subplot(111)
-                group = self.zoomed_in_group
-                ax.set_title(f'POWERS Data - {group}')
-                ax.set_xlabel('Frame')
-                ax.set_ylabel('Value')
-                ax.set_box_aspect(1)
-                self.axes.append(ax)
-                self.powers_plotter.plot_powers(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
-                if plot_current_frame is not None:
-                    vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1)
-                    self.vlines.append(vline)
-
-            elif selected_group != "All":
-                ax = self.figure.add_subplot(111)
-                ax.set_title(f'POWERS Data - {selected_group}')
-                ax.set_xlabel('Frame')
-                ax.set_ylabel('Value')
-                ax.set_box_aspect(1)
-                self.axes.append(ax)
-                self.powers_plotter.plot_powers(ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range)
-                if plot_current_frame is not None:
-                    vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                    self.vlines.append(vline)
-                self.ax_to_group[ax] = selected_group
-
-            else:
-                groups = [g for g in self.group_options if g != "All" and self.group_visibility.get(g, True)]
-                num_plots = min(max_plots, len(groups))
-
-                if num_plots > 0:
-                    cols = int(math.ceil(math.sqrt(num_plots)))
-                    rows = int(math.ceil(num_plots / float(cols)))
-
-                    for i in range(num_plots):
-                        group = groups[i]
-                        ax = self.figure.add_subplot(rows, cols, i + 1)
-                        ax.set_box_aspect(1)
-                        ax.set_title(f'POWERS Data - {group}')
-                        ax.set_xlabel('Frame')
-                        ax.set_ylabel('Value')
-                        self.axes.append(ax)
-                        self.ax_to_group[ax] = group
-                        self.powers_plotter.plot_powers(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
+                        if use_gait_cycle:
+                            self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)', current_frame, component=component)
+                        else:
+                            self.powers_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
+                            if plot_current_frame is not None:
+                                self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+        
+        else:
+            if groups:
+                component = selected_component.lower()
+                rows, cols = int(math.ceil(len(groups) / 3)), 3
+                for i, group in enumerate(groups):
+                    ax = self.figure.add_subplot(rows, cols, i + 1)
+                    ax.set_title(f'{group} - {selected_component}')
+                    ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+                    ax.set_ylabel('Power (W)')
+                    self.axes.append(ax)
+                    self.ax_to_group[ax] = group
+                    if use_gait_cycle:
+                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)', current_frame, component=component)
+                    else:
+                        self.powers_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                         if plot_current_frame is not None:
-                            vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                            self.vlines.append(vline)
+                            self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
-        import matplotlib.pyplot as plt
         self.figure.tight_layout()
-        plt.subplots_adjust(hspace=0.4, wspace=0.4)
         self.canvas.draw()
 
-    def on_group_selected(self, group_name):
-        """Handle group selection change."""
-        self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
+    def on_selection_changed(self, value):
+        if self.markers_data is not None:
+            self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
 
+    def on_line_pick(self, event):
+        if self.selected_line:
+            self.selected_line.set_linewidth(1)
 
-    def on_power_line_pick(self, event):
-        """Handle line pick event for powers."""
-        # Reset previous selection
-        if self.selected_power_line is not None:
-            self.selected_power_line.set_linewidth(1)
-
-        # Find the picked line
-        for marker_idx, (line, idx, label, magnitude_data) in self.powers_plotter.lines.items():
+        lines = self.powers_plotter.lines if not (self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])) else self.gait_cycle_plotter.lines
+        
+        for marker_idx, (line, idx, label, magnitude_data) in lines.items():
             if event.artist == line:
-                # Highlight the selected line
                 line.set_linewidth(3)
-                self.selected_power_line = line
-                self.selected_power_data = (marker_idx, label, magnitude_data)
-                self.update_selected_power_value()
+                self.selected_line = line
+                self.selected_data = (marker_idx, label, magnitude_data)
+                self.update_selected_value()
                 break
-
-        # Redraw the canvas
         self.canvas.draw()
 
     def on_button_press(self, event):
@@ -400,89 +267,76 @@ class PowersTab(QWidget):
     def on_hover(self, event):
         ax = event.inaxes
         if ax != self.hovered_ax:
-            if self.hovered_ax is not None:
+            if self.hovered_ax:
                 self.hovered_ax.patch.set_edgecolor('none')
                 self.hovered_ax.patch.set_linewidth(0)
 
             self.hovered_ax = ax
 
-            if self.hovered_ax is not None and self.hovered_ax in self.axes:
+            if self.hovered_ax and self.hovered_ax in self.axes:
                 self.hovered_ax.patch.set_edgecolor('grey')
                 self.hovered_ax.patch.set_linewidth(2)
 
             self.canvas.draw_idle()
 
-
-    def update_selected_power_value(self):
-        """Update the displayed value for the selected power line at the current frame."""
-        if self.selected_power_data is None:
+    def update_selected_value(self):
+        if not self.selected_data:
             return
 
-        marker_idx, label, magnitude_data = self.selected_power_data
+        marker_idx, label, magnitude_data = self.selected_data
         frame = int(self.current_frame)
-        if frame < len(magnitude_data):
-            value = magnitude_data[frame]
-            if not np.isnan(value):
-                self.value_label.setText(f"{label}: {value:.2f} W at frame {frame}")
-            else:
-                self.value_label.setText(f"{label}: No data at frame {frame}")
+        
+        plotter = self.powers_plotter if not (self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])) else self.gait_cycle_plotter
+        value_text = plotter.get_value_at_frame(marker_idx, frame)
+        
+        if value_text:
+            self.value_label.setText(value_text)
         else:
             self.value_label.setText(f"{label}: Frame {frame} out of range")
 
     def set_current_frame(self, frame_index):
-        """Update the current frame indicator."""
         self.current_frame = frame_index
-        if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
-            return # No red line for now in gait cycle mode
 
-        # Adjust for frame_range if provided
-        plot_frame = frame_index
-        if self.frame_range is not None:
+        plot_current_frame = frame_index
+        if self.frame_range:
             start_frame, end_frame = self.frame_range
             if not (start_frame <= frame_index <= end_frame):
-                plot_frame = None  # Outside range, hide vline
+                plot_current_frame = None
 
         for vline in self.vlines:
-            if plot_frame is not None:
-                vline.set_xdata([plot_frame, plot_frame])
+            if plot_current_frame is not None:
+                vline.set_xdata([plot_current_frame])
                 vline.set_visible(True)
             else:
                 vline.set_visible(False)
+        
         if self.canvas:
             self.canvas.draw_idle()
 
-        # Update selected value display if a line is selected
-        if self.selected_power_data is not None:
-            self.update_selected_power_value()
+        if self.selected_data:
+            self.update_selected_value()
 
     def set_gait_info(self, info_text):
-        """Set the gait info text."""
         self.gait_info_label.setText(info_text)
 
     def toggle_group_visibility(self, group):
-        """Toggle the visibility of a group."""
-        if group in self.group_visibility:
-            self.group_visibility[group] = not self.group_visibility[group]
-            button = self.group_buttons[group]
-            button.setChecked(self.group_visibility[group])
-            self.update_button_style(button, self.group_visibility[group])
-            if self.markers_data is not None:
-                self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
+        self.group_visibility[group] = not self.group_visibility[group]
+        button = self.group_buttons[group]
+        button.setChecked(self.group_visibility[group])
+        self.update_button_style(button, self.group_visibility[group])
+        if self.markers_data:
+            self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
 
     def update_button_style(self, button, visible):
-        """Update the button style based on visibility."""
         if visible:
             button.setStyleSheet("QPushButton { background-color: white; color: black; }")
         else:
             button.setStyleSheet("QPushButton { background-color: grey; color: white; }")
 
     def clear_data(self):
-        """Clear the plot data."""
         self.figure.clear()
-        self.axes = []
-        self.vlines = []
+        self.axes, self.vlines = [], []
         self.value_label.setText("")
         self.gait_info_label.setText("")
         self.canvas.draw()
         self.powers_plotter.lines = {}
-        self.gait_cycles = None

@@ -7,7 +7,7 @@ class GenericDataPlotter:
 
         # Define units and conversions based on marker type
         self.units_config = {
-            'ANGLES': {'unit': '°', 'conversion': lambda x: x},  # No conversion, display raw XYZ values
+            'ANGLES': {'unit': '', 'conversion': lambda x: x},  # No conversion, display raw XYZ values
             'FORCES': {'unit': 'N', 'conversion': lambda x: x},
             'MOMENTS': {'unit': 'Nmm', 'conversion': lambda x: x * 1000},
             'POWERS': {'unit': 'W', 'conversion': lambda x: x}

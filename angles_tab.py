@@ -141,14 +141,20 @@ class AnglesTab(QWidget):
         self.dropdown.clear()
         self.dropdown.addItems(self.group_options)
 
-        # Remove group visibility buttons
-        for button in self.group_buttons.values():
-            button.setParent(None)
-        self.group_buttons.clear()
-        self.group_visibility.clear()
+        # Create group visibility buttons
+        grey_out_groups = ['Absankl', 'Ankle', 'Elbow', 'Shoulder', 'Thorax', 'Wrist']
+        for group in self.groups:
+            button = QPushButton(group)
+            button.setCheckable(True)
+            default_visible = group not in grey_out_groups
+            button.setChecked(default_visible)
+            button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
+            self.group_buttons[group] = button
+            self.group_visibility[group] = default_visible
+            self.update_button_style(button, default_visible)
+        self.arrange_buttons()
 
     def plot_data(self, markers_data, marker_types, marker_labels, current_frame, max_plots, frame_range=None):
-        """Plot the angles data."""
         self.markers_data = markers_data
         self.marker_types = marker_types
         self.marker_labels = marker_labels
@@ -156,132 +162,77 @@ class AnglesTab(QWidget):
         self.max_plots = max_plots
         self.frame_range = frame_range
 
-        # Adjust current_frame for plotting if frame_range is provided
         plot_current_frame = current_frame
-        if frame_range is not None:
-            start_frame, end_frame = frame_range
-            if not (start_frame <= current_frame <= end_frame):
-                plot_current_frame = None  # Current frame is outside the range
+        if frame_range and not (frame_range[0] <= current_frame <= frame_range[1]):
+            plot_current_frame = None
 
-        # Clear figure
         self.figure.clear()
-        self.axes = []
-        self.vlines = []
-        self.ax_to_group = {}
+        self.axes, self.vlines, self.ax_to_group = [], [], {}
         self.value_label.setText("")
-        self.selected_line = None
-        self.selected_data = None
+        self.selected_line, self.selected_data = None, None
 
         selected_component = self.dropdown.currentText()
+        groups = [g for g in self.groups if self.group_visibility.get(g, True)]
+        use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
 
-        if self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right']):
-            # Gait cycle plotting - need to handle differently, but for now, keep similar
-            if self.zoomed_in_group:
-                ax = self.figure.add_subplot(111)
-                group = self.zoomed_in_group
-                ax.set_title(f'ANGLES Data - {group} (Gait Cycle Normalized)')
-                ax.set_ylabel('Angle (degrees)')
-                self.axes.append(ax)
-                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame)
-            elif selected_component != "All":
-                ax = self.figure.add_subplot(111)
-                ax.set_title(f'ANGLES Data - {selected_component} (Gait Cycle Normalized)')
-                ax.set_ylabel('Angle (degrees)')
-                self.axes.append(ax)
-                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, selected_component, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame)
-                self.ax_to_group[ax] = selected_component
-            else:
-                groups = self.groups
-                num_plots = min(max_plots, len(groups))
-                if num_plots > 0:
-                    cols = int(math.ceil(math.sqrt(num_plots)))
-                    rows = int(math.ceil(num_plots / float(cols)))
-                    for i in range(num_plots):
-                        group = groups[i]
-                        ax = self.figure.add_subplot(rows, cols, i + 1)
-                        ax.set_box_aspect(1)
-                        ax.set_title(f'ANGLES Data - {group} (Gait Cycle Normalized)')
-                        ax.set_ylabel('Angle (degrees)')
-                        self.axes.append(ax)
-                        self.ax_to_group[ax] = group
-                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame)
-
-        elif self.zoomed_in_group:
+        if self.zoomed_in_group:
             ax = self.figure.add_subplot(111)
             group = self.zoomed_in_group
             ax.set_title(f'ANGLES Data - {group}')
-            ax.set_xlabel('Frame')
-            ax.set_ylabel('Angle (degrees)')
+            ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+            ax.set_ylabel('Angle')
             ax.set_box_aspect(1)
             self.axes.append(ax)
-            self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees')
-            if plot_current_frame is not None:
-                vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1)
-                self.vlines.append(vline)
-
+            if use_gait_cycle:
+                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', current_frame)
+            else:
+                self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees')
+                if plot_current_frame is not None:
+                    self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+        
         elif selected_component == "All":
-            # Plot all groups, each with 3 subplots (X, Y, Z)
-            groups = self.groups
-            num_groups = len(groups)
-            if num_groups > 0:
-                cols = 3  # X, Y, Z
-                rows = num_groups
+            if groups:
+                rows, cols = len(groups), 3
                 for i, group in enumerate(groups):
                     for j, component in enumerate(['x', 'y', 'z']):
                         ax = self.figure.add_subplot(rows, cols, i * cols + j + 1)
-                        ax.set_box_aspect(1)
                         title = f'{group} - {component.upper()}'
                         if group.lower() == 'spine':
-                            if component == 'x':
-                                title = f'{group} - Trunk Sway'
-                            elif component == 'y':
-                                title = f'{group} - Trunk Tilt'
-                            elif component == 'z':
-                                title = f'{group} - Trunk Rotation'
+                            title = f'{group} - {"Trunk Sway" if component == "x" else "Trunk Tilt" if component == "y" else "Trunk Rotation"}'
                         ax.set_title(title)
-                        ax.set_xlabel('Frame')
-                        ax.set_ylabel('Angle (degrees)')
+                        ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+                        ax.set_ylabel('Angle')
                         self.axes.append(ax)
-                        self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
-                        if plot_current_frame is not None:
-                            vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                            self.vlines.append(vline)
+                        self.ax_to_group[ax] = group
+                        if use_gait_cycle:
+                            self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', current_frame, component=component)
+                        else:
+                            self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
+                            if plot_current_frame is not None:
+                                self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
         else:
-            # Plot selected component (X, Y, Z) for all groups, one plot per group
-            component = selected_component.lower()
-            groups = self.groups
-            num_plots = min(max_plots, len(groups))
-
-            if num_plots > 0:
-                cols = int(math.ceil(math.sqrt(num_plots)))
-                rows = int(math.ceil(num_plots / float(cols)))
-
-                for i in range(num_plots):
-                    group = groups[i]
+            if groups:
+                component = selected_component.lower()
+                rows, cols = int(math.ceil(len(groups) / 3)), 3
+                for i, group in enumerate(groups):
                     ax = self.figure.add_subplot(rows, cols, i + 1)
-                    ax.set_box_aspect(1)
                     title = f'{group} - {selected_component}'
                     if group.lower() == 'spine':
-                        if component == 'x':
-                            title = f'{group} - Trunk Sway'
-                        elif component == 'y':
-                            title = f'{group} - Trunk Tilt'
-                        elif component == 'z':
-                            title = f'{group} - Trunk Rotation'
+                        title = f'{group} - {"Trunk Sway" if component == "x" else "Trunk Tilt" if component == "y" else "Trunk Rotation"}'
                     ax.set_title(title)
-                    ax.set_xlabel('Frame')
+                    ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                     ax.set_ylabel('Angle (degrees)')
                     self.axes.append(ax)
                     self.ax_to_group[ax] = group
-                    self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
-                    if plot_current_frame is not None:
-                        vline = ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1, label='Current Frame')
-                        self.vlines.append(vline)
-
-        import matplotlib.pyplot as plt
+                    if use_gait_cycle:
+                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component)
+                    else:
+                        self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
+                        if plot_current_frame is not None:
+                            self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+        
         self.figure.tight_layout()
-        plt.subplots_adjust(hspace=0.4, wspace=0.4)
         self.canvas.draw()
 
     def on_group_selected(self, group_name):
