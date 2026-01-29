@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class GenericDataPlotter:
     def __init__(self, marker_type):
@@ -12,6 +13,31 @@ class GenericDataPlotter:
             'MOMENTS': {'unit': 'Nmm', 'conversion': lambda x: x * 1000},
             'POWERS': {'unit': 'W', 'conversion': lambda x: x}
         }
+
+    @staticmethod
+    def create_plot_grid(figure, num_plots, num_cols):
+        """
+        Clears the figure, calculates rows/cols, resizes the figure to fit
+        square plots, and returns a list of axes.
+        """
+        figure.clear()
+        if num_plots == 0:
+            return []
+
+        rows = int(math.ceil(num_plots / float(num_cols)))
+        
+        plot_size_inch = 4 
+        fig_width = num_cols * plot_size_inch
+        fig_height = rows * plot_size_inch
+        figure.set_size_inches(fig_width, fig_height)
+
+        axes = []
+        for i in range(num_plots):
+            ax = figure.add_subplot(rows, num_cols, i + 1)
+            ax.set_box_aspect(1)
+            axes.append(ax)
+
+        return axes
 
     def plot_data(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range=None, angle_units='degrees', component='magnitude'):
         """Generic plot method for any marker type."""

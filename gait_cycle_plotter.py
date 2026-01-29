@@ -66,7 +66,6 @@ class GaitCyclePlotter:
 
         ax.set_xlabel('Gait Cycle (%)')
         ax.set_ylabel(y_label)
-        ax.legend()
 
         if current_frame is not None:
             for side in ['left', 'right']:

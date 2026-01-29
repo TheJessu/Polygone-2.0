@@ -45,7 +45,12 @@ class AnglesTab(QWidget):
         # Create figure and canvas
         self.figure = Figure(figsize=(8, 6), dpi=100)
         self.canvas = PatchedFigureCanvas(self.figure)
-        self.layout.addWidget(self.canvas, 1)
+        
+        # Add scroll area
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.canvas)
+        self.layout.addWidget(self.scroll_area, 1)
 
         # Add value label below the canvas
         self.value_label = QLabel("")
@@ -176,13 +181,12 @@ class AnglesTab(QWidget):
         use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
 
         if self.zoomed_in_group:
-            ax = self.figure.add_subplot(111)
+            self.axes = GenericDataPlotter.create_plot_grid(self.figure, 1, 1)
+            ax = self.axes[0]
             group = self.zoomed_in_group
             ax.set_title(f'ANGLES Data - {group}')
             ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
             ax.set_ylabel('Angle')
-            ax.set_box_aspect(1)
-            self.axes.append(ax)
             if use_gait_cycle:
                 self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', current_frame)
             else:
@@ -191,46 +195,45 @@ class AnglesTab(QWidget):
                     self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
         
         elif selected_component == "All":
-            if groups:
-                rows, cols = len(groups), 3
-                for i, group in enumerate(groups):
-                    for j, component in enumerate(['x', 'y', 'z']):
-                        ax = self.figure.add_subplot(rows, cols, i * cols + j + 1)
-                        title = f'{group} - {component.upper()}'
-                        if group.lower() == 'spine':
-                            title = f'{group} - {"Trunk Sway" if component == "x" else "Trunk Tilt" if component == "y" else "Trunk Rotation"}'
-                        ax.set_title(title)
-                        ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                        ax.set_ylabel('Angle')
-                        self.axes.append(ax)
-                        self.ax_to_group[ax] = group
-                        if use_gait_cycle:
-                            self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', current_frame, component=component)
-                        else:
-                            self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
-                            if plot_current_frame is not None:
-                                self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
-
-        else:
-            if groups:
-                component = selected_component.lower()
-                rows, cols = int(math.ceil(len(groups) / 3)), 3
-                for i, group in enumerate(groups):
-                    ax = self.figure.add_subplot(rows, cols, i + 1)
-                    title = f'{group} - {selected_component}'
+            num_plots = len(groups) * 3
+            self.axes = GenericDataPlotter.create_plot_grid(self.figure, num_plots, 3)
+            ax_iter = iter(self.axes)
+            for group in groups:
+                for component in ['x', 'y', 'z']:
+                    ax = next(ax_iter)
+                    title = f'{group} - {component.upper()}'
                     if group.lower() == 'spine':
                         title = f'{group} - {"Trunk Sway" if component == "x" else "Trunk Tilt" if component == "y" else "Trunk Rotation"}'
                     ax.set_title(title)
                     ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                    ax.set_ylabel('Angle (degrees)')
-                    self.axes.append(ax)
+                    ax.set_ylabel('Angle')
                     self.ax_to_group[ax] = group
                     if use_gait_cycle:
-                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component)
+                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', current_frame, component=component)
                     else:
                         self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
                         if plot_current_frame is not None:
                             self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+
+        else:
+            num_plots = len(groups)
+            self.axes = GenericDataPlotter.create_plot_grid(self.figure, num_plots, 3)
+            component = selected_component.lower()
+            for i, group in enumerate(groups):
+                ax = self.axes[i]
+                title = f'{group} - {selected_component}'
+                if group.lower() == 'spine':
+                    title = f'{group} - {"Trunk Sway" if component == "x" else "Trunk Tilt" if component == "y" else "Trunk Rotation"}'
+                ax.set_title(title)
+                ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+                ax.set_ylabel('Angle (degrees)')
+                self.ax_to_group[ax] = group
+                if use_gait_cycle:
+                    self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component)
+                else:
+                    self.angles_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
+                    if plot_current_frame is not None:
+                        self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
         
         self.figure.tight_layout()
         self.canvas.draw()

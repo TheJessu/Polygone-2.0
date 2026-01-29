@@ -47,7 +47,11 @@ class PowersTab(QWidget):
 
         self.figure = Figure(figsize=(8, 6), dpi=100)
         self.canvas = PatchedFigureCanvas(self.figure)
-        self.layout.addWidget(self.canvas, 1)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.canvas)
+        self.layout.addWidget(self.scroll_area, 1)
 
         self.value_label = QLabel("")
         self.layout.addWidget(self.value_label)
