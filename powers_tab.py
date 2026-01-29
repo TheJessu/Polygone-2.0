@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QScrollArea
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import math
@@ -148,11 +148,12 @@ class PowersTab(QWidget):
         for group in sorted(list(groups)):
             button = QPushButton(group)
             button.setCheckable(True)
-            button.setChecked(True)
+            visible = group in ["Ankl", "Hi", "Kne"]
+            button.setChecked(visible)
             button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
             self.group_buttons[group] = button
-            self.group_visibility[group] = True
-            self.update_button_style(button, True)
+            self.group_visibility[group] = visible
+            self.update_button_style(button, visible)
 
         self.arrange_buttons()
 
@@ -175,7 +176,7 @@ class PowersTab(QWidget):
 
         selected_group = self.group_dropdown.currentText()
         selected_component = self.component_dropdown.currentText()
-        
+
         groups = [g for g in self.groups if g != "All" and self.group_visibility.get(g, True)]
         if selected_group != "All":
             groups = [selected_group]
@@ -183,13 +184,12 @@ class PowersTab(QWidget):
         use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
 
         if self.zoomed_in_group:
-            ax = self.figure.add_subplot(111)
+            self.axes = GenericDataPlotter.create_plot_grid(self.figure, 1, 1)
+            ax = self.axes[0]
             group = self.zoomed_in_group
             ax.set_title(f'POWERS Data - {group}')
             ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
             ax.set_ylabel('Power (W)')
-            ax.set_box_aspect(1)
-            self.axes.append(ax)
             if use_gait_cycle:
                 self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)', current_frame)
             else:
@@ -198,15 +198,16 @@ class PowersTab(QWidget):
                     self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
         elif selected_component == "All":
+            num_plots = len(groups) * 3
+            self.axes = GenericDataPlotter.create_plot_grid(self.figure, num_plots, 3)
+            ax_iter = iter(self.axes)
             if groups:
-                rows, cols = len(groups), 3
-                for i, group in enumerate(groups):
-                    for j, component in enumerate(['x', 'y', 'z']):
-                        ax = self.figure.add_subplot(rows, cols, i * cols + j + 1)
+                for group in groups:
+                    for component in ['x', 'y', 'z']:
+                        ax = next(ax_iter)
                         ax.set_title(f'{group} - {component.upper()}')
                         ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                         ax.set_ylabel('Power (W)')
-                        self.axes.append(ax)
                         self.ax_to_group[ax] = group
                         if use_gait_cycle:
                             self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)', current_frame, component=component)
@@ -214,17 +215,17 @@ class PowersTab(QWidget):
                             self.powers_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                             if plot_current_frame is not None:
                                 self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
-        
+
         else:
+            num_plots = len(groups)
+            self.axes = GenericDataPlotter.create_plot_grid(self.figure, num_plots, 3)
+            component = selected_component.lower()
             if groups:
-                component = selected_component.lower()
-                rows, cols = int(math.ceil(len(groups) / 3)), 3
                 for i, group in enumerate(groups):
-                    ax = self.figure.add_subplot(rows, cols, i + 1)
+                    ax = self.axes[i]
                     ax.set_title(f'{group} - {selected_component}')
                     ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                     ax.set_ylabel('Power (W)')
-                    self.axes.append(ax)
                     self.ax_to_group[ax] = group
                     if use_gait_cycle:
                         self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)', current_frame, component=component)

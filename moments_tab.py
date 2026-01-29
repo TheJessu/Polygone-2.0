@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QScrollArea
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import math
@@ -145,11 +145,12 @@ class MomentsTab(QWidget):
         for group in sorted(list(groups)):
             button = QPushButton(group)
             button.setCheckable(True)
-            button.setChecked(True)
+            visible_by_default = group in ['Ankl', 'Hi', 'Kne']
+            button.setChecked(visible_by_default)
             button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
             self.group_buttons[group] = button
-            self.group_visibility[group] = True
-            self.update_button_style(button, True)
+            self.group_visibility[group] = visible_by_default
+            self.update_button_style(button, visible_by_default)
 
         self.arrange_buttons()
 
@@ -323,7 +324,7 @@ class MomentsTab(QWidget):
         button = self.group_buttons[group]
         button.setChecked(self.group_visibility[group])
         self.update_button_style(button, self.group_visibility[group])
-        if self.markers_data:
+        if self.markers_data is not None:
             self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
 
     def update_button_style(self, button, visible):
