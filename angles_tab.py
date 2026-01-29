@@ -18,10 +18,21 @@ class PlotWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.canvas)
-        self.canvas.setFixedSize(400, 400)
+        self.canvas.setFixedSize(200, 200)
+
+        self.figure.patch.set_facecolor('white')
+        self.ax.set_facecolor('white')
 
     def mouseDoubleClickEvent(self, event):
         self.plot_double_clicked.emit(self)
+
+    def enterEvent(self, event):
+        self.ax.set_facecolor('#f0f0f0')
+        self.canvas.draw()
+
+    def leaveEvent(self, event):
+        self.ax.set_facecolor('white')
+        self.canvas.draw()
 
 class AnglesTab(QWidget):
     def __init__(self):
