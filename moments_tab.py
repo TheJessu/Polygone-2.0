@@ -1,21 +1,26 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QScrollArea
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QScrollArea, QGridLayout
+from PyQt5.QtCore import pyqtSignal
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import math
 import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
 from generic_plotter import GenericDataPlotter
 
-class PatchedFigureCanvas(FigureCanvas):
-    def resizeEvent(self, event):
-        try:
-            super().resizeEvent(event)
-        except ValueError as e:
-            if "figure size must be positive finite" in str(e):
-                # Skip the resize if it would cause negative size
-                pass
-            else:
-                raise
+class PlotWidget(QWidget):
+    plot_double_clicked = pyqtSignal(QWidget)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.figure = Figure(figsize=(4, 4), dpi=100)
+        self.canvas = FigureCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.canvas)
+
+    def mouseDoubleClickEvent(self, event):
+        self.plot_double_clicked.emit(self)
 
 class MomentsTab(QWidget):
     def __init__(self):
@@ -44,14 +49,14 @@ class MomentsTab(QWidget):
 
         self.buttons_layout = QVBoxLayout()
         self.layout.addLayout(self.buttons_layout)
-
-        self.figure = Figure(figsize=(8, 6), dpi=100)
-        self.canvas = PatchedFigureCanvas(self.figure)
-
+        
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setWidget(self.canvas)
-        self.layout.addWidget(self.scroll_area, 1);
+        self.layout.addWidget(self.scroll_area, 1)
+        
+        self.plot_container = QWidget()
+        self.plot_layout = QGridLayout(self.plot_container)
+        self.scroll_area.setWidget(self.plot_container)
 
         self.value_label = QLabel("")
         self.layout.addWidget(self.value_label)
@@ -60,61 +65,55 @@ class MomentsTab(QWidget):
         self.gait_info_label.setWordWrap(True)
         self.layout.addWidget(self.gait_info_label)
 
-        self.axes = []
+        self.plots = []
         self.vlines = []
         self.groups = []
         self.current_frame = 0
         self.max_plots = 4
-        self.selected_line = None
-        self.selected_data = None
-
+        
         self.group_visibility = {}
         self.group_buttons = {}
 
-        self.zoomed_in_group = None
-        self.ax_to_group = {}
-        self.hovered_ax = None
+        self.zoomed_plot = None
         self.markers_data = None
         self.marker_types = None
         self.marker_labels = None
 
-        self.canvas.mpl_connect('pick_event', self.on_line_pick)
-        self.canvas.mpl_connect('button_press_event', self.on_button_press)
-        self.canvas.mpl_connect('motion_notify_event', self.on_hover)
-
     def resizeEvent(self, event):
-        """Handle resize event to rearrange buttons."""
         super().resizeEvent(event)
         self.arrange_buttons()
 
     def arrange_buttons(self):
-        """Arrange buttons in rows based on widget width."""
         if not self.group_buttons:
             return
 
-        # Clear current layout
         for i in reversed(range(self.buttons_layout.count())):
-            widget = self.buttons_layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
+            layout_item = self.buttons_layout.itemAt(i)
+            if layout_item and layout_item.layout():
+                while layout_item.layout().count():
+                    item = layout_item.layout().takeAt(0)
+                    if item.widget():
+                        item.widget().setParent(None)
+                self.buttons_layout.removeItem(layout_item.layout())
 
-        # Calculate number of buttons per row
-        button_width = 60  # Smaller button width
+        button_width = 60
         spacing = 5
-        available_width = self.width() - 20  # Account for margins
+        available_width = self.width() - 20
         buttons_per_row = max(1, available_width // (button_width + spacing))
 
-        # Create rows
         button_list = list(self.group_buttons.values())
         for i in range(0, len(button_list), buttons_per_row):
             row_layout = QHBoxLayout()
             for j in range(buttons_per_row):
                 if i + j < len(button_list):
                     button = button_list[i + j]
-                    button.setFixedSize(button_width, 25)  # Smaller size
+                    button.setFixedSize(button_width, 25)
                     row_layout.addWidget(button)
             row_layout.addStretch()
             self.buttons_layout.addLayout(row_layout)
+            
+    def set_gait_cycles(self, gait_cycles):
+        self.gait_cycles = gait_cycles
 
     def load_data(self, markers_data, marker_types, marker_labels):
         self.markers_data = markers_data
@@ -166,6 +165,9 @@ class MomentsTab(QWidget):
         if frame_range and not (frame_range[0] <= current_frame <= frame_range[1]):
             plot_current_frame = None
 
+        self.clear_plots()
+        self.vlines = []
+
         selected_group = self.group_dropdown.currentText()
         selected_component = self.component_dropdown.currentText()
         
@@ -174,126 +176,82 @@ class MomentsTab(QWidget):
             groups = [selected_group]
 
         use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
-
-        if self.zoomed_in_group:
-            self.axes = GenericDataPlotter.create_plot_grid(self.figure, 1, 1)
-            ax = self.axes[0]
-            group = self.zoomed_in_group
-            ax.set_title(f'MOMENTS Data - {group}')
-            ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-            ax.set_ylabel('Moment (Nmm)')
-            if use_gait_cycle:
-                self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', current_frame, unit_conversion_factor=1000)
-            else:
-                self.moments_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range)
-                if plot_current_frame is not None:
-                    self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
-
-        elif selected_component == "All":
-            num_plots = len(groups) * 3
-            self.axes = GenericDataPlotter.create_plot_grid(self.figure, num_plots, 3)
-            ax_iter = iter(self.axes)
-            if groups:
-                for group in groups:
-                    for component in ['x', 'y', 'z']:
-                        ax = next(ax_iter)
-                        ax.set_title(f'{group} - {component.upper()}')
-                        ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                        ax.set_ylabel('Moment (Nmm)')
-                        self.ax_to_group[ax] = group
-                        if use_gait_cycle:
-                            self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', current_frame, component=component, unit_conversion_factor=1000)
-                        else:
-                            self.moments_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
-                            if plot_current_frame is not None:
-                                self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
         
-        else:
-            num_plots = len(groups)
-            self.axes = GenericDataPlotter.create_plot_grid(self.figure, num_plots, 3)
-            component = selected_component.lower()
-            if groups:
-                for i, group in enumerate(groups):
-                    ax = self.axes[i]
-                    ax.set_title(f'{group} - {selected_component}')
-                    ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                    ax.set_ylabel('Moment (Nmm)')
-                    self.ax_to_group[ax] = group
+        if self.zoomed_plot:
+            self.zoomed_plot = None
+            for p in self.plots:
+                p.show()
+                
+        row, col = 0, 0
+        if selected_component == "All":
+            for group in groups:
+                for component in ['x', 'y', 'z']:
+                    plot_widget = self.add_plot(row, col)
+                    plot_widget.ax.set_title(f'{group} - {component.upper()}')
+                    plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+                    plot_widget.ax.set_ylabel('Moment (Nmm)')
                     if use_gait_cycle:
-                        self.gait_cycle_plotter.plot_gait_cycle_data(ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', current_frame, component=component, unit_conversion_factor=1000)
+                        self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', current_frame, component=component, unit_conversion_factor=1000)
                     else:
-                        self.moments_plotter.plot_data(ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
+                        self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                         if plot_current_frame is not None:
-                            self.vlines.append(ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+                            self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+                    
+                    col += 1
+                    if col >= 3:
+                        col = 0
+                        row += 1
+                    plot_widget.canvas.draw()
+        else:
+            component = selected_component.lower()
+            for group in groups:
+                plot_widget = self.add_plot(row, col)
+                plot_widget.ax.set_title(f'{group} - {selected_component}')
+                plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+                plot_widget.ax.set_ylabel('Moment (Nmm)')
+                if use_gait_cycle:
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', current_frame, component=component, unit_conversion_factor=1000)
+                else:
+                    self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
+                    if plot_current_frame is not None:
+                        self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
-        self.figure.tight_layout()
-        self.canvas.draw()
+                col += 1
+                if col >= 3:
+                    col = 0
+                    row += 1
+                plot_widget.canvas.draw()
+
+    def add_plot(self, row, col):
+        plot_widget = PlotWidget(self.plot_container)
+        plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
+        self.plot_layout.addWidget(plot_widget, row, col)
+        self.plots.append(plot_widget)
+        return plot_widget
+
+    def clear_plots(self):
+        for plot_widget in self.plots:
+            self.plot_layout.removeWidget(plot_widget)
+            plot_widget.deleteLater()
+        self.plots = []
 
     def on_selection_changed(self, value):
         if self.markers_data is not None:
             self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
-
-    def on_line_pick(self, event):
-        if self.selected_line:
-            self.selected_line.set_linewidth(1)
-
-        lines = self.moments_plotter.lines if not (self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])) else self.gait_cycle_plotter.lines
-        
-        for marker_idx, (line, idx, label, magnitude_data) in lines.items():
-            if event.artist == line:
-                line.set_linewidth(3)
-                self.selected_line = line
-                self.selected_data = (marker_idx, label, magnitude_data)
-                self.update_selected_value()
-                break
-        self.canvas.draw()
-
-    def on_button_press(self, event):
-        if not event.dblclick:
-            return
-
-        if self.zoomed_in_group is None:
-            if event.inaxes in self.ax_to_group:
-                self.zoomed_in_group = self.ax_to_group[event.inaxes]
+    
+    def on_plot_double_clicked(self, plot_widget):
+        if self.zoomed_plot:
+            self.zoomed_plot = None
+            for p in self.plots:
+                p.show()
         else:
-            self.zoomed_in_group = None
-
-        if self.markers_data is not None:
-            self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
-
-    def on_hover(self, event):
-        ax = event.inaxes
-        if ax != self.hovered_ax:
-            if self.hovered_ax:
-                self.hovered_ax.patch.set_edgecolor('none')
-                self.hovered_ax.patch.set_linewidth(0)
-
-            self.hovered_ax = ax
-
-            if self.hovered_ax and self.hovered_ax in self.axes:
-                self.hovered_ax.patch.set_edgecolor('grey')
-                self.hovered_ax.patch.set_linewidth(2)
-
-            self.canvas.draw_idle()
-
-    def update_selected_value(self):
-        if not self.selected_data:
-            return
-
-        marker_idx, label, magnitude_data = self.selected_data
-        frame = int(self.current_frame)
-        
-        plotter = self.moments_plotter if not (self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])) else self.gait_cycle_plotter
-        value_text = plotter.get_value_at_frame(marker_idx, frame)
-        
-        if value_text:
-            self.value_label.setText(value_text)
-        else:
-            self.value_label.setText(f"{label}: Frame {frame} out of range")
+            self.zoomed_plot = plot_widget
+            for p in self.plots:
+                if p is not plot_widget:
+                    p.hide()
 
     def set_current_frame(self, frame_index):
         self.current_frame = frame_index
-
         plot_current_frame = frame_index
         if self.frame_range:
             start_frame, end_frame = self.frame_range
@@ -307,14 +265,8 @@ class MomentsTab(QWidget):
             else:
                 vline.set_visible(False)
         
-        if self.canvas:
-            self.canvas.draw_idle()
-
-        if self.selected_data:
-            self.update_selected_value()
-
-    def set_gait_cycles(self, gait_cycles):
-        self.gait_cycles = gait_cycles
+        for plot in self.plots:
+            plot.canvas.draw_idle()
 
     def set_gait_info(self, info_text):
         self.gait_info_label.setText(info_text)
@@ -324,7 +276,7 @@ class MomentsTab(QWidget):
         button = self.group_buttons[group]
         button.setChecked(self.group_visibility[group])
         self.update_button_style(button, self.group_visibility[group])
-        if self.markers_data is not None:
+        if self.markers_data:
             self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
 
     def update_button_style(self, button, visible):
@@ -334,9 +286,8 @@ class MomentsTab(QWidget):
             button.setStyleSheet("QPushButton { background-color: grey; color: white; }")
 
     def clear_data(self):
-        self.figure.clear()
-        self.axes, self.vlines = [], []
+        self.clear_plots()
+        self.vlines = []
         self.value_label.setText("")
         self.gait_info_label.setText("")
-        self.canvas.draw()
         self.moments_plotter.lines = {}
