@@ -233,6 +233,7 @@ class AnglesTab(QWidget):
     def add_plot(self, row, col):
         plot_widget = PlotWidget(self.plot_container)
         plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
+        plot_widget.setProperty("grid_pos", (row, col))
         self.plot_layout.addWidget(plot_widget, row, col)
         self.plots.append(plot_widget)
         return plot_widget
@@ -249,13 +250,19 @@ class AnglesTab(QWidget):
     
     def on_plot_double_clicked(self, plot_widget):
         if self.zoomed_plot:
-            self.zoomed_plot = None
+            # Restore original layout
             for p in self.plots:
+                pos = p.property("grid_pos")
+                if pos:
+                    self.plot_layout.addWidget(p, pos[0], pos[1])
                 p.show()
+            self.zoomed_plot = None
         else:
+            # Zoom in
             self.zoomed_plot = plot_widget
             for p in self.plots:
-                if p is not plot_widget:
+                if p is not self.zoomed_plot:
+                    self.plot_layout.removeWidget(p)
                     p.hide()
 
     def set_current_frame(self, frame_index):
