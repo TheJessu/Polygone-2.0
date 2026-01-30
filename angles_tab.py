@@ -23,8 +23,11 @@ class PlotWidget(QWidget):
         self.figure.patch.set_facecolor('white')
         self.ax.set_facecolor('white')
 
-    def mouseDoubleClickEvent(self, event):
-        self.plot_double_clicked.emit(self)
+        self.canvas.mpl_connect('button_press_event', self.on_button_press)
+
+    def on_button_press(self, event):
+        if event.dblclick:
+            self.plot_double_clicked.emit(self)
 
     def enterEvent(self, event):
         self.ax.set_facecolor('#f0f0f0')
@@ -276,11 +279,16 @@ class AnglesTab(QWidget):
     
     def on_plot_double_clicked(self, plot_widget):
         if self.zoomed_plot:
-            # Restore original layout
+            # Zoom out
+            self.plot_layout.removeWidget(self.zoomed_plot)
+            self.zoomed_plot.canvas.setFixedSize(200, 200)
+            self.zoomed_plot.canvas.draw()
             for p in self.plots:
                 pos = p.property("grid_pos")
                 if pos:
                     self.plot_layout.addWidget(p, pos[0], pos[1])
+                p.canvas.setFixedSize(200, 200)
+                p.canvas.draw()
                 p.show()
             self.zoomed_plot = None
         else:
@@ -290,6 +298,18 @@ class AnglesTab(QWidget):
                 if p is not self.zoomed_plot:
                     self.plot_layout.removeWidget(p)
                     p.hide()
+            # Remove and re-add zoomed plot at (0,0) with larger size
+            self.plot_layout.removeWidget(self.zoomed_plot)
+            self.plot_layout.addWidget(self.zoomed_plot, 0, 0)
+            self.zoomed_plot.canvas.setFixedSize(400, 400)
+            self.zoomed_plot.canvas.draw()
+            self.zoomed_plot.show()
+        self.plot_layout.update()
+        self.plot_container.adjustSize()
+        self.plot_container.updateGeometry()
+        self.plot_container.show()
+        self.scroll_area.update()
+        self.scroll_area.show()
 
     def set_current_frame(self, frame_index):
         self.current_frame = frame_index
