@@ -57,7 +57,7 @@ class AnglesTab(QWidget):
         self.layout.addLayout(self.buttons_layout)
         
         self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(False)
+        self.scroll_area.setWidgetResizable(True)
         self.layout.addWidget(self.scroll_area, 1)
         
         self.plot_container = QWidget()
@@ -243,7 +243,12 @@ class AnglesTab(QWidget):
                     col = 0
                     row += 1
                 plot_widget.canvas.draw()
+        self.plot_layout.update()
         self.plot_container.adjustSize()
+        self.plot_container.updateGeometry()
+        self.plot_container.show()
+        self.scroll_area.update()
+        self.scroll_area.show()
 
 
     def add_plot(self, row, col):
@@ -259,6 +264,11 @@ class AnglesTab(QWidget):
             self.plot_layout.removeWidget(plot_widget)
             plot_widget.deleteLater()
         self.plots = []
+        self.plot_layout.invalidate()
+        self.plot_layout.activate()
+        self.plot_container.adjustSize()
+        self.plot_container.update()
+        self.scroll_area.update()
 
     def on_group_selected(self, group_name):
         if self.markers_data is not None:
@@ -307,7 +317,7 @@ class AnglesTab(QWidget):
         button = self.group_buttons[group]
         button.setChecked(self.group_visibility[group])
         self.update_button_style(button, self.group_visibility[group])
-        if self.markers_data:
+        if self.markers_data is not None:
             self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
 
     def update_button_style(self, button, visible):
