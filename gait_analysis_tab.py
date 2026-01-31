@@ -154,6 +154,11 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_ylabel('Angle')
             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', self.current_frame, component=comp)
             plot_widget.canvas.draw()
+            # Make plots with no name change invisible
+            if title == f'{group} - {comp.upper()}':
+                plot_widget.setVisible(False)
+            else:
+                plot_widget.setVisible(True)
 
         # Plot kinetics
         for plot_widget, group, comp, plot_type, y_label, unit_factor in self.kinetics_plots:
@@ -191,6 +196,11 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_ylabel(y_label)
             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, unit_conversion_factor=unit_factor)
             plot_widget.canvas.draw()
+            # Make plots with no name change invisible
+            if title == f'{group} - {comp.upper()}':
+                plot_widget.setVisible(False)
+            else:
+                plot_widget.setVisible(True)
 
     def on_plot_double_clicked(self, plot_widget):
         # Simple zoom, but since fixed layout, maybe just ignore or implement basic zoom
