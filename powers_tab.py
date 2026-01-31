@@ -208,7 +208,8 @@ class PowersTab(QWidget):
         self.gait_cycle_plotter.lines = {}
 
         selected_component = self.dropdown.currentText()
-        groups = [g for g in self.groups if self.group_visibility.get(g, True)]
+        desired_order = ['Hi', 'Kne', 'Ankl']
+        groups = [g for g in desired_order if g in self.groups and self.group_visibility.get(g, True)]
         use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
 
         if self.zoomed_plot:
