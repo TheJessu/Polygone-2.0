@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QScrollArea, QGridLayout
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QEvent
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
@@ -8,13 +8,17 @@ from generic_plotter import GenericDataPlotter
 
 class PlotWidget(QWidget):
     plot_double_clicked = pyqtSignal(QWidget)
+    line_clicked = pyqtSignal(object)  # Signal for line clicks, emits (plotter_type, key)
 
-    def __init__(self, parent=None):
+    def __init__(self, angles_plotter, gait_cycle_plotter, parent=None):
         super().__init__(parent)
+        self.angles_plotter = angles_plotter
+        self.gait_cycle_plotter = gait_cycle_plotter
+        self.lines = {}  # Lines for this plot
         self.figure = Figure(figsize=(4, 4), dpi=100)
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
-        
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.canvas)
@@ -23,11 +27,31 @@ class PlotWidget(QWidget):
         self.figure.patch.set_facecolor('white')
         self.ax.set_facecolor('white')
 
-        self.canvas.mpl_connect('button_press_event', self.on_button_press)
+        self.canvas.mpl_connect('button_press_event', self.on_mpl_click)
+        self.canvas.mpl_connect('pick_event', self.on_line_pick)
 
-    def on_button_press(self, event):
+    def on_mpl_click(self, event):
         if event.dblclick:
             self.plot_double_clicked.emit(self)
+
+    def on_line_pick(self, event):
+        # Handle line picking
+        if hasattr(event.artist, 'get_label'):
+            # Check this plot's lines first
+            for key, (line, _, _, _) in self.lines.items():
+                if line == event.artist:
+                    self.line_clicked.emit(('angles', key))
+                    return
+            # Check angles_plotter lines
+            for key, (line, _, _, _) in self.angles_plotter.lines.items():
+                if line == event.artist:
+                    self.line_clicked.emit(('angles', key))
+                    return
+            # Check gait_cycle_plotter lines
+            for line_key, (line, _, _, _) in self.gait_cycle_plotter.lines.items():
+                if line == event.artist:
+                    self.line_clicked.emit(('gait', line_key))
+                    return
 
     def enterEvent(self, event):
         self.ax.set_facecolor('#f0f0f0')
@@ -58,11 +82,11 @@ class AnglesTab(QWidget):
 
         self.buttons_layout = QVBoxLayout()
         self.layout.addLayout(self.buttons_layout)
-        
+
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.layout.addWidget(self.scroll_area, 1)
-        
+
         self.plot_container = QWidget()
         self.plot_layout = QGridLayout(self.plot_container)
         self.scroll_area.setWidget(self.plot_container)
@@ -79,7 +103,7 @@ class AnglesTab(QWidget):
         self.groups = []
         self.current_frame = 0
         self.max_plots = 4
-        
+
         self.group_visibility = {}
         self.group_buttons = {}
 
@@ -87,6 +111,7 @@ class AnglesTab(QWidget):
         self.markers_data = None
         self.marker_types = None
         self.marker_labels = None
+        self.highlighted_line = None  # Track the currently highlighted line
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -105,7 +130,6 @@ class AnglesTab(QWidget):
                         item.widget().setParent(None)
                 self.buttons_layout.removeItem(layout_item.layout())
 
-
         button_width = 60
         spacing = 5
         available_width = self.width() - 20
@@ -121,7 +145,7 @@ class AnglesTab(QWidget):
                     row_layout.addWidget(button)
             row_layout.addStretch()
             self.buttons_layout.addLayout(row_layout)
-            
+
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
 
@@ -139,7 +163,7 @@ class AnglesTab(QWidget):
                     groups.add(group)
 
         self.groups = sorted(list(groups))
-        
+
         self.group_options = ["All", "X", "Y", "Z"]
         self.dropdown.clear()
         self.dropdown.addItems(self.group_options)
@@ -175,6 +199,11 @@ class AnglesTab(QWidget):
 
         self.clear_plots()
         self.vlines = []
+        self.highlighted_line = None  # Clear highlight on replot
+        self.value_label.setText("")  # Clear info on replot
+        # Clear lines on replot
+        self.angles_plotter.lines = {}
+        self.gait_cycle_plotter.lines = {}
 
         selected_component = self.dropdown.currentText()
         groups = [g for g in self.groups if self.group_visibility.get(g, True)]
@@ -207,10 +236,10 @@ class AnglesTab(QWidget):
                     if use_gait_cycle:
                         self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', current_frame, component=component)
                     else:
-                        self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
+                        self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component, plot_widget)
                         if plot_current_frame is not None:
                             self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
-                    
+
                     col += 1
                     if col >= 3:
                         col = 0
@@ -240,7 +269,7 @@ class AnglesTab(QWidget):
                     self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
-                
+
                 col += 1
                 if col >= 3:
                     col = 0
@@ -253,10 +282,10 @@ class AnglesTab(QWidget):
         self.scroll_area.update()
         self.scroll_area.show()
 
-
     def add_plot(self, row, col):
-        plot_widget = PlotWidget(self.plot_container)
+        plot_widget = PlotWidget(self.angles_plotter, self.gait_cycle_plotter, self.plot_container)
         plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
+        plot_widget.line_clicked.connect(self.on_line_clicked)
         plot_widget.setProperty("grid_pos", (row, col))
         self.plot_layout.addWidget(plot_widget, row, col)
         self.plots.append(plot_widget)
@@ -276,7 +305,7 @@ class AnglesTab(QWidget):
     def on_group_selected(self, group_name):
         if self.markers_data is not None:
             self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
-    
+
     def on_plot_double_clicked(self, plot_widget):
         if self.zoomed_plot:
             # Zoom out
@@ -311,6 +340,35 @@ class AnglesTab(QWidget):
         self.scroll_area.update()
         self.scroll_area.show()
 
+    def on_line_clicked(self, line_info):
+        plotter_type, key = line_info
+
+        # Unhighlight previous line
+        if self.highlighted_line is not None:
+            prev_plotter_type, prev_key = self.highlighted_line
+            if prev_plotter_type == 'angles':
+                self.angles_plotter.highlight_line(prev_key, highlight=False)
+            elif prev_plotter_type == 'gait':
+                self.gait_cycle_plotter.highlight_line(prev_key, highlight=False)
+
+        # Highlight new line
+        if plotter_type == 'angles':
+            self.angles_plotter.highlight_line(key, highlight=True)
+        elif plotter_type == 'gait':
+            self.gait_cycle_plotter.highlight_line(key, highlight=True)
+        self.highlighted_line = line_info
+
+        # Update display info
+        if plotter_type == 'angles':
+            info = self.angles_plotter.get_line_info(key, self.current_frame, self.gait_cycles)
+        elif plotter_type == 'gait':
+            info = self.gait_cycle_plotter.get_line_info(key, self.current_frame, self.gait_cycles, 'ANGLES')
+        self.value_label.setText(info)
+
+        # Redraw all plots
+        for plot in self.plots:
+            plot.canvas.draw()
+
     def set_current_frame(self, frame_index):
         self.current_frame = frame_index
         plot_current_frame = frame_index
@@ -325,9 +383,18 @@ class AnglesTab(QWidget):
                 vline.set_visible(True)
             else:
                 vline.set_visible(False)
-        
+
+        # Update highlighted line info if any
+        if self.highlighted_line is not None:
+            plotter_type, key = self.highlighted_line
+            if plotter_type == 'angles':
+                info = self.angles_plotter.get_line_info(key, self.current_frame, self.gait_cycles)
+            elif plotter_type == 'gait':
+                info = self.gait_cycle_plotter.get_line_info(key, self.current_frame, self.gait_cycles, 'ANGLES')
+            self.value_label.setText(info)
+
         for plot in self.plots:
-            plot.canvas.draw_idle()
+            plot.canvas.draw()
 
     def set_gait_info(self, info_text):
         self.gait_info_label.setText(info_text)
@@ -352,3 +419,5 @@ class AnglesTab(QWidget):
         self.value_label.setText("")
         self.gait_info_label.setText("")
         self.angles_plotter.lines = {}
+        self.gait_cycle_plotter.lines = {}
+        self.highlighted_line = None

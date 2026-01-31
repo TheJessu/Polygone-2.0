@@ -4,7 +4,7 @@ import math
 class GenericDataPlotter:
     def __init__(self, marker_type):
         self.marker_type = marker_type
-        self.lines = {}  # Store lines for picking
+        self.lines = {}  # Store lines for picking, dict of key to (line, marker_idx, label, plot_data)
 
         # Define units and conversions based on marker type
         self.units_config = {
@@ -39,9 +39,9 @@ class GenericDataPlotter:
 
         return axes
 
-    def plot_data(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range=None, angle_units='degrees', component='magnitude'):
+    def plot_data(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range=None, angle_units='degrees', component='magnitude', plot_widget=None):
         """Generic plot method for any marker type."""
-        self.lines = {}
+        lines_dict = plot_widget.lines if plot_widget else self.lines
 
         # Get markers of the specified type
         type_indices = [i for i, t in enumerate(marker_types) if t == self.marker_type]
@@ -75,8 +75,6 @@ class GenericDataPlotter:
             # Get label
             label = marker_labels[marker_idx] if marker_idx < len(marker_labels) and marker_labels[marker_idx] else f'Marker {marker_idx+1}'
 
-
-
             # Plot x, y, z values over time
             frames = np.arange(markers_data.shape[0])
             x_data = markers_data[:, marker_idx, 0]
@@ -99,6 +97,8 @@ class GenericDataPlotter:
             else:  # magnitude
                 plot_data = np.sqrt(x_data**2 + y_data**2 + z_data**2)
 
+            key = f"{marker_idx}_{component}"
+
             # Slice data to gait cycle range if provided
             if frame_range is not None:
                 start_frame, end_frame = frame_range
@@ -112,8 +112,11 @@ class GenericDataPlotter:
                 if np.any(valid_mask):
                     # Set color: red for left (L), green for right (R)
                     color = 'red' if label.startswith('L') else 'green'
-                    line, = ax.plot(x_values[valid_mask], sliced_plot_data[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
-                    self.lines[marker_idx] = (line, marker_idx, label, plot_data)  # Store full plot_data
+                    line, = ax.plot(x_values[valid_mask], sliced_plot_data[valid_mask], label=f'{label}', linewidth=2, color=color, picker=20)
+                    # Store in lines_dict
+                    lines_dict[key] = (line, marker_idx, label, plot_data)
+                    # Also store in self.lines for global access
+                    self.lines[key] = (line, marker_idx, label, plot_data)
                     # Set tick labels to frame numbers
                     ax.set_xticks(x_values)
                     ax.set_xticklabels(sliced_frames.astype(int))
@@ -124,7 +127,10 @@ class GenericDataPlotter:
                     # Set color: red for left (L), green for right (R)
                     color = 'red' if label.startswith('L') else 'green'
                     line, = ax.plot(frames[valid_mask], plot_data[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
-                    self.lines[marker_idx] = (line, marker_idx, label, plot_data)
+                    # Store in lines_dict
+                    lines_dict[key] = (line, marker_idx, label, plot_data)
+                    # Also store in self.lines for global access
+                    self.lines[key] = (line, marker_idx, label, plot_data)
 
         return self.lines
 
@@ -140,3 +146,44 @@ class GenericDataPlotter:
                 else:
                     return f"{label}: No data at frame {frame}"
         return ""
+
+    def highlight_line(self, key, highlight=True):
+        """Highlight or unhighlight a line."""
+        if key in self.lines:
+            line, _, label, _ = self.lines[key]
+            if highlight:
+                line.set_linewidth(4)
+                line.set_color('blue')
+            else:
+                # Reset to original color
+                color = 'red' if label.startswith('L') else 'green'
+                line.set_linewidth(2)
+                line.set_color(color)
+
+    def get_line_info(self, key, frame, gait_cycles=None):
+        """Get detailed info for the line at the current frame, including gait cycle %."""
+        if key not in self.lines:
+            return ""
+        line, idx, label, plot_data = self.lines[key]
+        if frame >= len(plot_data):
+            return f"{label}: No data at frame {frame}"
+        value = plot_data[frame]
+        if np.isnan(value):
+            return f"{label}: No data at frame {frame}"
+        unit = self.units_config[self.marker_type]['unit']
+        info = f"{value:.2f} {unit} at frame {frame}"
+        if gait_cycles:
+            # Calculate gait cycle %
+            gait_percent = self.calculate_gait_cycle_percent(frame, gait_cycles)
+            if gait_percent is not None:
+                info += f" and {gait_percent:.1f}%"
+        return f"{label}: {info}"
+
+    def calculate_gait_cycle_percent(self, frame, gait_cycles):
+        """Calculate the gait cycle percentage for the given frame."""
+        for side in ['left', 'right']:
+            for start, end in gait_cycles.get(side, []):
+                if start <= frame < end:
+                    percent = ((frame - start) / (end - start)) * 100
+                    return percent
+        return None
