@@ -1,16 +1,8 @@
-# Line Highlight Feature Implementation
+# TODO List for Adjusting Default Plot Visibility
 
-## Completed Tasks
-- [x] Added highlight_line method to GenericDataPlotter
-- [x] Added get_line_info method to GenericDataPlotter for displaying value, frame, and gait cycle %
-- [x] Added calculate_gait_cycle_percent method to GenericDataPlotter
-- [x] Modified PlotWidget to emit line_clicked signal on line pick
-- [x] Added on_line_clicked method to AnglesTab to handle highlighting and info display
-- [x] Connected line_clicked signal in add_plot method
-- [x] Updated set_current_frame to refresh info when frame changes
-- [x] Updated clear_data to reset highlighted line
-- [x] Updated plot_data to clear highlight and info on replot
+## Completed Steps
+- [x] Modified moments_tab.py to set default_visible = group in ['Hi', 'Kne', 'Ankl'] in the load_data method
+- [x] Modified powers_tab.py to set default_visible = group in ['Hi', 'Kne', 'Ankl'] in the load_data method
 
-## Pending Tasks
-- [ ] Test the implementation to ensure it works correctly
-- [ ] Verify that the feature integrates well with other tabs (future task)
+## Remaining Steps
+- [ ] Test the changes by running the application and verifying that only 'Hi', 'Kne', 'Ankl' buttons are checked by default in both moments and powers tabs
