@@ -157,7 +157,36 @@ class GaitAnalysisTab(QWidget):
 
         # Plot kinetics
         for plot_widget, group, comp, plot_type, y_label, unit_factor in self.kinetics_plots:
-            plot_widget.ax.set_title(f'{group} - {comp.upper()}')
+            if plot_type == 'ANGLES':
+                if group.lower() == 'hip' and comp == 'y':
+                    title = 'Hip Flexion-Extension'
+                elif group.lower() == 'knee' and comp == 'y':
+                    title = 'Knee Flexion-Extension'
+                elif group.lower() == 'footprogress' and comp == 'y':
+                    title = 'Dorsi-Plantarflexion'
+                else:
+                    title = f'{group} - {comp.upper()}'
+            elif plot_type == 'MOMENTS':
+                if group.lower() == 'hi' and comp == 'y':
+                    title = 'Hip Flex-Ext Moment'
+                elif group.lower() == 'kne' and comp == 'y':
+                    title = 'Knee Flex-Ext Moment'
+                elif group.lower() == 'ankl' and comp == 'y':
+                    title = 'Dors-Plan Moment'
+                else:
+                    title = f'{group} - {comp.upper()}'
+            elif plot_type == 'POWERS':
+                if group.lower() == 'hi' and comp == 'z':
+                    title = 'Hip Power'
+                elif group.lower() == 'kne' and comp == 'z':
+                    title = 'Knee Power'
+                elif group.lower() == 'ankl' and comp == 'z':
+                    title = 'Ankle Power'
+                else:
+                    title = f'{group} - {comp.upper()}'
+            else:
+                title = f'{group} - {comp.upper()}'
+            plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             plot_widget.ax.set_ylabel(y_label)
             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, unit_conversion_factor=unit_factor)
