@@ -1,9 +1,10 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout
 from PyQt5.QtCore import pyqtSignal
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
+from pdfExport import PDFExporter
 
 class PlotWidget(QWidget):
     plot_double_clicked = pyqtSignal(QWidget)
@@ -30,8 +31,18 @@ class GaitAnalysisTab(QWidget):
         super().__init__()
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
+        self.pdf_exporter = PDFExporter()
 
         self.layout = QVBoxLayout(self)
+
+        # Add export button
+        button_layout = QHBoxLayout()
+        self.export_pdf_button = QPushButton("Export PDF")
+        self.export_pdf_button.clicked.connect(self.export_to_pdf)
+        button_layout.addWidget(self.export_pdf_button)
+        button_layout.addStretch()
+        self.layout.addLayout(button_layout)
+
         self.tab_widget = QTabWidget()
         self.layout.addWidget(self.tab_widget)
 
@@ -205,6 +216,15 @@ class GaitAnalysisTab(QWidget):
     def on_plot_double_clicked(self, plot_widget):
         # Simple zoom, but since fixed layout, maybe just ignore or implement basic zoom
         pass
+
+    def export_to_pdf(self):
+        """Export the gait analysis tab content to PDF."""
+        if self.markers_data is None or not self.gait_cycles:
+            # Show a message or disable button if no data
+            return
+        # Ensure plots are up to date
+        self.plot_data()
+        self.pdf_exporter.export_gait_analysis_to_pdf(self)
 
     def clear_data(self):
         self.markers_data = None
