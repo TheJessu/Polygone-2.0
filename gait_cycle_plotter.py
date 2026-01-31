@@ -9,6 +9,12 @@ class GaitCyclePlotter:
         self.lines = {}
 
     def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, current_frame=None, unit_conversion_factor=1, component='magnitude'):
+        if gait_cycles is None or not (gait_cycles.get('left') or gait_cycles.get('right')):
+            # No gait cycles defined, set xlabel and ylabel but don't plot anything
+            ax.set_xlabel('Gait Cycle (%)')
+            ax.set_ylabel(y_label)
+            return
+
         type_indices = [i for i, t in enumerate(marker_types) if t == plot_type]
         if selected_group != "All":
             type_indices = [

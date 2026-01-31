@@ -201,8 +201,7 @@ class AnglesTab(QWidget):
         self.vlines = []
         self.highlighted_line = None  # Clear highlight on replot
         self.value_label.setText("")  # Clear info on replot
-        # Clear lines on replot
-        self.angles_plotter.lines = {}
+        self.angles_plotter.lines.clear()
         self.gait_cycle_plotter.lines = {}
 
         selected_component = self.dropdown.currentText()
@@ -236,7 +235,7 @@ class AnglesTab(QWidget):
                     if use_gait_cycle:
                         self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', current_frame, component=component)
                     else:
-                        self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component, plot_widget)
+                        self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
                         if plot_current_frame is not None:
                             self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 

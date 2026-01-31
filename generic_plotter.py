@@ -114,9 +114,9 @@ class GenericDataPlotter:
                     color = 'red' if label.startswith('L') else 'green'
                     line, = ax.plot(x_values[valid_mask], sliced_plot_data[valid_mask], label=f'{label}', linewidth=2, color=color, picker=20)
                     # Store in lines_dict
-                    lines_dict[key] = (line, marker_idx, label, plot_data)
+                    lines_dict[key] = (line, marker_idx, label, plot_data, color, 2)
                     # Also store in self.lines for global access
-                    self.lines[key] = (line, marker_idx, label, plot_data)
+                    self.lines[key] = (line, marker_idx, label, plot_data, color, 2)
                     # Set tick labels to frame numbers
                     ax.set_xticks(x_values)
                     ax.set_xticklabels(sliced_frames.astype(int))
@@ -128,16 +128,16 @@ class GenericDataPlotter:
                     color = 'red' if label.startswith('L') else 'green'
                     line, = ax.plot(frames[valid_mask], plot_data[valid_mask], label=f'{label}', linewidth=1, color=color, picker=5)
                     # Store in lines_dict
-                    lines_dict[key] = (line, marker_idx, label, plot_data)
+                    lines_dict[key] = (line, marker_idx, label, plot_data, color, 1)
                     # Also store in self.lines for global access
-                    self.lines[key] = (line, marker_idx, label, plot_data)
+                    self.lines[key] = (line, marker_idx, label, plot_data, color, 1)
 
         return self.lines
 
     def get_value_at_frame(self, marker_idx, frame):
         """Get the value at a specific frame for display."""
         if marker_idx in self.lines:
-            line, idx, label, plot_data = self.lines[marker_idx]
+            line, idx, label, plot_data, _, _ = self.lines[marker_idx]
             if frame < len(plot_data):
                 value = plot_data[frame]
                 if not np.isnan(value):
@@ -150,15 +150,14 @@ class GenericDataPlotter:
     def highlight_line(self, key, highlight=True):
         """Highlight or unhighlight a line."""
         if key in self.lines:
-            line, _, label, _ = self.lines[key]
+            line, _, _, _, original_color, original_linewidth = self.lines[key]
             if highlight:
                 line.set_linewidth(4)
                 line.set_color('blue')
             else:
-                # Reset to original color
-                color = 'red' if label.startswith('L') else 'green'
-                line.set_linewidth(2)
-                line.set_color(color)
+                # Reset to original color and linewidth
+                line.set_linewidth(original_linewidth)
+                line.set_color(original_color)
 
     def get_line_info(self, key, frame, gait_cycles=None):
         """Get detailed info for the line at the current frame, including gait cycle %."""

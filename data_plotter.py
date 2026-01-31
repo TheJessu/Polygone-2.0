@@ -88,7 +88,7 @@ class DataPlotter(QWidget):
 
         for _, config in self.plot_types_config.items():
             config['tab'].set_gait_cycles(self.gait_cycles)
-        
+
         self.plot_data()
     
     def clear_data(self):
@@ -98,3 +98,4 @@ class DataPlotter(QWidget):
         self.gait_cycles = None
         for _, config in self.plot_types_config.items():
             config['tab'].clear_data()
+        self.gait_analysis_tab.clear_data()

@@ -6,6 +6,7 @@ from c3d_viewer import C3DViewer
 from video_player import VideoPlayer
 from marker_outliner import MarkerOutliner
 from data_plotter import DataPlotter
+from gait_analysis_tab import GaitAnalysisTab
 from timeline_widget import TimelineWidget
 from PyQt5.QtWidgets import QTabWidget
 
@@ -55,6 +56,10 @@ class MainWindow(QMainWindow):
         self.data_plotter = DataPlotter()
         self.right_tabs.addTab(self.data_plotter, "Data Plots")
 
+        # Create gait analysis tab
+        self.gait_analysis_tab = GaitAnalysisTab()
+        self.right_tabs.addTab(self.gait_analysis_tab, "Gait Analysis")
+
         # Set splitter proportions
         splitter.setSizes([1100, 500])
 
@@ -103,6 +108,7 @@ class MainWindow(QMainWindow):
                 # Update data plotter with data
                 angle_units = getattr(self.c3d_viewer, 'angle_units', 'degrees')
                 self.data_plotter.load_data(markers_data, marker_types, marker_labels, angle_units)
+                self.gait_analysis_tab.load_data(markers_data, marker_types, marker_labels)
                 # Update timeline controls
                 if markers_data is not None:
                     self.total_frames = markers_data.shape[0]
@@ -112,6 +118,7 @@ class MainWindow(QMainWindow):
                     self.c3d_viewer.set_frame(0)  # Set to first frame
                     self.marker_outliner.set_frame(0)
                     self.data_plotter.set_current_frame(0)
+                    self.gait_analysis_tab.set_current_frame(0)
 
                     # Set events data for timeline
                     events_data = self.c3d_viewer.get_events_data()
@@ -119,6 +126,15 @@ class MainWindow(QMainWindow):
                         self.timeline_widget.set_events_data(events_data)
                         # Set gait info for data plotter
                         self.data_plotter.set_gait_info(events_data)
+                        # Set gait cycles for gait analysis tab
+                        left_strikes = sorted([int(e['time'] * 100) for e in events_data if e.get('foot') == 'left' and e.get('type') == 'strike'])
+                        right_strikes = sorted([int(e['time'] * 100) for e in events_data if e.get('foot') == 'right' and e.get('type') == 'strike'])
+                        gait_cycles = {'left': [], 'right': []}
+                        for i in range(len(left_strikes) - 1):
+                            gait_cycles['left'].append((left_strikes[i], left_strikes[i+1]))
+                        for i in range(len(right_strikes) - 1):
+                            gait_cycles['right'].append((right_strikes[i], right_strikes[i+1]))
+                        self.gait_analysis_tab.set_gait_cycles(gait_cycles)
                 self.status_bar.showMessage(f"Loaded C3D file: {file_path}")
             elif file_path.lower().endswith(('.avi', '.mp4')):
                 self.video_player.load_video(file_path)
@@ -143,6 +159,7 @@ class MainWindow(QMainWindow):
             self.c3d_viewer.set_frame(self.current_frame)
             self.marker_outliner.set_frame(self.current_frame)
             self.data_plotter.set_current_frame(self.current_frame)
+            self.gait_analysis_tab.set_current_frame(self.current_frame)
 
     def stop_playback(self):
         """Stop playback."""
@@ -153,6 +170,7 @@ class MainWindow(QMainWindow):
         self.c3d_viewer.set_frame(0)
         self.marker_outliner.set_frame(0)
         self.data_plotter.set_current_frame(0)
+        self.gait_analysis_tab.set_current_frame(0)
 
     def next_frame(self):
         """Advance to next frame in animation."""
@@ -162,6 +180,7 @@ class MainWindow(QMainWindow):
             self.c3d_viewer.set_frame(self.current_frame)
             self.marker_outliner.set_frame(self.current_frame)
             self.data_plotter.set_current_frame(self.current_frame)
+            self.gait_analysis_tab.set_current_frame(self.current_frame)
 
     def update_frame_label(self):
         """Update the frame display label."""
