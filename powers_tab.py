@@ -265,6 +265,11 @@ class PowersTab(QWidget):
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
+                if component == 'z':
+                    plot_widget.ax.text(-0.05, 0.25, 'Abs', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'W/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Gen', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+
                 col += 1
                 if col >= 3:
                     col = 0

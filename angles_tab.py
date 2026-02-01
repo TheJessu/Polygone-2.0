@@ -240,6 +240,33 @@ class AnglesTab(QWidget):
                         if plot_current_frame is not None:
                             self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
+                    if component == 'x':
+                        if group.lower() in ['spine', 'pelvis']:
+                            plot_widget.ax.text(-0.05, 0.25, 'Down', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Up', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        else:  # hip, knee, footprogress
+                            plot_widget.ax.text(-0.05, 0.25, 'Abd', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Add', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    elif component == 'y':
+                        if group.lower() in ['spine', 'pelvis']:
+                            plot_widget.ax.text(-0.05, 0.25, 'Post', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Ant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        elif group.lower() in ['hip', 'knee']:
+                            plot_widget.ax.text(-0.05, 0.25, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        else:  # footprogress
+                            plot_widget.ax.text(-0.05, 0.25, 'Plan', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    elif component == 'z':
+                        plot_widget.ax.text(-0.05, 0.25, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Int', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+
                     col += 1
                     if col >= 3:
                         col = 0
@@ -269,6 +296,33 @@ class AnglesTab(QWidget):
                     self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+
+                if component == 'x':
+                    if group.lower() in ['spine', 'pelvis']:
+                        plot_widget.ax.text(-0.05, 0.25, 'Down', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Up', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    else:  # hip, knee, footprogress
+                        plot_widget.ax.text(-0.05, 0.25, 'Abd', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Add', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                elif component == 'y':
+                    if group.lower() in ['spine', 'pelvis']:
+                        plot_widget.ax.text(-0.05, 0.25, 'Post', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Ant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    elif group.lower() in ['hip', 'knee']:
+                        plot_widget.ax.text(-0.05, 0.25, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    else:  # footprogress
+                        plot_widget.ax.text(-0.05, 0.25, 'Plan', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                elif component == 'z':
+                    plot_widget.ax.text(-0.05, 0.25, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Int', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
                 col += 1
                 if col >= 3:

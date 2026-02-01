@@ -77,6 +77,43 @@ class GaitCyclePlotter:
         ax.set_xlabel('Gait Cycle (%)')
         ax.set_ylabel(y_label)
 
+        if plot_type == 'ANGLES':
+            if component == 'x':
+                if selected_group.lower() in ['spine', 'pelvis']:
+                    ax.text(-0.05, 0.25, 'Down', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.75, 'Up', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                else:  # hip, knee, footprogress
+                    ax.text(-0.05, 0.25, 'Abd', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.75, 'Add', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+            elif component == 'y':
+                if selected_group.lower() in ['spine', 'pelvis']:
+                    ax.text(-0.05, 0.25, 'Post', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.75, 'Ant', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                elif selected_group.lower() in ['hip', 'knee']:
+                    ax.text(-0.05, 0.25, 'Ext', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.75, 'Flex', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                else:  # footprogress
+                    ax.text(-0.05, 0.25, 'Plan', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.75, 'Dors', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+            elif component == 'z':
+                ax.text(-0.05, 0.25, 'Ext', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                ax.text(-0.05, 0.75, 'Int', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+        elif plot_type == 'MOMENTS':
+            if selected_group.lower() == 'ankl' and component == 'y':
+                ax.text(-0.05, 0.25, 'Dors', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                ax.text(-0.05, 0.50, 'Nm/kg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                ax.text(-0.05, 0.75, 'Plant', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+            else:
+                ax.text(-0.05, 0.25, 'Flex', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                ax.text(-0.05, 0.50, 'Nm/kg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                ax.text(-0.05, 0.75, 'Ext', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+
         if current_frame is not None:
             for side in ['left', 'right']:
                 for start, end in gait_cycles.get(side, []):
