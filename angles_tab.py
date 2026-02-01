@@ -267,6 +267,44 @@ class AnglesTab(QWidget):
                         plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.75, 'Int', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
+                    plot_widget.ax.set_box_aspect(1)
+                    if group.lower() == 'spine':
+                        ymin, ymax = -20, 20
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                    elif group.lower() == 'pelvis':
+                        if component == 'x':
+                            ymin, ymax = -20, 20
+                            plot_widget.ax.set_ylim(ymin, ymax)
+                        elif component == 'y':
+                            ymin, ymax = -5, 35
+                            plot_widget.ax.set_ylim(ymin, ymax)
+                        elif component == 'z':
+                            ymin, ymax = -30, 30
+                            plot_widget.ax.set_ylim(ymin, ymax)
+                    elif group.lower() == 'hip':
+                        if component == 'x':
+                            ymin, ymax = -15, 20
+                            plot_widget.ax.set_ylim(ymin, ymax)
+                        elif component == 'y':
+                            ymin, ymax = -15, 60
+                            plot_widget.ax.set_ylim(ymin, ymax)
+                        elif component == 'z':
+                            ymin, ymax = -30, 40
+                            plot_widget.ax.set_ylim(ymin, ymax)
+                    elif group.lower() == 'knee':
+                        ymin, ymax = -15, 90
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                    elif group.lower() == 'footprogress':
+                        ymin, ymax = -40, 40
+                        plot_widget.ax.set_ylim(ymin, ymax)
+
+                    # Set y-ticks to only show min and max
+                    plot_widget.ax.set_yticks([ymin, ymax])
+                    # Add horizontal grid lines at every 10 units
+                    for y in range(ymin + 10, ymax, 10):
+                        linewidth = 1.5 if y == 0 else 0.5
+                        plot_widget.ax.axhline(y=y, color='grey', linestyle='-', linewidth=linewidth, alpha=0.5)
+
                     col += 1
                     if col >= 3:
                         col = 0
@@ -323,6 +361,44 @@ class AnglesTab(QWidget):
                     plot_widget.ax.text(-0.05, 0.25, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                     plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                     plot_widget.ax.text(-0.05, 0.75, 'Int', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+
+                plot_widget.ax.set_box_aspect(1)
+                if group.lower() == 'spine':
+                    ymin, ymax = -20, 20
+                    plot_widget.ax.set_ylim(ymin, ymax)
+                elif group.lower() == 'pelvis':
+                    if component == 'x':
+                        ymin, ymax = -20, 20
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                    elif component == 'y':
+                        ymin, ymax = -5, 35
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                    elif component == 'z':
+                        ymin, ymax = -30, 30
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                elif group.lower() == 'hip':
+                    if component == 'x':
+                        ymin, ymax = -15, 20
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                    elif component == 'y':
+                        ymin, ymax = -15, 60
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                    elif component == 'z':
+                        ymin, ymax = -30, 40
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                elif group.lower() == 'knee':
+                    ymin, ymax = -15, 90
+                    plot_widget.ax.set_ylim(ymin, ymax)
+                elif group.lower() == 'footprogress':
+                    ymin, ymax = -40, 40
+                    plot_widget.ax.set_ylim(ymin, ymax)
+
+                # Set y-ticks to only show min and max
+                plot_widget.ax.set_yticks([ymin, ymax])
+                # Add horizontal grid lines at every 10 units
+                for y in range(ymin + 10, ymax, 10):
+                    linewidth = 1.5 if y == 0 else 0.5
+                    plot_widget.ax.axhline(y=y, color='grey', linestyle='-', linewidth=linewidth, alpha=0.5)
 
                 col += 1
                 if col >= 3:
