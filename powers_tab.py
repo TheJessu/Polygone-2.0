@@ -152,7 +152,7 @@ class PowersTab(QWidget):
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
 
-    def load_data(self, markers_data, marker_types, marker_labels):
+    def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
         type_indices = [i for i, t in enumerate(marker_types) if t == 'POWERS']
         groups = set()
         for idx in type_indices:

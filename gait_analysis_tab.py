@@ -32,6 +32,7 @@ class GaitAnalysisTab(QWidget):
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
         self.pdf_exporter = PDFExporter()
+        self.body_mass = None
 
         self.layout = QVBoxLayout(self)
 
@@ -88,9 +89,9 @@ class GaitAnalysisTab(QWidget):
             ('Hip', 'y', 'ANGLES', 'Angle'),
             ('Knee', 'y', 'ANGLES', 'Angle'),
             ('Footprogress', 'y', 'ANGLES', 'Angle'),
-            ('Hi', 'y', 'MOMENTS', 'Moment (Nmm)', 1000),
-            ('Kne', 'y', 'MOMENTS', 'Moment (Nmm)', 1000),
-            ('Ankl', 'y', 'MOMENTS', 'Moment (Nmm)', 1000),
+            ('Hi', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
+            ('Kne', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
+            ('Ankl', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
             ('Hi', 'z', 'POWERS', 'Power (W)'),
             ('Kne', 'z', 'POWERS', 'Power (W)'),
             ('Ankl', 'z', 'POWERS', 'Power (W)')
@@ -103,10 +104,11 @@ class GaitAnalysisTab(QWidget):
             self.kinetics_layout.addWidget(plot_widget, row, col)
             self.kinetics_plots.append((plot_widget, group, comp, plot_type, y_label, unit_factor[0] if unit_factor else 1))
 
-    def load_data(self, markers_data, marker_types, marker_labels):
+    def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
         self.markers_data = markers_data
         self.marker_types = marker_types
         self.marker_labels = marker_labels
+        self.body_mass = body_mass
         self.plot_data()
 
     def set_gait_cycles(self, gait_cycles):
@@ -205,7 +207,7 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             plot_widget.ax.set_ylabel(y_label)
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, unit_conversion_factor=unit_factor)
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass)
             plot_widget.canvas.draw()
             # Make plots with no name change invisible
             if title == f'{group} - {comp.upper()}':

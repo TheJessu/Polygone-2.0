@@ -245,9 +245,9 @@ class MomentsTab(QWidget):
                         title = f'{group} - Ankle Rotation Moment'
                     plot_widget.ax.set_title(title)
                     plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                    plot_widget.ax.set_ylabel('Moment')
+                    plot_widget.ax.set_ylabel('Moment (Nm/kg)')
                     if use_gait_cycle:
-                        self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment', current_frame, component=component)
+                        self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', current_frame, component=component, body_mass=self.body_mass)
                     else:
                         self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                         if plot_current_frame is not None:
@@ -327,9 +327,9 @@ class MomentsTab(QWidget):
                     title = f'{group} - Ankle Rotation Moment'
                 plot_widget.ax.set_title(title)
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                plot_widget.ax.set_ylabel('Moment')
+                plot_widget.ax.set_ylabel('Moment (Nm/kg)')
                 if use_gait_cycle:
-                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment', current_frame, component=component)
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', current_frame, component=component, body_mass=self.body_mass)
                 else:
                     self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                     if plot_current_frame is not None:

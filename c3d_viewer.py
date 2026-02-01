@@ -193,11 +193,20 @@ class C3DViewer(QWidget):
             self.body_mass = None
             try:
                 processing_group = reader.get('PROCESSING')
-                if processing_group and 'Bodymass' in processing_group:
-                    self.body_mass = processing_group['Bodymass'].float_value
-                    print(f"Body mass: {self.body_mass} kg")
+                param = None
+                if processing_group:
+                    param = processing_group.get('Bodymass') or processing_group.get('BODYMASS')
+
+                if param:
+                    # Check if the parameter is an array with at least 2 elements based on user hint
+                    if hasattr(param, 'dimensions') and len(param.dimensions) > 0 and param.dimensions[0] > 1:
+                        self.body_mass = param.float_array[1]
+                    else:
+                        self.body_mass = param.float_value
+                    print(f"Body mass extracted: {self.body_mass} kg")
                 else:
                     print("Body mass not found in C3D file")
+
             except Exception as e:
                 print(f"Could not extract body mass: {e}")
             

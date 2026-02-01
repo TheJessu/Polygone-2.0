@@ -8,7 +8,7 @@ class GaitCyclePlotter:
     def __init__(self):
         self.lines = {}
 
-    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, current_frame=None, unit_conversion_factor=1, component='magnitude'):
+    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, current_frame=None, unit_conversion_factor=1, component='magnitude', body_mass=None):
         if gait_cycles is None or not (gait_cycles.get('left') or gait_cycles.get('right')):
             # No gait cycles defined, set xlabel and ylabel but don't plot anything
             ax.set_xlabel('Gait Cycle (%)')
@@ -37,6 +37,9 @@ class GaitCyclePlotter:
             
             label = marker_labels[marker_idx]
             data = markers_data[:, marker_idx, :] * unit_conversion_factor
+
+            if plot_type == 'MOMENTS' and body_mass is not None and body_mass > 0:
+                data /= body_mass
             
             if component == 'x':
                 plot_data = data[:, 0]
@@ -169,7 +172,7 @@ class GaitCyclePlotter:
         units = {
             'ANGLES': '',
             'FORCES': 'N',
-            'MOMENTS': 'Nmm',
+            'MOMENTS': 'Nm/kg',
             'POWERS': 'W'
         }
         return units.get(plot_type, '')
