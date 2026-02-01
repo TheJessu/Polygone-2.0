@@ -129,7 +129,7 @@ class PDFExporter:
                         ax = fig.add_subplot(gs[row, col])
                         ax.set_visible(False)
 
-        pdf.savefig(fig, bbox_inches='tight')
+        pdf.savefig(fig)
         plt.close(fig)
 
     def _export_kinetics_to_pdf(self, gait_analysis_tab, pdf):
@@ -159,7 +159,7 @@ class PDFExporter:
                         ax = fig.add_subplot(gs[row, col])
                         ax.set_visible(False)
 
-        pdf.savefig(fig, bbox_inches='tight')
+        pdf.savefig(fig)
         plt.close(fig)
 
     def _copy_plot_to_ax(self, plot_widget, ax):

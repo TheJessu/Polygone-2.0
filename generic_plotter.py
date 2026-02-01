@@ -2,15 +2,16 @@ import numpy as np
 import math
 
 class GenericDataPlotter:
-    def __init__(self, marker_type):
+    def __init__(self, marker_type, body_mass=None):
         self.marker_type = marker_type
+        self.body_mass = body_mass
         self.lines = {}  # Store lines for picking, dict of key to (line, marker_idx, label, plot_data)
 
         # Define units and conversions based on marker type
         self.units_config = {
             'ANGLES': {'unit': '', 'conversion': lambda x: x},  # No conversion, display raw XYZ values
             'FORCES': {'unit': 'N', 'conversion': lambda x: x},
-            'MOMENTS': {'unit': 'Nmm', 'conversion': lambda x: x * 1000},
+            'MOMENTS': {'unit': 'Nm/kg', 'conversion': lambda x, bm: x / bm if bm else x},
             'POWERS': {'unit': 'W', 'conversion': lambda x: x}
         }
 
@@ -83,9 +84,14 @@ class GenericDataPlotter:
 
             # Apply unit conversion
             config = self.units_config[self.marker_type]
-            x_data = config['conversion'](x_data)
-            y_data = config['conversion'](y_data)
-            z_data = config['conversion'](z_data)
+            if self.marker_type == 'MOMENTS':
+                x_data = config['conversion'](x_data, self.body_mass)
+                y_data = config['conversion'](y_data, self.body_mass)
+                z_data = config['conversion'](z_data, self.body_mass)
+            else:
+                x_data = config['conversion'](x_data)
+                y_data = config['conversion'](y_data)
+                z_data = config['conversion'](z_data)
 
             # Select component to plot
             if component == 'x':

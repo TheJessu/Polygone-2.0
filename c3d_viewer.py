@@ -188,6 +188,18 @@ class C3DViewer(QWidget):
             # Read C3D file
             reader = c3d.Reader(open(file_path, 'rb'))
             print(dir(reader))
+
+            # Extract body mass
+            self.body_mass = None
+            try:
+                processing_group = reader.get('PROCESSING')
+                if processing_group and 'Bodymass' in processing_group:
+                    self.body_mass = processing_group['Bodymass'].float_value
+                    print(f"Body mass: {self.body_mass} kg")
+                else:
+                    print("Body mass not found in C3D file")
+            except Exception as e:
+                print(f"Could not extract body mass: {e}")
             
             all_markers = []
             all_analog = []
@@ -455,6 +467,10 @@ class C3DViewer(QWidget):
     def get_events_data(self):
         """Get the current event data for the timeline."""
         return self.events_data
+
+    def get_body_mass(self):
+        """Get the body mass extracted from the C3D file."""
+        return self.body_mass
 
     def toggle_trajectories(self):
         """Toggle visibility of trajectory lines for selected markers."""

@@ -65,6 +65,7 @@ class MomentsTab(QWidget):
     def __init__(self):
         super().__init__()
         self.moments_plotter = GenericDataPlotter('MOMENTS')
+        self.body_mass = None
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
         self.frame_range = None
@@ -151,7 +152,9 @@ class MomentsTab(QWidget):
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
 
-    def load_data(self, markers_data, marker_types, marker_labels):
+    def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
+        self.body_mass = body_mass
+        self.moments_plotter = GenericDataPlotter('MOMENTS', body_mass)
         type_indices = [i for i, t in enumerate(marker_types) if t == 'MOMENTS']
         groups = set()
         for idx in type_indices:
@@ -224,10 +227,22 @@ class MomentsTab(QWidget):
                     title = f'{group} - {component.upper()}'
                     if group.lower() == 'hi' and component == 'y':
                         title = f'{group} - Hip Flex-Ext Moment'
+                    elif group.lower() == 'hi' and component == 'x':
+                        title = f'{group} - Hip Ab-Add Moment'
+                    elif group.lower() == 'hi' and component == 'z':
+                        title = f'{group} - Hip Rotation Moment'
                     elif group.lower() == 'kne' and component == 'y':
                         title = f'{group} - Knee Flex-Ext Moment'
+                    elif group.lower() == 'kne' and component == 'x':
+                        title = f'{group} - Knee Valg-Var Moment'
+                    elif group.lower() == 'kne' and component == 'z':
+                        title = f'{group} - Knee Rotation Moment'
                     elif group.lower() == 'ankl' and component == 'y':
                         title = f'{group} - Dors-Plan Moment'
+                    elif group.lower() == 'ankl' and component == 'x':
+                        title = f'{group} - Ankle Ab-Add Moment'
+                    elif group.lower() == 'ankl' and component == 'z':
+                        title = f'{group} - Ankle Rotation Moment'
                     plot_widget.ax.set_title(title)
                     plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                     plot_widget.ax.set_ylabel('Moment')
@@ -247,6 +262,41 @@ class MomentsTab(QWidget):
                         plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
+                    if group.lower() == 'hi':
+                        if component == 'x':
+                            ymin, ymax = -1.0, 1.0
+                        elif component == 'y':
+                            ymin, ymax = -1.0, 2.0
+                        elif component == 'z':
+                            ymin, ymax = -0.5, 0.5
+                    elif group.lower() == 'kne':
+                        if component == 'x':
+                            ymin, ymax = -1.0, 1.0
+                        elif component == 'y':
+                            ymin, ymax = -1.0, 2.0
+                        elif component == 'z':
+                            ymin, ymax = -0.5, 0.5
+                    elif group.lower() == 'ankl':
+                        if component == 'x':
+                            ymin, ymax = -0.5, 0.5
+                        elif component == 'y':
+                            ymin, ymax = -1.0, 2.0
+                        elif component == 'z':
+                            ymin, ymax = -0.5, 0.5
+                    plot_widget.ax.set_ylim(ymin, ymax)
+                    plot_widget.ax.set_yticks([ymin, ymax])
+                    plot_widget.ax.set_box_aspect(1)
+                    # Always add a thick, darker grey line at y=0 if within range
+                    if ymin <= 0 <= ymax:
+                        plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+                    # Add horizontal grid lines at every 0.5 units in both directions from 0
+                    max_abs = max(abs(ymin), abs(ymax))
+                    for step in np.arange(0.5, max_abs + 0.5, 0.5):
+                        if ymin <= step <= ymax:
+                            plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+                        if ymin <= -step <= ymax:
+                            plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+
                     col += 1
                     if col >= 3:
                         col = 0
@@ -259,19 +309,75 @@ class MomentsTab(QWidget):
                 title = f'{group} - {selected_component}'
                 if group.lower() == 'hi' and component == 'y':
                     title = f'{group} - Hip Flex-Ext Moment'
+                elif group.lower() == 'hi' and component == 'x':
+                    title = f'{group} - Hip Ab-Add Moment'
+                elif group.lower() == 'hi' and component == 'z':
+                    title = f'{group} - Hip Rotation Moment'
                 elif group.lower() == 'kne' and component == 'y':
                     title = f'{group} - Knee Flex-Ext Moment'
+                elif group.lower() == 'kne' and component == 'x':
+                    title = f'{group} - Knee Valg-Var Moment'
+                elif group.lower() == 'kne' and component == 'z':
+                    title = f'{group} - Knee Rotation Moment'
                 elif group.lower() == 'ankl' and component == 'y':
                     title = f'{group} - Dors-Plan Moment'
+                elif group.lower() == 'ankl' and component == 'x':
+                    title = f'{group} - Ankle Ab-Add Moment'
+                elif group.lower() == 'ankl' and component == 'z':
+                    title = f'{group} - Ankle Rotation Moment'
                 plot_widget.ax.set_title(title)
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                plot_widget.ax.set_ylabel('Moment (Nmm)')
+                plot_widget.ax.set_ylabel('Moment')
                 if use_gait_cycle:
-                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nmm)', current_frame, component=component, unit_conversion_factor=1000)
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment', current_frame, component=component)
                 else:
                     self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+
+                if component == 'y' and group.lower() == 'ankl':
+                    plot_widget.ax.text(-0.05, 0.25, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Plant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                else:
+                    plot_widget.ax.text(-0.05, 0.25, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+
+                if group.lower() == 'hi':
+                    if component == 'x':
+                        ymin, ymax = -1.0, 1.0
+                    elif component == 'y':
+                        ymin, ymax = -1.0, 2.0
+                    elif component == 'z':
+                        ymin, ymax = -0.5, 0.5
+                elif group.lower() == 'kne':
+                    if component == 'x':
+                        ymin, ymax = -1.0, 1.0
+                    elif component == 'y':
+                        ymin, ymax = -1.0, 2.0
+                    elif component == 'z':
+                        ymin, ymax = -0.5, 0.5
+                elif group.lower() == 'ankl':
+                    if component == 'x':
+                        ymin, ymax = -0.5, 0.5
+                    elif component == 'y':
+                        ymin, ymax = -1.0, 2.0
+                    elif component == 'z':
+                        ymin, ymax = -0.5, 0.5
+                plot_widget.ax.set_ylim(ymin, ymax)
+                plot_widget.ax.set_yticks([ymin, ymax])
+                plot_widget.ax.set_box_aspect(1)
+                # Always add a thick, darker grey line at y=0 if within range
+                if ymin <= 0 <= ymax:
+                    plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+                # Add horizontal grid lines at every 0.5 units in both directions from 0
+                max_abs = max(abs(ymin), abs(ymax))
+                for step in np.arange(0.5, max_abs + 0.5, 0.5):
+                    if ymin <= step <= ymax:
+                        plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+                    if ymin <= -step <= ymax:
+                        plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 
                 col += 1
                 if col >= 3:

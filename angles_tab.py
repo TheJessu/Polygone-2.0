@@ -149,7 +149,8 @@ class AnglesTab(QWidget):
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
 
-    def load_data(self, markers_data, marker_types, marker_labels):
+    def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
+        self.body_mass = body_mass
         type_indices = [i for i, t in enumerate(marker_types) if t == 'ANGLES']
         groups = set()
         for idx in type_indices:

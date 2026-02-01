@@ -107,7 +107,8 @@ class MainWindow(QMainWindow):
                 self.marker_outliner.load_markers(markers_data, marker_labels, marker_types)
                 # Update data plotter with data
                 angle_units = getattr(self.c3d_viewer, 'angle_units', 'degrees')
-                self.data_plotter.load_data(markers_data, marker_types, marker_labels, angle_units)
+                body_mass = self.c3d_viewer.get_body_mass()
+                self.data_plotter.load_data(markers_data, marker_types, marker_labels, angle_units, body_mass)
                 self.gait_analysis_tab.load_data(markers_data, marker_types, marker_labels)
                 # Update timeline controls
                 if markers_data is not None:

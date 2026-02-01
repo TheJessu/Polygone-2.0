@@ -44,12 +44,13 @@ class DataPlotter(QWidget):
         for plot_type, config in self.plot_types_config.items():
             self.tab_widget.addTab(config['tab'], plot_type)
 
-    def load_data(self, markers_data, marker_types, marker_labels, angle_units='degrees'):
+    def load_data(self, markers_data, marker_types, marker_labels, angle_units='degrees', body_mass=None):
         self.markers_data = markers_data
         self.marker_types = marker_types
         self.marker_labels = marker_labels
+        self.body_mass = body_mass
         for plot_type, config in self.plot_types_config.items():
-            config['tab'].load_data(markers_data, marker_types, marker_labels)
+            config['tab'].load_data(markers_data, marker_types, marker_labels, body_mass)
         self.plot_data()
 
     def plot_data(self):
