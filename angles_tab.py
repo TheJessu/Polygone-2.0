@@ -300,10 +300,16 @@ class AnglesTab(QWidget):
 
                     # Set y-ticks to only show min and max
                     plot_widget.ax.set_yticks([ymin, ymax])
-                    # Add horizontal grid lines at every 10 units
-                    for y in range(ymin + 10, ymax, 10):
-                        linewidth = 1.5 if y == 0 else 0.5
-                        plot_widget.ax.axhline(y=y, color='grey', linestyle='-', linewidth=linewidth, alpha=0.5)
+                    # Always add a thick, darker grey line at y=0 if within range
+                    if ymin <= 0 <= ymax:
+                        plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+                    # Add horizontal grid lines at every 10 units in both directions from 0
+                    max_abs = max(abs(ymin), abs(ymax))
+                    for step in range(10, max_abs + 10, 10):
+                        if ymin <= step <= ymax:
+                            plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+                        if ymin <= -step <= ymax:
+                            plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 
                     col += 1
                     if col >= 3:
@@ -395,10 +401,13 @@ class AnglesTab(QWidget):
 
                 # Set y-ticks to only show min and max
                 plot_widget.ax.set_yticks([ymin, ymax])
-                # Add horizontal grid lines at every 10 units
+                # Always add a thick, darker grey line at y=0 if within range
+                if ymin <= 0 <= ymax:
+                    plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+                # Add horizontal grid lines at every 10 units, skipping 0 to avoid duplicate
                 for y in range(ymin + 10, ymax, 10):
-                    linewidth = 1.5 if y == 0 else 0.5
-                    plot_widget.ax.axhline(y=y, color='grey', linestyle='-', linewidth=linewidth, alpha=0.5)
+                    if y != 0:  # Skip 0 since we already added it
+                        plot_widget.ax.axhline(y=y, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 
                 col += 1
                 if col >= 3:
