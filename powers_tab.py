@@ -265,12 +265,27 @@ class PowersTab(QWidget):
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
-                if component == 'z':
-                    plot_widget.ax.text(-0.05, 0.25, 'Abs', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                    plot_widget.ax.text(-0.05, 0.50, 'W/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                    plot_widget.ax.text(-0.05, 0.75, 'Gen', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    if component == 'z':
+                        plot_widget.ax.text(-0.05, 0.25, 'Abs', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'W/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Gen', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
-                col += 1
+                    plot_widget.ax.set_box_aspect(1)
+                    if group.lower() in ['hi', 'kne', 'ankl'] and component == 'z':
+                        ymin, ymax = -2.0, 3.0
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                        plot_widget.ax.set_yticks([ymin, ymax])
+                        if ymin <= 0 <= ymax:
+                            plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+                        # Add horizontal grid lines at every 1 unit in both directions from 0
+                        max_abs = max(abs(ymin), abs(ymax))
+                        for step in range(1, int(max_abs) + 1, 1):
+                            if ymin <= step <= ymax:
+                                plot_widget.ax.axhline(y=step, color='lightgrey', linestyle='-', linewidth=0.5, alpha=0.7)
+                            if ymin <= -step <= ymax:
+                                plot_widget.ax.axhline(y=-step, color='lightgrey', linestyle='-', linewidth=0.5, alpha=0.7)
+
+                    col += 1
                 if col >= 3:
                     col = 0
                     row += 1

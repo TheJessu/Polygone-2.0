@@ -11,7 +11,7 @@ class GenericDataPlotter:
         self.units_config = {
             'ANGLES': {'unit': '', 'conversion': lambda x: x},  # No conversion, display raw XYZ values
             'FORCES': {'unit': 'N', 'conversion': lambda x: x},
-            'MOMENTS': {'unit': 'Nm/kg', 'conversion': lambda x, bm: x / bm if bm else x},
+            'MOMENTS': {'unit': 'Nm/kg', 'conversion': lambda x, bm: (x / 1000) / bm if bm else x / 1000},
             'POWERS': {'unit': 'W', 'conversion': lambda x: x}
         }
 

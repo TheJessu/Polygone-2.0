@@ -36,10 +36,13 @@ class GaitCyclePlotter:
                 continue
             
             label = marker_labels[marker_idx]
-            data = markers_data[:, marker_idx, :] * unit_conversion_factor
+            data = markers_data[:, marker_idx, :]
 
-            if plot_type == 'MOMENTS' and body_mass is not None and body_mass > 0:
-                data /= body_mass
+            if plot_type == 'MOMENTS':
+                data = data / 10  # Convert Nmm to Nm
+                if body_mass is not None and body_mass > 0:
+                    data /= body_mass  # Normalize by body mass
+            data *= unit_conversion_factor
             
             if component == 'x':
                 plot_data = data[:, 0]
