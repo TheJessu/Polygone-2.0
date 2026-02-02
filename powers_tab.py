@@ -202,8 +202,8 @@ class PowersTab(QWidget):
 
         self.clear_plots()
         self.vlines = []
-        self.highlighted_line = None  # Clear highlight on replot
-        self.value_label.setText("")  # Clear info on replot
+        self.highlighted_line = None
+        self.value_label.setText("")
         self.powers_plotter.lines.clear()
         self.gait_cycle_plotter.lines = {}
 
@@ -218,66 +218,51 @@ class PowersTab(QWidget):
                 p.show()
 
         row, col = 0, 0
-        if selected_component == "All":
-            for group in groups:
-                for component in ['x', 'y', 'z']:
-                    plot_widget = self.add_plot(row, col)
-                    title = f'{group} - {component.upper()}'
-                    if group.lower() == 'hi' and component == 'z':
-                        title = f'{group} - Hip Power'
-                    elif group.lower() == 'kne' and component == 'z':
-                        title = f'{group} - Knee Power'
-                    elif group.lower() == 'ankl' and component == 'z':
-                        title = f'{group} - Ankle Power'
-                    plot_widget.ax.set_title(title)
-                    plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                    plot_widget.ax.set_ylabel('Power')
-                    if use_gait_cycle:
-                        self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power', current_frame, component=component)
-                    else:
-                        self.powers_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
-                        if plot_current_frame is not None:
-                            self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+        components_to_plot = ['x', 'y', 'z'] if selected_component == "All" else [selected_component.lower()]
+        
+        for group in groups:
+            for component in components_to_plot:
+                if selected_component != "All" and component != selected_component.lower():
+                    continue
 
-                    col += 1
-                    if col >= 3:
-                        col = 0
-                        row += 1
-                    plot_widget.canvas.draw()
-        else:
-            component = selected_component.lower()
-            for group in groups:
                 plot_widget = self.add_plot(row, col)
-                title = f'{group} - {selected_component}'
+                
+                # Set title
+                title = f'{group} - {component.upper()}'
                 if group.lower() == 'hi' and component == 'z':
-                    title = f'{group} - Hip Power'
+                    title = 'Hip Power'
                 elif group.lower() == 'kne' and component == 'z':
-                    title = f'{group} - Knee Power'
+                    title = 'Knee Power'
                 elif group.lower() == 'ankl' and component == 'z':
-                    title = f'{group} - Ankle Power'
+                    title = 'Ankle Power'
                 plot_widget.ax.set_title(title)
+
+                # Set labels
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                plot_widget.ax.set_ylabel('Power (W)')
+                plot_widget.ax.set_ylabel('Power (W/kg)')
+
+                # Plot data
                 if use_gait_cycle:
-                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W)', current_frame, component=component)
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W/kg)', current_frame, component=component)
                 else:
                     self.powers_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
-                    if component == 'z':
-                        plot_widget.ax.text(-0.05, 0.25, 'Abs', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        plot_widget.ax.text(-0.05, 0.50, 'W/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        plot_widget.ax.text(-0.05, 0.75, 'Gen', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                # Apply specific styles for Z-component plots
+                if component == 'z':
+                    plot_widget.ax.text(-0.05, 0.25, 'Abs', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'W/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Gen', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
-                    plot_widget.ax.set_box_aspect(1)
-                    if group.lower() in ['hi', 'kne', 'ankl'] and component == 'z':
+                    if group.lower() in ['hi', 'kne', 'ankl']:
                         ymin, ymax = -2.0, 3.0
                         plot_widget.ax.set_ylim(ymin, ymax)
                         plot_widget.ax.set_yticks([ymin, ymax])
+                        
                         if ymin <= 0 <= ymax:
                             plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
-                        # Add horizontal grid lines at every 1 unit in both directions from 0
+                        
                         max_abs = max(abs(ymin), abs(ymax))
                         for step in range(1, int(max_abs) + 1, 1):
                             if ymin <= step <= ymax:
@@ -285,11 +270,14 @@ class PowersTab(QWidget):
                             if ymin <= -step <= ymax:
                                 plot_widget.ax.axhline(y=-step, color='lightgrey', linestyle='-', linewidth=0.5, alpha=0.7)
 
-                    col += 1
+                plot_widget.ax.set_box_aspect(1)
+                plot_widget.canvas.draw()
+                
+                col += 1
                 if col >= 3:
                     col = 0
                     row += 1
-                plot_widget.canvas.draw()
+
 
     def add_plot(self, row, col):
         plot_widget = PlotWidget(self.powers_plotter, self.gait_cycle_plotter, self.plot_container)
