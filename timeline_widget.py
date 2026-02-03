@@ -107,7 +107,7 @@ class TimelineWidget(QWidget):
         # Add current frame label on scrubber
         font = QFont("Arial", 8)
         font.setBold(True)
-        self.frame_label = self.scene.addText(str(self.current_frame), font)
+        self.frame_label = self.scene.addText(str(self.current_frame + self.first_frame), font)
         self.frame_label.setDefaultTextColor(Qt.black)
 
         self.update_scrubber()
@@ -127,7 +127,7 @@ class TimelineWidget(QWidget):
             # Create new label with updated text
             font = QFont("Arial", 8)
             font.setBold(True)
-            self.frame_label = self.scene.addText(str(self.current_frame), font)
+            self.frame_label = self.scene.addText(str(self.current_frame + self.first_frame), font)
             self.frame_label.setDefaultTextColor(Qt.black)
             # Position the label on top of the scrubber
             scrubber_x = self.scrubber.pos().x() + 5  # Center on scrubber
