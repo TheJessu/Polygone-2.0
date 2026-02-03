@@ -70,7 +70,7 @@ class DataPlotter(QWidget):
         for plot_type, config in self.plot_types_config.items():
             config['tab'].set_current_frame(frame_index)
 
-    def set_gait_info(self, events_data, frame_rate=100):
+    def set_gait_info(self, events_data, frame_rate=100, first_frame=0):
         if not events_data:
             self.gait_cycles = None
             for _, config in self.plot_types_config.items():
@@ -78,8 +78,8 @@ class DataPlotter(QWidget):
             self.plot_data()
             return
 
-        left_strikes = sorted([int(e['time'] * frame_rate) for e in events_data if e.get('foot') == 'left' and e.get('type') == 'strike'])
-        right_strikes = sorted([int(e['time'] * frame_rate) for e in events_data if e.get('foot') == 'right' and e.get('type') == 'strike'])
+        left_strikes = sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'left' and e.get('type') == 'strike'])
+        right_strikes = sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'right' and e.get('type') == 'strike'])
 
         self.gait_cycles = {'left': [], 'right': []}
         for i in range(len(left_strikes) - 1):
