@@ -124,14 +124,16 @@ class MainWindow(QMainWindow):
                     # Set events data for timeline
                     events_data = self.c3d_viewer.get_events_data()
                     first_frame = self.c3d_viewer.get_first_frame()
+                    frame_rate = self.c3d_viewer.frame_rate
                     if events_data:
                         self.timeline_widget.set_events_data(events_data)
                         self.timeline_widget.set_first_frame(first_frame)
+                        self.timeline_widget.set_frame_rate(frame_rate)
                         # Set gait info for data plotter
-                        self.data_plotter.set_gait_info(events_data)
+                        self.data_plotter.set_gait_info(events_data, frame_rate)
                         # Set gait cycles for gait analysis tab
-                        left_strikes = sorted([int(e['time'] * 100) for e in events_data if e.get('foot') == 'left' and e.get('type') == 'strike'])
-                        right_strikes = sorted([int(e['time'] * 100) for e in events_data if e.get('foot') == 'right' and e.get('type') == 'strike'])
+                        left_strikes = sorted([int(e['time'] * frame_rate) for e in events_data if e.get('foot') == 'left' and e.get('type') == 'strike'])
+                        right_strikes = sorted([int(e['time'] * frame_rate) for e in events_data if e.get('foot') == 'right' and e.get('type') == 'strike'])
                         gait_cycles = {'left': [], 'right': []}
                         for i in range(len(left_strikes) - 1):
                             gait_cycles['left'].append((left_strikes[i], left_strikes[i+1]))

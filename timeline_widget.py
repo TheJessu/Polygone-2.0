@@ -64,6 +64,11 @@ class TimelineWidget(QWidget):
         self.first_frame = first_frame
         self.draw_timeline()
 
+    def set_frame_rate(self, frame_rate):
+        """Set the frame rate from the C3D file."""
+        self.frame_rate = frame_rate
+        self.draw_timeline()
+
     def draw_timeline(self):
         self.scene.clear()
         if self.total_frames == 0:
@@ -162,8 +167,8 @@ class TimelineWidget(QWidget):
         # Draw block for first left gait cycle (red)
         if len(left_strikes) >= 2:
             start_time, end_time = left_strikes[0], left_strikes[1]
-            start_frame = int(start_time * self.frame_rate)
-            end_frame = int(end_time * self.frame_rate)
+            start_frame = int(start_time * self.frame_rate) - self.first_frame
+            end_frame = int(end_time * self.frame_rate) - self.first_frame
             if 0 <= start_frame < self.total_frames and 0 <= end_frame < self.total_frames:
                 x_start = (start_frame / self.total_frames) * width
                 x_end = (end_frame / self.total_frames) * width
@@ -175,12 +180,12 @@ class TimelineWidget(QWidget):
         # Draw block for first right gait cycle (green)
         if len(right_strikes) >= 2:
             start_time, end_time = right_strikes[0], right_strikes[1]
-            start_frame = int(start_time * self.frame_rate)
-            end_frame = int(end_time * self.frame_rate)
+            start_frame = int(start_time * self.frame_rate) - self.first_frame
+            end_frame = int(end_time * self.frame_rate) - self.first_frame
             if 0 <= start_frame < self.total_frames and 0 <= end_frame < self.total_frames:
                 x_start = (start_frame / self.total_frames) * width
                 x_end = (end_frame / self.total_frames) * width
-                rect_item = QGraphicsRectItem(x_start, height - 30, x_end - x_start, 10)
+                rect_item = QGraphicsRectItem(x_start, height - 20, x_end - x_start, 10)
                 rect_item.setPen(QPen(QColor(0, 255, 0)))
                 rect_item.setBrush(QBrush(QColor(0, 255, 0, 128)))
                 self.scene.addItem(rect_item)
