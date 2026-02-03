@@ -254,35 +254,49 @@ class C3DViewer(QWidget):
             self.events_data = []
             try:
                 event_group = reader.get('EVENT')
-                used = event_group.get('USED').int16_value
-                if used > 0:
-                    labels = event_group.get('LABELS').string_array[:used]
-                    times = event_group.get('TIMES').float_array[:used]
-                    contexts = event_group.get('CONTEXTS').string_array[:used]
+                if event_group:
+                    used_param = event_group.get('USED')
+                    if used_param:
+                        used = used_param.int16_value
+                        if used > 0:
+                            labels_param = event_group.get('LABELS')
+                            times_param = event_group.get('TIMES')
+                            contexts_param = event_group.get('CONTEXTS')
 
-                    for i in range(used):
-                        time = times[i][1]
-                        label = labels[i].strip().upper()
-                        context = contexts[i].strip().upper()
+                            if labels_param and times_param and contexts_param:
+                                labels = labels_param.string_array[:used]
+                                times = times_param.float_array[:used]
+                                contexts = contexts_param.string_array[:used]
 
-                        foot = None
-                        if context == 'LEFT':
-                            foot = 'left'
-                        elif context == 'RIGHT':
-                            foot = 'right'
+                                for i in range(used):
+                                    time_val = times[i]
+                                    time = time_val[1] if isinstance(time_val, (list, np.ndarray)) and len(time_val) > 1 else time_val
+                                    
+                                    label = labels[i].strip().upper()
+                                    context = contexts[i].strip().upper()
 
-                        event_type = None
-                        if 'STRIKE' in label or 'HS' in label or 'ON' in label:
-                            event_type = 'strike'
-                        elif 'OFF' in label or 'TO' in label:
-                            event_type = 'off'
-                        
-                        if foot and event_type:
-                            self.events_data.append({
-                                'time': time,
-                                'foot': foot,
-                                'type': event_type
-                            })
+                                    foot = None
+                                    if context == 'LEFT':
+                                        foot = 'left'
+                                    elif context == 'RIGHT':
+                                        foot = 'right'
+
+                                    event_type = None
+                                    if 'FOOT STRIKE' in label:
+                                        event_type = 'strike'
+                                    elif 'FOOT OFF' in label:
+                                        event_type = 'off'
+                                    elif 'STRIKE' in label or 'HS' in label or 'ON' in label:
+                                        event_type = 'strike'
+                                    elif 'OFF' in label or 'TO' in label:
+                                        event_type = 'off'
+                                    
+                                    if foot and event_type:
+                                        self.events_data.append({
+                                            'time': time,
+                                            'foot': foot,
+                                            'type': event_type
+                                        })
             except Exception as e:
                 print(f"Error extracting events: {e}")
 
