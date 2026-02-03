@@ -25,7 +25,7 @@ class DataPlotter(QWidget):
         self.plot_types_config = {
             'ANGLES': {'tab': AnglesTab(), 'y_label': 'Angle (degrees)', 'unit_conversion': 1},
             'MOMENTS': {'tab': MomentsTab(), 'y_label': 'Moment (Nm/kg)', 'unit_conversion': 1},
-            'POWERS': {'tab': PowersTab(), 'y_label': 'Power (W)', 'unit_conversion': 1},
+            'POWERS': {'tab': PowersTab(), 'y_label': 'Power (W/kg)', 'unit_conversion': 1},
             'FORCES': {'tab': ForcesTab(), 'y_label': 'Force (N)', 'unit_conversion': 1}
         }
 

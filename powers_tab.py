@@ -259,16 +259,16 @@ class PowersTab(QWidget):
                         ymin, ymax = -2.0, 3.0
                         plot_widget.ax.set_ylim(ymin, ymax)
                         plot_widget.ax.set_yticks([ymin, ymax])
-                        
+
                         if ymin <= 0 <= ymax:
-                            plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
-                        
+                            plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7, zorder=-1)
+
                         max_abs = max(abs(ymin), abs(ymax))
-                        for step in range(1, int(max_abs) + 1, 1):
+                        for step in np.arange(0.5, max_abs + 0.5, 0.5):
                             if ymin <= step <= ymax:
-                                plot_widget.ax.axhline(y=step, color='lightgrey', linestyle='-', linewidth=0.5, alpha=0.7)
+                                plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5, zorder=-1)
                             if ymin <= -step <= ymax:
-                                plot_widget.ax.axhline(y=-step, color='lightgrey', linestyle='-', linewidth=0.5, alpha=0.7)
+                                plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5, zorder=-1)
 
                 plot_widget.ax.set_box_aspect(1)
                 plot_widget.canvas.draw()

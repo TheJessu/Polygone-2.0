@@ -39,9 +39,7 @@ class GaitCyclePlotter:
             data = markers_data[:, marker_idx, :]
 
             if plot_type == 'MOMENTS':
-                data = data / 10  # Convert Nmm to Nm
-                if body_mass is not None and body_mass > 0:
-                    data /= body_mass  # Normalize by body mass
+                data = data / 1000  # Convert Nmm to Nm
             data *= unit_conversion_factor
             
             if component == 'x':
@@ -176,6 +174,6 @@ class GaitCyclePlotter:
             'ANGLES': '',
             'FORCES': 'N',
             'MOMENTS': 'Nm/kg',
-            'POWERS': 'W'
+            'POWERS': 'W/kg'
         }
         return units.get(plot_type, '')

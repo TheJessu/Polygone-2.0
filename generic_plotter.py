@@ -11,8 +11,8 @@ class GenericDataPlotter:
         self.units_config = {
             'ANGLES': {'unit': '', 'conversion': lambda x: x},  # No conversion, display raw XYZ values
             'FORCES': {'unit': 'N', 'conversion': lambda x: x},
-            'MOMENTS': {'unit': 'Nm/kg', 'conversion': lambda x, bm: (x / 1000) / bm if bm else x / 1000},
-            'POWERS': {'unit': 'W', 'conversion': lambda x: x}
+            'MOMENTS': {'unit': 'Nm', 'conversion': lambda x: x / 1000},
+            'POWERS': {'unit': 'W/kg', 'conversion': lambda x: x}
         }
 
     @staticmethod
@@ -84,14 +84,9 @@ class GenericDataPlotter:
 
             # Apply unit conversion
             config = self.units_config[self.marker_type]
-            if self.marker_type == 'MOMENTS':
-                x_data = config['conversion'](x_data, self.body_mass)
-                y_data = config['conversion'](y_data, self.body_mass)
-                z_data = config['conversion'](z_data, self.body_mass)
-            else:
-                x_data = config['conversion'](x_data)
-                y_data = config['conversion'](y_data)
-                z_data = config['conversion'](z_data)
+            x_data = config['conversion'](x_data)
+            y_data = config['conversion'](y_data)
+            z_data = config['conversion'](z_data)
 
             # Select component to plot
             if component == 'x':
