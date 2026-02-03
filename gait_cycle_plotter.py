@@ -13,6 +13,7 @@ class GaitCyclePlotter:
             # No gait cycles defined, set xlabel and ylabel but don't plot anything
             ax.set_xlabel('Gait Cycle (%)')
             ax.set_ylabel(y_label)
+            ax.set_xlim(0, 100)
             return
 
         type_indices = [i for i, t in enumerate(marker_types) if t == plot_type]
@@ -71,18 +72,16 @@ class GaitCyclePlotter:
             mean_left = np.mean(all_left_cycles_norm, axis=0)
             std_left = np.std(all_left_cycles_norm, axis=0)
             line, = ax.plot(x_axis_norm, mean_left, color='red', linewidth=2, label='Mean Left', picker=5)
-            key = f'{selected_group}_mean_left'
-            lines_dict[key] = (line, key, 'Mean Left', mean_left)
-            self.lines[key] = lines_dict[key]
+            key = f'{selected_group}_{component}_mean_left'
+            self.lines[key] = (line, key, 'Mean Left', mean_left)
             ax.fill_between(x_axis_norm, mean_left - std_left, mean_left + std_left, color='red', alpha=0.2)
 
         if all_right_cycles_norm:
             mean_right = np.mean(all_right_cycles_norm, axis=0)
             std_right = np.std(all_right_cycles_norm, axis=0)
             line, = ax.plot(x_axis_norm, mean_right, color='green', linewidth=2, label='Mean Right', picker=5)
-            key = f'{selected_group}_mean_right'
-            lines_dict[key] = (line, key, 'Mean Right', mean_right)
-            self.lines[key] = lines_dict[key]
+            key = f'{selected_group}_{component}_mean_right'
+            self.lines[key] = (line, key, 'Mean Right', mean_right)
             ax.fill_between(x_axis_norm, mean_right - std_right, mean_right + std_right, color='green', alpha=0.2)
 
         ax.set_xlabel('Gait Cycle (%)')

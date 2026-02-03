@@ -247,7 +247,7 @@ class PowersTab(QWidget):
 
                 # Plot data
                 if use_gait_cycle:
-                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W/kg)', current_frame, component=component, plot_widget=plot_widget)
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W/kg)', current_frame, component=component)
                 else:
                     self.powers_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component, plot_widget=plot_widget)
                     if plot_current_frame is not None:
