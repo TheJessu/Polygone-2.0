@@ -266,6 +266,7 @@ class MomentsTab(QWidget):
                         plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
+                    ymin, ymax = -1.0, 1.0  # Default values
                     if group.lower() == 'hip':
                         if component == 'x':
                             ymin, ymax = -1.0, 1.0
@@ -348,6 +349,7 @@ class MomentsTab(QWidget):
                     plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                     plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
+                ymin, ymax = -1.0, 1.0  # Default values
                 if group.lower() == 'hip':
                     if component == 'x':
                         ymin, ymax = -1.0, 1.0
