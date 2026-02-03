@@ -317,6 +317,11 @@ class AnglesTab(QWidget):
                     col = 0
                     row += 1
                 plot_widget.canvas.draw()
+            self.plot_layout.invalidate()
+            self.plot_layout.activate()
+            self.plot_container.adjustSize()
+            self.plot_container.update()
+            self.scroll_area.update()
         else:
             component = selected_component.lower()
             for group in groups:
@@ -414,13 +419,7 @@ class AnglesTab(QWidget):
                 if col >= 3:
                     col = 0
                     row += 1
-                plot_widget.canvas.draw()
-        self.plot_layout.update()
-        self.plot_container.adjustSize()
-        self.plot_container.updateGeometry()
-        self.plot_container.show()
-        self.scroll_area.update()
-        self.scroll_area.show()
+
 
     def add_plot(self, row, col):
         plot_widget = PlotWidget(self.angles_plotter, self.gait_cycle_plotter, self.plot_container)
