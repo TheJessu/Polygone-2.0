@@ -34,6 +34,7 @@ class TimelineWidget(QWidget):
         self.frame_step = 25  # Frame numbers every 25 frames
         self.frame_rate = 100  # Default frame rate (Hz)
         self.events_data = []  # List of events with 'time', 'label', 'type'
+        self.first_frame = 0  # First frame number from C3D file
 
         # Draw initial timeline
         self.draw_timeline()
@@ -56,6 +57,11 @@ class TimelineWidget(QWidget):
     def set_events_data(self, events_data):
         """Set the events data for displaying on the timeline."""
         self.events_data = events_data
+        self.draw_timeline()
+
+    def set_first_frame(self, first_frame):
+        """Set the first frame number from the C3D file."""
+        self.first_frame = first_frame
         self.draw_timeline()
 
     def draw_timeline(self):
@@ -83,7 +89,8 @@ class TimelineWidget(QWidget):
             # Tick
             self.scene.addLine(x, height - 30, x, height - 25, QPen(Qt.black))
             # Label
-            text_item = self.scene.addText(str(frame), font)
+            label_frame = frame + self.first_frame
+            text_item = self.scene.addText(str(label_frame), font)
             text_item.setPos(x - text_item.boundingRect().width() / 2, height - 50)
 
         # Draw events on timeline
@@ -186,14 +193,14 @@ class TimelineWidget(QWidget):
         for event in self.events_data:
             event_time = event.get('time')
             event_type = event.get('type')
-            
+
             if event_time is None or event_type is None:
                 continue
 
-            event_frame = int(event_time * self.frame_rate)
+            event_frame = int(event_time * self.frame_rate) - self.first_frame
             if not (0 <= event_frame <= self.total_frames):
                 continue
-            
+
             x_pos = (event_frame / self.total_frames) * width
             
             if event_type == 'strike':

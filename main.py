@@ -123,8 +123,10 @@ class MainWindow(QMainWindow):
 
                     # Set events data for timeline
                     events_data = self.c3d_viewer.get_events_data()
+                    first_frame = self.c3d_viewer.get_first_frame()
                     if events_data:
                         self.timeline_widget.set_events_data(events_data)
+                        self.timeline_widget.set_first_frame(first_frame)
                         # Set gait info for data plotter
                         self.data_plotter.set_gait_info(events_data)
                         # Set gait cycles for gait analysis tab

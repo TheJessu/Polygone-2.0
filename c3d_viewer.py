@@ -97,6 +97,7 @@ class C3DViewer(QWidget):
         self.events_data = None  # Store event data for timeline
         self.force_plate_actors = []  # Store force plate actors
         self.segments = [] # Store segment data for drawing lines
+        self.body_mass = None  # Body mass from C3D file
 
         # Initialize interactor and picker
         self.iren.Initialize()
@@ -189,6 +190,11 @@ class C3DViewer(QWidget):
             reader = c3d.Reader(open(file_path, 'rb'))
             print(dir(reader))
 
+            # Store first and last frame
+            self.first_frame = reader.first_frame
+            self.last_frame = reader.first_frame + reader.frame_count - 1
+            self.frame_rate = getattr(reader, 'frame_rate', 100)  # Default to 100 Hz if not available
+
             # Extract body mass
             self.body_mass = None
             try:
@@ -210,23 +216,26 @@ class C3DViewer(QWidget):
             except Exception as e:
                 print(f"Could not extract body mass: {e}")
             
-            all_markers = []
-            all_analog = []
+            num_frames = reader.frame_count
+            
+            read_data = {}
             max_markers = 0
-
             for i, points, analog in reader.read_frames():
-                frame_markers = [[float(m[0]), float(m[1]), float(m[2]), float(m[3])] for m in points if len(m) >= 4]
-                all_markers.append(frame_markers)
-                all_analog.append(analog)
-                max_markers = max(max_markers, len(frame_markers))
-
-            # Create a consistent 3D array for markers
-            num_frames = len(all_markers)
+                read_data[i] = (points, analog)
+                max_markers = max(max_markers, len(points))
+            
             markers = np.zeros((num_frames, max_markers, 4), dtype=float)
-            for i, frame in enumerate(all_markers):
-                for j, marker in enumerate(frame):
-                    if j < max_markers:
-                        markers[i, j] = marker
+            all_analog = [np.zeros((reader.analog_per_frame, reader.analog_used)) for _ in range(num_frames)]
+
+            for i in range(reader.first_frame, reader.first_frame + num_frames):
+                frame_idx = i - reader.first_frame
+                if i in read_data:
+                    points, analog_data = read_data[i]
+                    for j, marker in enumerate(points):
+                        if j < max_markers:
+                            markers[frame_idx, j] = [float(m) for m in marker[:4]]
+                    if frame_idx < len(all_analog):
+                        all_analog[frame_idx] = analog_data
 
             # Store marker data and labels
             self.markers_data = markers
@@ -494,6 +503,14 @@ class C3DViewer(QWidget):
     def get_body_mass(self):
         """Get the body mass extracted from the C3D file."""
         return self.body_mass
+
+    def get_first_frame(self):
+        """Get the first frame number from the C3D file."""
+        return getattr(self, 'first_frame', 0)
+
+    def get_last_frame(self):
+        """Get the last frame number from the C3D file."""
+        return getattr(self, 'last_frame', 0)
 
     def toggle_trajectories(self):
         """Toggle visibility of trajectory lines for selected markers."""
