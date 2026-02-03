@@ -41,6 +41,7 @@ class GenericDataPlotter:
         return axes
 
     def plot_data(self, ax, markers_data, marker_labels, marker_types, current_frame, selected_group, frame_range=None, angle_units='degrees', component='magnitude', plot_widget=None):
+        lines_dict = plot_widget.lines if plot_widget else self.lines
         """Generic plot method for any marker type."""
         lines_dict = plot_widget.lines if plot_widget else self.lines
 
@@ -119,7 +120,7 @@ class GenericDataPlotter:
                     # Store in lines_dict
                     lines_dict[key] = (line, marker_idx, label, plot_data, color, 2)
                     # Also store in self.lines for global access
-                    self.lines[key] = (line, marker_idx, label, plot_data, color, 2)
+                    self.lines[key] = lines_dict[key]
                     # Set tick labels to frame numbers
                     ax.set_xticks(x_values)
                     ax.set_xticklabels(sliced_frames.astype(int))

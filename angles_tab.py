@@ -234,89 +234,89 @@ class AnglesTab(QWidget):
                     plot_widget.ax.set_title(title)
                     plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                     plot_widget.ax.set_ylabel('Angle')
-                    if use_gait_cycle:
-                        self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', current_frame, component=component)
-                    else:
-                        self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
-                        if plot_current_frame is not None:
+                if use_gait_cycle:
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', current_frame, component=component, plot_widget=plot_widget)
+                else:
+                    self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component, plot_widget=plot_widget)
+                if plot_current_frame is not None:
                             self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
-                    if component == 'x':
-                        if group.lower() in ['spine', 'pelvis']:
-                            plot_widget.ax.text(-0.05, 0.25, 'Down', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.75, 'Up', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        else:  # hip, knee, footprogress
-                            plot_widget.ax.text(-0.05, 0.25, 'Abd', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.75, 'Add', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                    elif component == 'y':
-                        if group.lower() in ['spine', 'pelvis']:
-                            plot_widget.ax.text(-0.05, 0.25, 'Post', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.75, 'Ant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        elif group.lower() in ['hip', 'knee']:
-                            plot_widget.ax.text(-0.05, 0.25, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.75, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        else:  # footprogress
-                            plot_widget.ax.text(-0.05, 0.25, 'Plan', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                            plot_widget.ax.text(-0.05, 0.75, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                    elif component == 'z':
+                if component == 'x':
+                    if group.lower() in ['spine', 'pelvis']:
+                        plot_widget.ax.text(-0.05, 0.25, 'Down', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Up', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    else:  # hip, knee, footprogress
+                        plot_widget.ax.text(-0.05, 0.25, 'Abd', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Add', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                elif component == 'y':
+                    if group.lower() in ['spine', 'pelvis']:
+                        plot_widget.ax.text(-0.05, 0.25, 'Post', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Ant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    elif group.lower() in ['hip', 'knee']:
                         plot_widget.ax.text(-0.05, 0.25, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        plot_widget.ax.text(-0.05, 0.75, 'Int', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    else:  # footprogress
+                        plot_widget.ax.text(-0.05, 0.25, 'Plan', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                elif component == 'z':
+                    plot_widget.ax.text(-0.05, 0.25, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Int', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
-                    plot_widget.ax.set_box_aspect(1)
-                    if group.lower() == 'spine':
+                plot_widget.ax.set_box_aspect(1)
+                if group.lower() == 'spine':
+                    ymin, ymax = -20, 20
+                    plot_widget.ax.set_ylim(ymin, ymax)
+                elif group.lower() == 'pelvis':
+                    if component == 'x':
                         ymin, ymax = -20, 20
                         plot_widget.ax.set_ylim(ymin, ymax)
-                    elif group.lower() == 'pelvis':
-                        if component == 'x':
-                            ymin, ymax = -20, 20
-                            plot_widget.ax.set_ylim(ymin, ymax)
-                        elif component == 'y':
-                            ymin, ymax = -5, 35
-                            plot_widget.ax.set_ylim(ymin, ymax)
-                        elif component == 'z':
-                            ymin, ymax = -30, 30
-                            plot_widget.ax.set_ylim(ymin, ymax)
-                    elif group.lower() == 'hip':
-                        if component == 'x':
-                            ymin, ymax = -15, 20
-                            plot_widget.ax.set_ylim(ymin, ymax)
-                        elif component == 'y':
-                            ymin, ymax = -15, 60
-                            plot_widget.ax.set_ylim(ymin, ymax)
-                        elif component == 'z':
-                            ymin, ymax = -30, 40
-                            plot_widget.ax.set_ylim(ymin, ymax)
-                    elif group.lower() == 'knee':
-                        ymin, ymax = -15, 90
+                    elif component == 'y':
+                        ymin, ymax = -5, 35
                         plot_widget.ax.set_ylim(ymin, ymax)
-                    elif group.lower() == 'footprogress':
-                        ymin, ymax = -40, 40
+                    elif component == 'z':
+                        ymin, ymax = -30, 30
                         plot_widget.ax.set_ylim(ymin, ymax)
+                elif group.lower() == 'hip':
+                    if component == 'x':
+                        ymin, ymax = -15, 20
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                    elif component == 'y':
+                        ymin, ymax = -15, 60
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                    elif component == 'z':
+                        ymin, ymax = -30, 40
+                        plot_widget.ax.set_ylim(ymin, ymax)
+                elif group.lower() == 'knee':
+                    ymin, ymax = -15, 90
+                    plot_widget.ax.set_ylim(ymin, ymax)
+                elif group.lower() == 'footprogress':
+                    ymin, ymax = -40, 40
+                    plot_widget.ax.set_ylim(ymin, ymax)
 
-                    # Set y-ticks to only show min and max
-                    plot_widget.ax.set_yticks([ymin, ymax])
-                    # Always add a thick, darker grey line at y=0 if within range
-                    if ymin <= 0 <= ymax:
-                        plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
-                    # Add horizontal grid lines at every 10 units in both directions from 0
-                    max_abs = max(abs(ymin), abs(ymax))
-                    for step in range(10, max_abs + 10, 10):
-                        if ymin <= step <= ymax:
-                            plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
-                        if ymin <= -step <= ymax:
-                            plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+                # Set y-ticks to only show min and max
+                plot_widget.ax.set_yticks([ymin, ymax])
+                # Always add a thick, darker grey line at y=0 if within range
+                if ymin <= 0 <= ymax:
+                    plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+                # Add horizontal grid lines at every 10 units in both directions from 0
+                max_abs = max(abs(ymin), abs(ymax))
+                for step in range(10, max_abs + 10, 10):
+                    if ymin <= step <= ymax:
+                        plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+                    if ymin <= -step <= ymax:
+                        plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 
-                    col += 1
-                    if col >= 3:
-                        col = 0
-                        row += 1
-                    plot_widget.canvas.draw()
+                col += 1
+                if col >= 3:
+                    col = 0
+                    row += 1
+                plot_widget.canvas.draw()
         else:
             component = selected_component.lower()
             for group in groups:
@@ -336,9 +336,9 @@ class AnglesTab(QWidget):
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                 plot_widget.ax.set_ylabel('Angle (degrees)')
                 if use_gait_cycle:
-                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component)
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component, plot_widget=plot_widget)
                 else:
-                    self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component)
+                    self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component, plot_widget=plot_widget)
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 

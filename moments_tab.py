@@ -253,9 +253,9 @@ class MomentsTab(QWidget):
                     if use_gait_cycle:
                         self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', current_frame, component=component, body_mass=self.body_mass)
                     else:
-                        self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
-                        if plot_current_frame is not None:
-                            self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+                        self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component, plot_widget=plot_widget)
+                    if plot_current_frame is not None:
+                        self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
                     if component == 'y' and group.lower() == 'ankle':
                         plot_widget.ax.text(-0.05, 0.25, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)

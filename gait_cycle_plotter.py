@@ -72,7 +72,8 @@ class GaitCyclePlotter:
             std_left = np.std(all_left_cycles_norm, axis=0)
             line, = ax.plot(x_axis_norm, mean_left, color='red', linewidth=2, label='Mean Left', picker=5)
             key = f'{selected_group}_mean_left'
-            self.lines[key] = (line, key, 'Mean Left', mean_left)
+            lines_dict[key] = (line, key, 'Mean Left', mean_left)
+            self.lines[key] = lines_dict[key]
             ax.fill_between(x_axis_norm, mean_left - std_left, mean_left + std_left, color='red', alpha=0.2)
 
         if all_right_cycles_norm:
@@ -80,7 +81,8 @@ class GaitCyclePlotter:
             std_right = np.std(all_right_cycles_norm, axis=0)
             line, = ax.plot(x_axis_norm, mean_right, color='green', linewidth=2, label='Mean Right', picker=5)
             key = f'{selected_group}_mean_right'
-            self.lines[key] = (line, key, 'Mean Right', mean_right)
+            lines_dict[key] = (line, key, 'Mean Right', mean_right)
+            self.lines[key] = lines_dict[key]
             ax.fill_between(x_axis_norm, mean_right - std_right, mean_right + std_right, color='green', alpha=0.2)
 
         ax.set_xlabel('Gait Cycle (%)')
