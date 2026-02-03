@@ -54,6 +54,8 @@ class GaitCyclePlotter:
             side = 'left' if label.startswith('L') else 'right'
             for start, end in gait_cycles.get(side, []):
                 cycle_data = plot_data[start:end]
+                if cycle_data.size == 0:
+                    continue
                 x_norm = np.linspace(0, 100, len(cycle_data))
                 interp_data = np.interp(np.linspace(0, 100, 101), x_norm, cycle_data)
                 if side == 'left':
