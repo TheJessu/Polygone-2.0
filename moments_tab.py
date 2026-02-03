@@ -157,14 +157,18 @@ class MomentsTab(QWidget):
         self.moments_plotter = GenericDataPlotter('MOMENTS', body_mass)
         type_indices = [i for i, t in enumerate(marker_types) if t == 'MOMENTS']
         groups = set()
+        name_map = {'Hi': 'Hip', 'Kne': 'Knee', 'Ankl': 'Ankle'}
         for idx in type_indices:
             if idx < len(marker_labels) and marker_labels[idx]:
                 label = marker_labels[idx]
+                group = ""
                 if label.startswith('L') or label.startswith('R'):
                     group = label[1:-len('MOMENTS')].lower().capitalize()
-                    groups.add(group)
                 else:
                     group = label[:-len('MOMENTS')].lower().capitalize() if label.endswith('MOMENTS') else label.lower().capitalize()
+                
+                group = name_map.get(group, group)
+                if group:
                     groups.add(group)
 
         self.groups = sorted(list(groups))
@@ -182,7 +186,7 @@ class MomentsTab(QWidget):
         for group in self.groups:
             button = QPushButton(group)
             button.setCheckable(True)
-            default_visible = group in ['Hi', 'Kne', 'Ankl']
+            default_visible = group in ['Hip', 'Knee', 'Ankle']
             button.setChecked(default_visible)
             button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
             self.group_buttons[group] = button
@@ -210,7 +214,7 @@ class MomentsTab(QWidget):
         self.gait_cycle_plotter.lines = {}
 
         selected_component = self.dropdown.currentText()
-        desired_order = ['Hi', 'Kne', 'Ankl']
+        desired_order = ['Hip', 'Knee', 'Ankle']
         groups = [g for g in desired_order if g in self.groups and self.group_visibility.get(g, True)]
         use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
 
@@ -225,23 +229,23 @@ class MomentsTab(QWidget):
                 for component in ['x', 'y', 'z']:
                     plot_widget = self.add_plot(row, col)
                     title = f'{group} - {component.upper()}'
-                    if group.lower() == 'hi' and component == 'y':
+                    if group.lower() == 'hip' and component == 'y':
                         title = f'{group} - Hip Flex-Ext Moment'
-                    elif group.lower() == 'hi' and component == 'x':
+                    elif group.lower() == 'hip' and component == 'x':
                         title = f'{group} - Hip Ab-Add Moment'
-                    elif group.lower() == 'hi' and component == 'z':
+                    elif group.lower() == 'hip' and component == 'z':
                         title = f'{group} - Hip Rotation Moment'
-                    elif group.lower() == 'kne' and component == 'y':
+                    elif group.lower() == 'knee' and component == 'y':
                         title = f'{group} - Knee Flex-Ext Moment'
-                    elif group.lower() == 'kne' and component == 'x':
+                    elif group.lower() == 'knee' and component == 'x':
                         title = f'{group} - Knee Valg-Var Moment'
-                    elif group.lower() == 'kne' and component == 'z':
+                    elif group.lower() == 'knee' and component == 'z':
                         title = f'{group} - Knee Rotation Moment'
-                    elif group.lower() == 'ankl' and component == 'y':
+                    elif group.lower() == 'ankle' and component == 'y':
                         title = f'{group} - Dors-Plan Moment'
-                    elif group.lower() == 'ankl' and component == 'x':
+                    elif group.lower() == 'ankle' and component == 'x':
                         title = f'{group} - Ankle Ab-Add Moment'
-                    elif group.lower() == 'ankl' and component == 'z':
+                    elif group.lower() == 'ankle' and component == 'z':
                         title = f'{group} - Ankle Rotation Moment'
                     plot_widget.ax.set_title(title)
                     plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
@@ -253,7 +257,7 @@ class MomentsTab(QWidget):
                         if plot_current_frame is not None:
                             self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
-                    if component == 'y' and group.lower() == 'ankl':
+                    if component == 'y' and group.lower() == 'ankle':
                         plot_widget.ax.text(-0.05, 0.25, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.75, 'Plant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
@@ -262,21 +266,21 @@ class MomentsTab(QWidget):
                         plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
-                    if group.lower() == 'hi':
+                    if group.lower() == 'hip':
                         if component == 'x':
                             ymin, ymax = -1.0, 1.0
                         elif component == 'y':
                             ymin, ymax = -1.0, 2.0
                         elif component == 'z':
                             ymin, ymax = -0.5, 0.5
-                    elif group.lower() == 'kne':
+                    elif group.lower() == 'knee':
                         if component == 'x':
                             ymin, ymax = -1.0, 1.0
                         elif component == 'y':
                             ymin, ymax = -1.0, 2.0
                         elif component == 'z':
                             ymin, ymax = -0.5, 0.5
-                    elif group.lower() == 'ankl':
+                    elif group.lower() == 'ankle':
                         if component == 'x':
                             ymin, ymax = -0.5, 0.5
                         elif component == 'y':
@@ -307,23 +311,23 @@ class MomentsTab(QWidget):
             for group in groups:
                 plot_widget = self.add_plot(row, col)
                 title = f'{group} - {selected_component}'
-                if group.lower() == 'hi' and component == 'y':
+                if group.lower() == 'hip' and component == 'y':
                     title = f'{group} - Hip Flex-Ext Moment'
-                elif group.lower() == 'hi' and component == 'x':
+                elif group.lower() == 'hip' and component == 'x':
                     title = f'{group} - Hip Ab-Add Moment'
-                elif group.lower() == 'hi' and component == 'z':
+                elif group.lower() == 'hip' and component == 'z':
                     title = f'{group} - Hip Rotation Moment'
-                elif group.lower() == 'kne' and component == 'y':
+                elif group.lower() == 'knee' and component == 'y':
                     title = f'{group} - Knee Flex-Ext Moment'
-                elif group.lower() == 'kne' and component == 'x':
+                elif group.lower() == 'knee' and component == 'x':
                     title = f'{group} - Knee Valg-Var Moment'
-                elif group.lower() == 'kne' and component == 'z':
+                elif group.lower() == 'knee' and component == 'z':
                     title = f'{group} - Knee Rotation Moment'
-                elif group.lower() == 'ankl' and component == 'y':
+                elif group.lower() == 'ankle' and component == 'y':
                     title = f'{group} - Dors-Plan Moment'
-                elif group.lower() == 'ankl' and component == 'x':
+                elif group.lower() == 'ankle' and component == 'x':
                     title = f'{group} - Ankle Ab-Add Moment'
-                elif group.lower() == 'ankl' and component == 'z':
+                elif group.lower() == 'ankle' and component == 'z':
                     title = f'{group} - Ankle Rotation Moment'
                 plot_widget.ax.set_title(title)
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
@@ -335,7 +339,7 @@ class MomentsTab(QWidget):
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
-                if component == 'y' and group.lower() == 'ankl':
+                if component == 'y' and group.lower() == 'ankle':
                     plot_widget.ax.text(-0.05, 0.25, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                     plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                     plot_widget.ax.text(-0.05, 0.75, 'Plant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
@@ -344,21 +348,21 @@ class MomentsTab(QWidget):
                     plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                     plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
-                if group.lower() == 'hi':
+                if group.lower() == 'hip':
                     if component == 'x':
                         ymin, ymax = -1.0, 1.0
                     elif component == 'y':
                         ymin, ymax = -1.0, 2.0
                     elif component == 'z':
                         ymin, ymax = -0.5, 0.5
-                elif group.lower() == 'kne':
+                elif group.lower() == 'knee':
                     if component == 'x':
                         ymin, ymax = -1.0, 1.0
                     elif component == 'y':
                         ymin, ymax = -1.0, 2.0
                     elif component == 'z':
                         ymin, ymax = -0.5, 0.5
-                elif group.lower() == 'ankl':
+                elif group.lower() == 'ankle':
                     if component == 'x':
                         ymin, ymax = -0.5, 0.5
                     elif component == 'y':

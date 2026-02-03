@@ -17,18 +17,21 @@ class GaitCyclePlotter:
 
         type_indices = [i for i, t in enumerate(marker_types) if t == plot_type]
         if selected_group != "All":
-            type_indices = [
-                idx for idx in type_indices
-                if idx < len(marker_labels) and marker_labels[idx] and
-                (label := marker_labels[idx]) and
-                (
-                    (label.startswith('L') or label.startswith('R')) and
-                    label[1:-len(plot_type)].lower().capitalize() == selected_group
-                ) or
-                (
-                    (label[:-len(plot_type)].lower().capitalize() if label.endswith(plot_type) else label.lower().capitalize()) == selected_group
-                )
-            ]
+            filtered_indices = []
+            name_map = {'Hi': 'Hip', 'Kne': 'Knee', 'Ankl': 'Ankle'}
+            for idx in type_indices:
+                if idx < len(marker_labels) and marker_labels[idx]:
+                    label = marker_labels[idx]
+                    group = ""
+                    if label.startswith('L') or label.startswith('R'):
+                        group = label[1:-len(plot_type)].lower().capitalize()
+                    else:
+                        group = label[:-len(plot_type)].lower().capitalize() if label.endswith(plot_type) else label.lower().capitalize()
+                    
+                    group = name_map.get(group, group)
+                    if group == selected_group:
+                        filtered_indices.append(idx)
+            type_indices = filtered_indices
 
         all_left_cycles_norm, all_right_cycles_norm = [], []
         for marker_idx in type_indices:

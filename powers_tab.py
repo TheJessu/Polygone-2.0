@@ -155,14 +155,18 @@ class PowersTab(QWidget):
     def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
         type_indices = [i for i, t in enumerate(marker_types) if t == 'POWERS']
         groups = set()
+        name_map = {'Hi': 'Hip', 'Kne': 'Knee', 'Ankl': 'Ankle'}
         for idx in type_indices:
             if idx < len(marker_labels) and marker_labels[idx]:
                 label = marker_labels[idx]
+                group = ""
                 if label.startswith('L') or label.startswith('R'):
                     group = label[1:-len('POWERS')].lower().capitalize()
-                    groups.add(group)
                 else:
                     group = label[:-len('POWERS')].lower().capitalize() if label.endswith('POWERS') else label.lower().capitalize()
+
+                group = name_map.get(group, group)
+                if group:
                     groups.add(group)
 
         self.groups = sorted(list(groups))
@@ -180,7 +184,7 @@ class PowersTab(QWidget):
         for group in self.groups:
             button = QPushButton(group)
             button.setCheckable(True)
-            default_visible = group in ['Hi', 'Kne', 'Ankl']
+            default_visible = group in ['Hip', 'Knee', 'Ankle']
             button.setChecked(default_visible)
             button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
             self.group_buttons[group] = button
@@ -208,7 +212,7 @@ class PowersTab(QWidget):
         self.gait_cycle_plotter.lines = {}
 
         selected_component = self.dropdown.currentText()
-        desired_order = ['Hi', 'Kne', 'Ankl']
+        desired_order = ['Hip', 'Knee', 'Ankle']
         groups = [g for g in desired_order if g in self.groups and self.group_visibility.get(g, True)]
         use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
 
@@ -229,11 +233,11 @@ class PowersTab(QWidget):
                 
                 # Set title
                 title = f'{group} - {component.upper()}'
-                if group.lower() == 'hi' and component == 'z':
+                if group.lower() == 'hip' and component == 'z':
                     title = 'Hip Power'
-                elif group.lower() == 'kne' and component == 'z':
+                elif group.lower() == 'knee' and component == 'z':
                     title = 'Knee Power'
-                elif group.lower() == 'ankl' and component == 'z':
+                elif group.lower() == 'ankle' and component == 'z':
                     title = 'Ankle Power'
                 plot_widget.ax.set_title(title)
 
@@ -255,7 +259,7 @@ class PowersTab(QWidget):
                     plot_widget.ax.text(-0.05, 0.50, 'W/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                     plot_widget.ax.text(-0.05, 0.75, 'Gen', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
-                    if group.lower() in ['hi', 'kne', 'ankl']:
+                    if group.lower() in ['hip', 'knee', 'ankle']:
                         ymin, ymax = -2.0, 3.0
                         plot_widget.ax.set_ylim(ymin, ymax)
                         plot_widget.ax.set_yticks([ymin, ymax])

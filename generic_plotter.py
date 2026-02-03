@@ -54,18 +54,20 @@ class GenericDataPlotter:
         # Filter by selected group
         if selected_group != "All":
             filtered_indices = []
+            name_map = {'Hi': 'Hip', 'Kne': 'Knee', 'Ankl': 'Ankle'}
             for idx in type_indices:
                 if idx < len(marker_labels) and marker_labels[idx]:
                     label = marker_labels[idx]
+                    group = ""
                     # Check if this marker belongs to the selected group
                     if label.startswith('L') or label.startswith('R'):
                         group = label[1:-len(self.marker_type)].lower().capitalize()
-                        if group == selected_group:
-                            filtered_indices.append(idx)
                     else:
                         group = label[:-len(self.marker_type)].lower().capitalize() if label.endswith(self.marker_type) else label.lower().capitalize()
-                        if group == selected_group:
-                            filtered_indices.append(idx)
+                    
+                    group = name_map.get(group, group)
+                    if group == selected_group:
+                        filtered_indices.append(idx)
             type_indices = filtered_indices
 
         # Plot data for each marker
