@@ -1,5 +1,2 @@
-- [x] Add scrubber update logic to forces_tab.py set_current_frame method
-- [x] Add scrubber update logic to moments_tab.py set_current_frame method
-- [x] Add scrubber update logic to powers_tab.py set_current_frame method
-- [x] Add scrubber_lines attribute to PlotWidget classes in forces_tab.py, moments_tab.py, and powers_tab.py
-- [x] Fix duplicate scrubber_lines lines in forces_tab.py, moments_tab.py, and powers_tab.py
+- [x] Modify get_line_info in gait_cycle_plotter.py to determine side from line_key and calculate percentage only for matching side
+- [ ] Test the fix to ensure highlighting red shows red data and green shows green data

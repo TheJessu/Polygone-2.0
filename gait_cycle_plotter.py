@@ -161,16 +161,20 @@ class GaitCyclePlotter:
         if line_key not in self.lines:
             return ""
         line, _, label, plot_data = self.lines[line_key]
-        # Calculate current percentage
+        # Determine side from line_key
+        if 'mean_left' in line_key:
+            side = 'left'
+        elif 'mean_right' in line_key:
+            side = 'right'
+        else:
+            return f"{label}: Invalid line key"
+        # Calculate current percentage only for the matching side
         percentage = None
-        for side in ['left', 'right']:
-            for start, end in gait_cycles.get(side, []):
-                if start <= current_frame < end:
-                    cycle_len = end - start
-                    if cycle_len > 0:
-                        percentage = (current_frame - start) / cycle_len * 100
-                    break
-            if percentage is not None:
+        for start, end in gait_cycles.get(side, []):
+            if start <= current_frame < end:
+                cycle_len = end - start
+                if cycle_len > 0:
+                    percentage = (current_frame - start) / cycle_len * 100
                 break
         if percentage is None:
             return f"{label}: No gait cycle data at frame {current_frame}"
