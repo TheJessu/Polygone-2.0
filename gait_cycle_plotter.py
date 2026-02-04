@@ -12,7 +12,6 @@ class GaitCyclePlotter:
         if gait_cycles is None or not (gait_cycles.get('left') or gait_cycles.get('right')):
             # No gait cycles defined, set xlabel and ylabel but don't plot anything
             ax.set_xlabel('Gait Cycle (%)')
-            ax.set_ylabel(y_label)
             ax.set_xlim(0, 100)
             return
 

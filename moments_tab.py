@@ -251,7 +251,6 @@ class MomentsTab(QWidget):
                         title = f'{group} - Ankle Rotation Moment'
                     plot_widget.ax.set_title(title)
                     plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                    plot_widget.ax.set_ylabel('Moment (Nm/kg)')
                     if use_gait_cycle:
                         self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', current_frame, component=component, body_mass=self.body_mass, plot_widget=plot_widget)
                         plot_widget.ax.set_xlim(0, 100)
@@ -394,6 +393,11 @@ class MomentsTab(QWidget):
                     col = 0
                     row += 1
                 plot_widget.canvas.draw()
+
+        # Adjust subplot margins to prevent cut-off labels
+        for plot in self.plots:
+            plot.figure.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.1)
+            plot.canvas.draw()
 
     def add_plot(self, row, col):
         plot_widget = PlotWidget(self.moments_plotter, self.gait_cycle_plotter, self.plot_container)

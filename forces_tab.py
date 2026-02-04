@@ -224,7 +224,6 @@ class ForcesTab(QWidget):
                     title = f'{group} - {component.upper()}'
                     plot_widget.ax.set_title(title)
                     plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                    plot_widget.ax.set_ylabel('Force (N)')
                     if use_gait_cycle:
                         self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'FORCES', 'Force (N)', current_frame, component=component)
                     else:

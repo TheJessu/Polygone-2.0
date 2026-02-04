@@ -233,11 +233,10 @@ class AnglesTab(QWidget):
                     title = f'{group} - {"Hip Ab-Adduction" if component == "x" else "Hip Flexion-Extension" if component == "y" else "Hip Rotation"}'
                 elif group.lower() == 'knee':
                     title = f'{group} - {"Knee Flexion-Extension" if component == "y" else component.upper()}'
-                elif group.lower() == 'foot':
+                elif group.lower() == 'footprogress':
                     title = f'{group} - {"Dorsi-Plantarflexion" if component == "y" else "Foot Progression" if component == "z" else component.upper()}'
                 plot_widget.ax.set_title(title)
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                plot_widget.ax.set_ylabel('Angle (degrees)')
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component, plot_widget=plot_widget)
                     plot_widget.ax.set_xlim(0, 100)
@@ -323,6 +322,11 @@ class AnglesTab(QWidget):
         self.plot_container.adjustSize()
         self.plot_container.update()
         self.scroll_area.update()
+
+        # Adjust subplot margins to prevent cut-off labels
+        for plot in self.plots:
+            plot.figure.subplots_adjust(left=0.15, right=0.95, top=0.9, bottom=0.1)
+            plot.canvas.draw()
 
 
     def add_plot(self, row, col):
