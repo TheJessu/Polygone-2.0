@@ -206,8 +206,9 @@ class AnglesTab(QWidget):
         self.gait_cycle_plotter.lines = {}
 
         selected_component = self.dropdown.currentText()
-        desired_order = ['Spine', 'Pelvis', 'Hip', 'Knee', 'Footprogress']
-        groups = [g for g in desired_order if g in self.groups and self.group_visibility.get(g, True)]
+        desired_order = ['Spine', 'Pelvis', 'Hip', 'Knee', 'Footprogress', 'Absankl', 'Ankle', 'Elbow', 'Shoulder', 'Thorax', 'Wrist']
+        visible_groups = [g for g in self.groups if self.group_visibility.get(g, True)]
+        groups = sorted(visible_groups, key=lambda g: (0 if g in desired_order else 1, desired_order.index(g) if g in desired_order else 0))
         use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
 
         if self.zoomed_plot:
