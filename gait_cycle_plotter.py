@@ -8,7 +8,7 @@ class GaitCyclePlotter:
     def __init__(self):
         self.lines = {}
 
-    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, current_frame=None, unit_conversion_factor=1, component='magnitude', body_mass=None):
+    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, current_frame=None, unit_conversion_factor=1, component='magnitude', body_mass=None, plot_widget=None):
         if gait_cycles is None or not (gait_cycles.get('left') or gait_cycles.get('right')):
             # No gait cycles defined, set xlabel and ylabel but don't plot anything
             ax.set_xlabel('Gait Cycle (%)')
@@ -126,13 +126,16 @@ class GaitCyclePlotter:
 
         if current_frame is not None:
             for side in ['left', 'right']:
-                for start, end in gait_cycles.get(side, []):
+                color = 'red' if side == 'left' else 'green'
+                cycles = gait_cycles.get(side, [])
+                percentage = 0
+                if cycles:
+                    start, end = cycles[0]
                     if start <= current_frame < end:
                         cycle_len = end - start
                         if cycle_len > 0:
                             percentage = (current_frame - start) / cycle_len * 100
-                            ax.axvline(x=percentage, color='red', linestyle='--', linewidth=2)
-                        break
+                ax.axvline(x=percentage, color=color, linestyle='-', linewidth=1)
 
     def highlight_line(self, line_key, highlight=True):
         """Highlight or unhighlight a line."""

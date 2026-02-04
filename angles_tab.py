@@ -15,6 +15,7 @@ class PlotWidget(QWidget):
         self.angles_plotter = angles_plotter
         self.gait_cycle_plotter = gait_cycle_plotter
         self.lines = {}  # Lines for this plot
+        self.scrubber_lines = {}  # side to scrubber line
         self.figure = Figure(figsize=(4, 4), dpi=100)
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
@@ -204,6 +205,8 @@ class AnglesTab(QWidget):
         self.value_label.setText("")  # Clear info on replot
         self.angles_plotter.lines.clear()
         self.gait_cycle_plotter.lines = {}
+        for plot in self.plots:
+            plot.scrubber_lines = {}
 
         selected_component = self.dropdown.currentText()
         desired_order = ['Spine', 'Pelvis', 'Hip', 'Knee', 'Footprogress', 'Absankl', 'Ankle', 'Elbow', 'Shoulder', 'Thorax', 'Wrist']
@@ -236,10 +239,10 @@ class AnglesTab(QWidget):
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
                 plot_widget.ax.set_ylabel('Angle (degrees)')
                 if use_gait_cycle:
-                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component)
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component, plot_widget=plot_widget)
                 else:
                     self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component, plot_widget=plot_widget)
-                if plot_current_frame is not None:
+                if plot_current_frame is not None and not use_gait_cycle:
                     self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
                 if component == 'x':
                     if group.lower() in ['spine', 'pelvis']:
@@ -422,6 +425,25 @@ class AnglesTab(QWidget):
                 vline.set_visible(True)
             else:
                 vline.set_visible(False)
+
+        # Update scrubbers
+        for plot in self.plots:
+            for side, line in plot.scrubber_lines.items():
+                cycles = self.gait_cycles.get(side, []) if self.gait_cycles else []
+                if cycles:
+                    start, end = cycles[0]
+                    if start <= frame_index < end:
+                        cycle_len = end - start
+                        if cycle_len > 0:
+                            percentage = (frame_index - start) / cycle_len * 100
+                            line.set_xdata([percentage])
+                            line.set_visible(True)
+                        else:
+                            line.set_visible(False)
+                    else:
+                        line.set_visible(False)
+                else:
+                    line.set_visible(False)
 
         # Update highlighted line info if any
         if self.highlighted_line is not None:
