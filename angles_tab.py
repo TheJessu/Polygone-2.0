@@ -427,23 +427,22 @@ class AnglesTab(QWidget):
                 vline.set_visible(False)
 
         # Update scrubbers
-        for plot in self.plots:
-            for side, line in plot.scrubber_lines.items():
-                cycles = self.gait_cycles.get(side, []) if self.gait_cycles else []
-                if cycles:
-                    start, end = cycles[0]
-                    if start <= frame_index < end:
-                        cycle_len = end - start
-                        if cycle_len > 0:
-                            percentage = (frame_index - start) / cycle_len * 100
-                            line.set_xdata([percentage])
-                            line.set_visible(True)
-                        else:
-                            line.set_visible(False)
-                    else:
-                        line.set_visible(False)
-                else:
-                    line.set_visible(False)
+        if self.gait_cycles and (self.gait_cycles.get('left') or self.gait_cycles.get('right')):
+            for plot in self.plots:
+                if hasattr(plot, 'scrubber_lines'):
+                    for side, scrubber in plot.scrubber_lines.items():
+                        cycles = self.gait_cycles.get(side, [])
+                        percentage = 0
+                        is_in_cycle = False
+                        for start, end in cycles:
+                            if start <= frame_index < end:
+                                cycle_len = end - start
+                                if cycle_len > 0:
+                                    percentage = (frame_index - start) / cycle_len * 100
+                                is_in_cycle = True
+                                break
+                        scrubber.set_xdata([percentage])
+                        scrubber.set_visible(is_in_cycle)
 
         # Update highlighted line info if any
         if self.highlighted_line is not None:

@@ -15,6 +15,7 @@ class PlotWidget(QWidget):
         self.forces_plotter = forces_plotter
         self.gait_cycle_plotter = gait_cycle_plotter
         self.lines = {}  # Lines for this plot
+        self.scrubber_lines = {}  # side to scrubber line
         self.figure = Figure(figsize=(4, 4), dpi=100)
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
@@ -365,6 +366,25 @@ class ForcesTab(QWidget):
                 vline.set_visible(True)
             else:
                 vline.set_visible(False)
+
+        # Update scrubbers
+        for plot in self.plots:
+            for side, line in plot.scrubber_lines.items():
+                cycles = self.gait_cycles.get(side, []) if self.gait_cycles else []
+                if cycles:
+                    start, end = cycles[0]
+                    if start <= frame_index < end:
+                        cycle_len = end - start
+                        if cycle_len > 0:
+                            percentage = (frame_index - start) / cycle_len * 100
+                            line.set_xdata([percentage])
+                            line.set_visible(True)
+                        else:
+                            line.set_visible(False)
+                    else:
+                        line.set_visible(False)
+                else:
+                    line.set_visible(False)
 
         # Update highlighted line info if any
         if self.highlighted_line is not None:

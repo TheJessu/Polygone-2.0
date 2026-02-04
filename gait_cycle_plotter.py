@@ -129,13 +129,16 @@ class GaitCyclePlotter:
                 color = 'red' if side == 'left' else 'green'
                 cycles = gait_cycles.get(side, [])
                 percentage = 0
-                if cycles:
-                    start, end = cycles[0]
+                for start, end in cycles:
                     if start <= current_frame < end:
                         cycle_len = end - start
                         if cycle_len > 0:
                             percentage = (current_frame - start) / cycle_len * 100
-                ax.axvline(x=percentage, color=color, linestyle='-', linewidth=1)
+                        break
+                
+                scrubber = ax.axvline(x=percentage, color=color, linestyle='-', linewidth=1)
+                if plot_widget and hasattr(plot_widget, 'scrubber_lines'):
+                    plot_widget.scrubber_lines[side] = scrubber
 
     def highlight_line(self, line_key, highlight=True):
         """Highlight or unhighlight a line."""

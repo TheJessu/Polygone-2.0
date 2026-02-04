@@ -15,6 +15,7 @@ class PlotWidget(QWidget):
         self.powers_plotter = powers_plotter
         self.gait_cycle_plotter = gait_cycle_plotter
         self.lines = {}  # Lines for this plot
+        self.scrubber_lines = {}  # side to scrubber line
         self.figure = Figure(figsize=(4, 4), dpi=100)
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
@@ -248,7 +249,7 @@ class PowersTab(QWidget):
 
                 # Plot data
                 if use_gait_cycle:
-                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W/kg)', current_frame, component=component)
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W/kg)', current_frame, component=component, plot_widget=plot_widget)
                 else:
                     self.powers_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component, plot_widget=plot_widget)
                     if plot_current_frame is not None:
@@ -380,6 +381,23 @@ class PowersTab(QWidget):
                 vline.set_visible(True)
             else:
                 vline.set_visible(False)
+        
+        if self.gait_cycles and (self.gait_cycles.get('left') or self.gait_cycles.get('right')):
+            for plot in self.plots:
+                if hasattr(plot, 'scrubber_lines'):
+                    for side, scrubber in plot.scrubber_lines.items():
+                        cycles = self.gait_cycles.get(side, [])
+                        percentage = 0
+                        is_in_cycle = False
+                        for start, end in cycles:
+                            if start <= frame_index < end:
+                                cycle_len = end - start
+                                if cycle_len > 0:
+                                    percentage = (frame_index - start) / cycle_len * 100
+                                is_in_cycle = True
+                                break
+                        scrubber.set_xdata([percentage])
+                        scrubber.set_visible(is_in_cycle)
 
         # Update highlighted line info if any
         if self.highlighted_line is not None:

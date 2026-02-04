@@ -1,12 +1,5 @@
-# TODO: Fix Angles Tab "All" Selection Issue
-
-## Completed Tasks
-- [x] Analyzed the angles_tab.py code to understand the plotting logic for "All" selection.
-- [x] Identified that canvas.draw() was called during the loop for each plot, but layout updates happened after, potentially causing only the last plot (Z) to be visible due to stacking or positioning issues.
-- [x] Removed plot_widget.canvas.draw() from the "All" branch loop.
-- [x] Added for plot in self.plots: plot.canvas.draw() after layout updates to ensure all plots are drawn in their correct positions.
-
-## Followup Steps
-- [ ] Test the application to verify that "All" selection now shows X, Y, and Z plots for each group.
-- [ ] Ensure individual X, Y, Z selections still work correctly.
-- [ ] Check for any performance issues or rendering delays with the new drawing sequence.
+- [x] Add scrubber update logic to forces_tab.py set_current_frame method
+- [x] Add scrubber update logic to moments_tab.py set_current_frame method
+- [x] Add scrubber update logic to powers_tab.py set_current_frame method
+- [x] Add scrubber_lines attribute to PlotWidget classes in forces_tab.py, moments_tab.py, and powers_tab.py
+- [x] Fix duplicate scrubber_lines lines in forces_tab.py, moments_tab.py, and powers_tab.py
