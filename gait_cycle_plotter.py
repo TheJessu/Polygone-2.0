@@ -20,6 +20,7 @@ class GaitCyclePlotter:
         if selected_group != "All":
             filtered_indices = []
             name_map = {'Hi': 'Hip', 'Kne': 'Knee', 'Ankl': 'Ankle'}
+            selected_group_mapped = name_map.get(selected_group, selected_group)
             for idx in type_indices:
                 if idx < len(marker_labels) and marker_labels[idx]:
                     label = marker_labels[idx]
@@ -28,9 +29,9 @@ class GaitCyclePlotter:
                         group = label[1:-len(plot_type)].lower().capitalize()
                     else:
                         group = label[:-len(plot_type)].lower().capitalize() if label.endswith(plot_type) else label.lower().capitalize()
-                    
+
                     group = name_map.get(group, group)
-                    if group == selected_group:
+                    if group == selected_group_mapped:
                         filtered_indices.append(idx)
             type_indices = filtered_indices
 
@@ -86,6 +87,7 @@ class GaitCyclePlotter:
 
         ax.set_xlabel('Gait Cycle (%)')
         ax.set_ylabel(y_label)
+        ax.set_xlim(0, 100)
         ax.set_box_aspect(1)
 
         if plot_type == 'ANGLES':
@@ -198,12 +200,13 @@ class GaitCyclePlotter:
                     ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 
         elif plot_type == 'POWERS':
+            ax.set_ylabel('')  # Remove ylabel to avoid overlap with text labels
             if component == 'z':
                 ax.text(-0.05, 0.25, 'Abs', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                 ax.text(-0.05, 0.50, 'W/kg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                 ax.text(-0.05, 0.75, 'Gen', transform=ax.transAxes, ha='right', va='center', fontsize=8)
 
-            if component == 'z' and selected_group.lower() in ['hip', 'knee', 'ankle']:
+            if component == 'z' and selected_group_mapped.lower() in ['hip', 'knee', 'ankle']:
                 ymin, ymax = -2.0, 3.0
                 ax.set_ylim(ymin, ymax)
                 ax.set_yticks([ymin, ymax])

@@ -117,13 +117,13 @@ class GaitAnalysisTab(QWidget):
 
     def set_current_frame(self, frame_index):
         self.current_frame = frame_index
-        # Update vlines
+        # Update vlines only for kinematics plots
         for vline in self.vlines:
             if vline:
                 # Remove old vline
                 vline.remove()
         self.vlines = []
-        for plot_widget, *_ in self.kinematics_plots + [(p[0], p[1], p[2], p[3], p[4], p[5]) for p in self.kinetics_plots]:
+        for plot_widget, *_ in self.kinematics_plots:
             if self.gait_cycles:
                 for side in ['left', 'right']:
                     for start, end in self.gait_cycles.get(side, []):
