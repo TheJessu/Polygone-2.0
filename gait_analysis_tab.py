@@ -86,15 +86,15 @@ class GaitAnalysisTab(QWidget):
     def setup_kinetics_plots(self):
         # 3x3 grid
         plots_config = [
-            ('Hip', 'y', 'ANGLES', 'Angle'),
-            ('Knee', 'y', 'ANGLES', 'Angle'),
-            ('Footprogress', 'y', 'ANGLES', 'Angle'),
+            ('Hip', 'y', 'ANGLES', 'Angle (degrees)'),
+            ('Knee', 'y', 'ANGLES', 'Angle (degrees)'),
+            ('Footprogress', 'y', 'ANGLES', 'Angle (degrees)'),
             ('Hi', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
             ('Kne', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
             ('Ankl', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
-            ('Hi', 'z', 'POWERS', 'Power (W)'),
-            ('Kne', 'z', 'POWERS', 'Power (W)'),
-            ('Ankl', 'z', 'POWERS', 'Power (W)')
+            ('Hi', 'z', 'POWERS', 'Power (W/kg)'),
+            ('Kne', 'z', 'POWERS', 'Power (W/kg)'),
+            ('Ankl', 'z', 'POWERS', 'Power (W/kg)')
         ]
         for i, (group, comp, plot_type, y_label, *unit_factor) in enumerate(plots_config):
             row = i // 3
@@ -164,8 +164,8 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else "Foot Progression" if comp == "z" else comp.upper()}'
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
-            plot_widget.ax.set_ylabel('Angle')
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', 'Angle', self.current_frame, component=comp)
+            plot_widget.ax.set_ylabel('Angle (degrees)')
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', self.current_frame, component=comp)
             plot_widget.canvas.draw()
             # Make plots with no name change invisible
             if title == f'{group} - {comp.upper()}':

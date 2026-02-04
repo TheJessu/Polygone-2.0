@@ -86,6 +86,7 @@ class GaitCyclePlotter:
 
         ax.set_xlabel('Gait Cycle (%)')
         ax.set_ylabel(y_label)
+        ax.set_box_aspect(1)
 
         if plot_type == 'ANGLES':
             if component == 'x':
@@ -114,6 +115,42 @@ class GaitCyclePlotter:
                 ax.text(-0.05, 0.25, 'Ext', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                 ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                 ax.text(-0.05, 0.75, 'Int', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+
+            # Set y-limits
+            ymin, ymax = -1.0, 1.0  # Default
+            if selected_group.lower() == 'spine':
+                ymin, ymax = -20, 20
+            elif selected_group.lower() == 'pelvis':
+                if component == 'x':
+                    ymin, ymax = -20, 20
+                elif component == 'y':
+                    ymin, ymax = -5, 35
+                elif component == 'z':
+                    ymin, ymax = -30, 30
+            elif selected_group.lower() == 'hip':
+                if component == 'x':
+                    ymin, ymax = -15, 20
+                elif component == 'y':
+                    ymin, ymax = -15, 60
+                elif component == 'z':
+                    ymin, ymax = -30, 40
+            elif selected_group.lower() == 'knee':
+                ymin, ymax = -15, 90
+            elif selected_group.lower() == 'footprogress':
+                ymin, ymax = -40, 40
+            ax.set_ylim(ymin, ymax)
+            ax.set_yticks([ymin, ymax])
+            # Always add a thick, darker grey line at y=0 if within range
+            if ymin <= 0 <= ymax:
+                ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+            # Add horizontal grid lines at every 10 units in both directions from 0
+            max_abs = max(abs(ymin), abs(ymax))
+            for step in range(10, max_abs + 10, 10):
+                if ymin <= step <= ymax:
+                    ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+                if ymin <= -step <= ymax:
+                    ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+
         elif plot_type == 'MOMENTS':
             if selected_group.lower() == 'ankl' and component == 'y':
                 ax.text(-0.05, 0.25, 'Dors', transform=ax.transAxes, ha='right', va='center', fontsize=8)
@@ -123,6 +160,63 @@ class GaitCyclePlotter:
                 ax.text(-0.05, 0.25, 'Flex', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                 ax.text(-0.05, 0.50, 'Nm/kg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                 ax.text(-0.05, 0.75, 'Ext', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+
+            # Set y-limits
+            ymin, ymax = -1.0, 1.0  # Default values
+            if selected_group.lower() == 'hip':
+                if component == 'x':
+                    ymin, ymax = -1.0, 1.0
+                elif component == 'y':
+                    ymin, ymax = -1.0, 2.0
+                elif component == 'z':
+                    ymin, ymax = -0.5, 0.5
+            elif selected_group.lower() == 'knee':
+                if component == 'x':
+                    ymin, ymax = -1.0, 1.0
+                elif component == 'y':
+                    ymin, ymax = -1.0, 2.0
+                elif component == 'z':
+                    ymin, ymax = -0.5, 0.5
+            elif selected_group.lower() == 'ankle':
+                if component == 'x':
+                    ymin, ymax = -0.5, 0.5
+                elif component == 'y':
+                    ymin, ymax = -1.0, 2.0
+                elif component == 'z':
+                    ymin, ymax = -0.5, 0.5
+            ax.set_ylim(ymin, ymax)
+            ax.set_yticks([ymin, ymax])
+            # Always add a thick, darker grey line at y=0 if within range
+            if ymin <= 0 <= ymax:
+                ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+            # Add horizontal grid lines at every 0.5 units in both directions from 0
+            max_abs = max(abs(ymin), abs(ymax))
+            for step in np.arange(0.5, max_abs + 0.5, 0.5):
+                if ymin <= step <= ymax:
+                    ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+                if ymin <= -step <= ymax:
+                    ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+
+        elif plot_type == 'POWERS':
+            if component == 'z':
+                ax.text(-0.05, 0.25, 'Abs', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                ax.text(-0.05, 0.50, 'W/kg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                ax.text(-0.05, 0.75, 'Gen', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+
+            if component == 'z' and selected_group.lower() in ['hip', 'knee', 'ankle']:
+                ymin, ymax = -2.0, 3.0
+                ax.set_ylim(ymin, ymax)
+                ax.set_yticks([ymin, ymax])
+
+                if ymin <= 0 <= ymax:
+                    ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7, zorder=-1)
+
+                max_abs = max(abs(ymin), abs(ymax))
+                for step in np.arange(0.5, max_abs + 0.5, 0.5):
+                    if ymin <= step <= ymax:
+                        ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5, zorder=-1)
+                    if ymin <= -step <= ymax:
+                        ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5, zorder=-1)
 
         if current_frame is not None:
             for side in ['left', 'right']:
