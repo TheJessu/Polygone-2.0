@@ -240,6 +240,7 @@ class AnglesTab(QWidget):
                 plot_widget.ax.set_ylabel('Angle (degrees)')
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component, plot_widget=plot_widget)
+                    plot_widget.ax.set_xlim(0, 100)
                 else:
                     self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component, plot_widget=plot_widget)
                 if plot_current_frame is not None and not use_gait_cycle:

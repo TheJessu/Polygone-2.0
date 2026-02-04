@@ -254,6 +254,7 @@ class MomentsTab(QWidget):
                     plot_widget.ax.set_ylabel('Moment (Nm/kg)')
                     if use_gait_cycle:
                         self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', current_frame, component=component, body_mass=self.body_mass, plot_widget=plot_widget)
+                        plot_widget.ax.set_xlim(0, 100)
                     else:
                         self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component, plot_widget=plot_widget)
                     if plot_current_frame is not None:
@@ -337,6 +338,7 @@ class MomentsTab(QWidget):
                 plot_widget.ax.set_ylabel('Moment (Nm/kg)')
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', current_frame, component=component, body_mass=self.body_mass, plot_widget=plot_widget)
+                    plot_widget.ax.set_xlim(0, 100)
                 else:
                     self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                     if plot_current_frame is not None:
