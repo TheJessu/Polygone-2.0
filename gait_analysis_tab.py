@@ -164,14 +164,18 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else "Foot Progression" if comp == "z" else comp.upper()}'
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
-            plot_widget.ax.set_ylabel('Angle (degrees)')
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', self.current_frame, component=comp)
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp)
             plot_widget.canvas.draw()
             # Make plots with no name change invisible
             if title == f'{group} - {comp.upper()}':
                 plot_widget.setVisible(False)
             else:
                 plot_widget.setVisible(True)
+
+        # Adjust subplot margins to prevent cut-off labels for kinematics
+        for plot_widget, *_ in self.kinematics_plots:
+            plot_widget.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
+            plot_widget.canvas.draw()
 
         # Plot kinetics
         for plot_widget, group, comp, plot_type, y_label, unit_factor in self.kinetics_plots:

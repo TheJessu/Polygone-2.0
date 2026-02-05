@@ -232,23 +232,32 @@ class AnglesTab(QWidget):
                 elif group.lower() == 'hip':
                     title = f'{group} - {"Hip Ab-Adduction" if component == "x" else "Hip Flexion-Extension" if component == "y" else "Hip Rotation"}'
                 elif group.lower() == 'knee':
-                    title = f'{group} - {"Knee Flexion-Extension" if component == "y" else component.upper()}'
+                    title = f'{group} - {"Knee Flexion-Extension" if component == "y" else "Knee Rotation" if component == "z" else "Knee Valg/Varus"}'
                 elif group.lower() == 'footprogress':
                     title = f'{group} - {"Dorsi-Plantarflexion" if component == "y" else "Foot Progression" if component == "z" else component.upper()}'
-                plot_widget.ax.set_title(title)
-                plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+                plot_widget.ax.set_title(title, fontsize=10)
+                plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)', fontsize=8, labelpad=-1)
                 if use_gait_cycle:
-                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', 'Angle (degrees)', current_frame, component=component, plot_widget=plot_widget)
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', '', current_frame, component=component, plot_widget=plot_widget)
                     plot_widget.ax.set_xlim(0, 100)
                 else:
                     self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component, plot_widget=plot_widget)
                 if plot_current_frame is not None and not use_gait_cycle:
                     self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+
+                # Clear any existing text labels to prevent overlap
+                for text in list(plot_widget.ax.texts):
+                    text.remove()
+
                 if component == 'x':
                     if group.lower() in ['spine', 'pelvis']:
                         plot_widget.ax.text(-0.05, 0.25, 'Down', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.75, 'Up', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    elif group.lower() in ['knee']:
+                        plot_widget.ax.text(-0.05, 0.25, 'Val', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        plot_widget.ax.text(-0.05, 0.75, 'Var', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                     else:  # hip, knee, footprogress
                         plot_widget.ax.text(-0.05, 0.25, 'Abd', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                         plot_widget.ax.text(-0.05, 0.50, 'deg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
@@ -325,7 +334,7 @@ class AnglesTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels
         for plot in self.plots:
-            plot.figure.subplots_adjust(left=0.15, right=0.95, top=0.9, bottom=0.1)
+            plot.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
             plot.canvas.draw()
 
 

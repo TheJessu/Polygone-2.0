@@ -241,10 +241,10 @@ class PowersTab(QWidget):
                     title = 'Knee Power'
                 elif group.lower() == 'ankle' and component == 'z':
                     title = 'Ankle Power'
-                plot_widget.ax.set_title(title)
+                plot_widget.ax.set_title(title, fontsize=10)
 
-                # Set labels
-                plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+                # Set labelsplot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)', fontsize=8, labelpad=-5)
+                plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)', fontsize=8, labelpad=-1)
                 plot_widget.ax.set_ylabel('Power (W/kg)')
 
                 # Plot data
@@ -283,6 +283,11 @@ class PowersTab(QWidget):
                 if col >= 3:
                     col = 0
                     row += 1
+
+        # Adjust subplot margins to prevent cut-off labels
+        for plot in self.plots:
+            plot.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
+            plot.canvas.draw()
 
 
     def add_plot(self, row, col):

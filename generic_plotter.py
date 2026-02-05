@@ -81,8 +81,8 @@ class GenericDataPlotter:
 
             # Plot x, y, z values over time
             frames = np.arange(markers_data.shape[0])
-            x_data = markers_data[:, marker_idx, 0]
-            y_data = markers_data[:, marker_idx, 1]
+            x_data = markers_data[:, marker_idx, 1]
+            y_data = markers_data[:, marker_idx, 0]
             z_data = markers_data[:, marker_idx, 2]
 
             # Apply unit conversion

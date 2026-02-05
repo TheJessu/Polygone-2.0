@@ -47,9 +47,9 @@ class GaitCyclePlotter:
             data *= unit_conversion_factor
             
             if component == 'x':
-                plot_data = data[:, 0]
-            elif component == 'y':
                 plot_data = data[:, 1]
+            elif component == 'y':
+                plot_data = data[:, 0]
             elif component == 'z':
                 plot_data = data[:, 2]
             else:
@@ -95,6 +95,10 @@ class GaitCyclePlotter:
                     ax.text(-0.05, 0.25, 'Down', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                     ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                     ax.text(-0.05, 0.75, 'Up', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                elif selected_group.lower() in ['knee']:
+                    ax.text(-0.05, 0.25, 'Val', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+                    ax.text(-0.05, 0.75, 'Var', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                 else:  # hip, knee, footprogress
                     ax.text(-0.05, 0.25, 'Abd', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                     ax.text(-0.05, 0.50, 'deg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
@@ -146,21 +150,14 @@ class GaitCyclePlotter:
                 ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
             # Add horizontal grid lines at every 10 units in both directions from 0
             max_abs = max(abs(ymin), abs(ymax))
-            for step in range(10, max_abs + 10, 10):
+            for step in np.arange(10, max_abs + 10, 10):
                 if ymin <= step <= ymax:
                     ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
                 if ymin <= -step <= ymax:
                     ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 
         elif plot_type == 'MOMENTS':
-            if selected_group.lower() == 'ankl' and component == 'y':
-                ax.text(-0.05, 0.25, 'Dors', transform=ax.transAxes, ha='right', va='center', fontsize=8)
-                ax.text(-0.05, 0.50, 'Nm/kg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
-                ax.text(-0.05, 0.75, 'Plant', transform=ax.transAxes, ha='right', va='center', fontsize=8)
-            else:
-                ax.text(-0.05, 0.25, 'Flex', transform=ax.transAxes, ha='right', va='center', fontsize=8)
-                ax.text(-0.05, 0.50, 'Nm/kg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
-                ax.text(-0.05, 0.75, 'Ext', transform=ax.transAxes, ha='right', va='center', fontsize=8)
+            # Labels and limits are handled in moments_tab.py to avoid duplication
 
             # Set y-limits
             ymin, ymax = -1.0, 1.0  # Default values

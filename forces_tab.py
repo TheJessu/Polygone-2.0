@@ -242,9 +242,8 @@ class ForcesTab(QWidget):
                 plot_widget = self.add_plot(row, col)
                 plot_widget.ax.set_title(f'{group} - {selected_component}')
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
-                plot_widget.ax.set_ylabel('Force (N)')
                 if use_gait_cycle:
-                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'FORCES', 'Force (N)', current_frame, component=component)
+                    self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'FORCES', '', current_frame, component=component)
                 else:
                     self.forces_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                     if plot_current_frame is not None:
@@ -255,6 +254,12 @@ class ForcesTab(QWidget):
                     col = 0
                     row += 1
                 plot_widget.canvas.draw()
+
+        # Adjust subplot margins to prevent cut-off labels
+        for plot in self.plots:
+            plot.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
+            plot.canvas.draw()
+
         self.plot_layout.update()
         self.plot_container.adjustSize()
         self.plot_container.updateGeometry()

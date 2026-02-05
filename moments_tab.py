@@ -249,25 +249,43 @@ class MomentsTab(QWidget):
                         title = f'{group} - Ankle Ab-Add Moment'
                     elif group.lower() == 'ankle' and component == 'z':
                         title = f'{group} - Ankle Rotation Moment'
-                    plot_widget.ax.set_title(title)
-                    plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+                    plot_widget.ax.set_title(title, fontsize=10)
+                    plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)', fontsize=8, labelpad=-1)
                     if use_gait_cycle:
-                        self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', current_frame, component=component, body_mass=self.body_mass, plot_widget=plot_widget)
+                        self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', '', current_frame, component=component, body_mass=self.body_mass, plot_widget=plot_widget)
                         plot_widget.ax.set_xlim(0, 100)
                     else:
                         self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component, plot_widget=plot_widget)
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
-                    if component == 'y' and group.lower() == 'ankle':
-                        plot_widget.ax.text(-0.05, 0.25, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        plot_widget.ax.text(-0.05, 0.75, 'Plant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                    else:
-                        plot_widget.ax.text(-0.05, 0.25, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                        plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    # Clear any existing text labels to prevent overlap
+                    for text in list(plot_widget.ax.texts):
+                        text.remove()
 
+                    if component == 'x':
+                        if group.lower() in ['hip', 'ankle']:
+                            plot_widget.ax.text(-0.05, 0.25, 'Add', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Abd', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                        else:  # hip, knee, footprogress
+                            plot_widget.ax.text(-0.05, 0.25, 'Var', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Valg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+
+                    if component == 'y' and group.lower() == 'ankle':
+                            plot_widget.ax.text(-0.05, 0.25, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Plant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    elif component == 'y' and group.lower() in ['hip', 'knee']:
+                            plot_widget.ax.text(-0.05, 0.25, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    if component == 'z':
+                            plot_widget.ax.text(-0.05, 0.25, 'Int', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                            plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    
                     ymin, ymax = -1.0, 1.0  # Default values
                     if group.lower() == 'hip':
                         if component == 'x':
@@ -332,8 +350,8 @@ class MomentsTab(QWidget):
                     title = f'{group} - Ankle Ab-Add Moment'
                 elif group.lower() == 'ankle' and component == 'z':
                     title = f'{group} - Ankle Rotation Moment'
-                plot_widget.ax.set_title(title)
-                plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)')
+                plot_widget.ax.set_title(title, fontsize=10)
+                plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)', fontsize=8, labelpad=-1)
                 plot_widget.ax.set_ylabel('Moment (Nm/kg)')
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', current_frame, component=component, body_mass=self.body_mass, plot_widget=plot_widget)
@@ -343,60 +361,9 @@ class MomentsTab(QWidget):
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
 
-                if component == 'y' and group.lower() == 'ankle':
-                    plot_widget.ax.text(-0.05, 0.25, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                    plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                    plot_widget.ax.text(-0.05, 0.75, 'Plant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                else:
-                    plot_widget.ax.text(-0.05, 0.25, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                    plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-                    plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
-
-                ymin, ymax = -1.0, 1.0  # Default values
-                if group.lower() == 'hip':
-                    if component == 'x':
-                        ymin, ymax = -1.0, 1.0
-                    elif component == 'y':
-                        ymin, ymax = -1.0, 2.0
-                    elif component == 'z':
-                        ymin, ymax = -0.5, 0.5
-                elif group.lower() == 'knee':
-                    if component == 'x':
-                        ymin, ymax = -1.0, 1.0
-                    elif component == 'y':
-                        ymin, ymax = -1.0, 2.0
-                    elif component == 'z':
-                        ymin, ymax = -0.5, 0.5
-                elif group.lower() == 'ankle':
-                    if component == 'x':
-                        ymin, ymax = -0.5, 0.5
-                    elif component == 'y':
-                        ymin, ymax = -1.0, 2.0
-                    elif component == 'z':
-                        ymin, ymax = -0.5, 0.5
-                plot_widget.ax.set_ylim(ymin, ymax)
-                plot_widget.ax.set_yticks([ymin, ymax])
-                plot_widget.ax.set_box_aspect(1)
-                # Always add a thick, darker grey line at y=0 if within range
-                if ymin <= 0 <= ymax:
-                    plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
-                # Add horizontal grid lines at every 0.5 units in both directions from 0
-                max_abs = max(abs(ymin), abs(ymax))
-                for step in np.arange(0.5, max_abs + 0.5, 0.5):
-                    if ymin <= step <= ymax:
-                        plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
-                    if ymin <= -step <= ymax:
-                        plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
-
-                col += 1
-                if col >= 3:
-                    col = 0
-                    row += 1
-                plot_widget.canvas.draw()
-
         # Adjust subplot margins to prevent cut-off labels
         for plot in self.plots:
-            plot.figure.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.1)
+            plot.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
             plot.canvas.draw()
 
     def add_plot(self, row, col):
