@@ -6,8 +6,11 @@ import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
 from generic_plotter import GenericDataPlotter, EditablePlotWidget
 
-class PlotWidget(QWidget):
+class PlotWidget(EditablePlotWidget):
     plot_double_clicked = pyqtSignal(QWidget)
+    ymin_double_clicked = pyqtSignal(QWidget)
+    ymax_double_clicked = pyqtSignal(QWidget)
+    title_double_clicked = pyqtSignal(QWidget)
     line_clicked = pyqtSignal(object)  # Signal for line clicks, emits (plotter_type, key)
 
     def __init__(self, moments_plotter, gait_cycle_plotter, parent=None):
@@ -16,19 +19,7 @@ class PlotWidget(QWidget):
         self.gait_cycle_plotter = gait_cycle_plotter
         self.lines = {}  # Lines for this plot
         self.scrubber_lines = {}  # side to scrubber line
-        self.figure = Figure(figsize=(4, 4), dpi=100)
-        self.canvas = FigureCanvas(self.figure)
-        self.ax = self.figure.add_subplot(111)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.canvas)
-        self.canvas.setFixedSize(200, 200)
-
-        self.figure.patch.set_facecolor('white')
-        self.ax.set_facecolor('white')
-
-        self.canvas.mpl_connect('button_press_event', self.on_mpl_click)
         self.canvas.mpl_connect('pick_event', self.on_line_pick)
 
     def on_mpl_click(self, event):
@@ -118,6 +109,7 @@ class MomentsTab(QWidget):
         self.markers_data = None
         self.marker_types = None
         self.marker_labels = None
+        self.editable_values = {}
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -154,6 +146,9 @@ class MomentsTab(QWidget):
             
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
+
+    def set_editable_values(self, editable_values):
+        self.editable_values = editable_values
 
     def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
         self.body_mass = body_mass
@@ -310,6 +305,17 @@ class MomentsTab(QWidget):
                             ymin, ymax = -1.0, 2.0
                         elif component == 'z':
                             ymin, ymax = -0.5, 0.5
+
+                    # Check for edited values
+                    plot_key = f"moments_plot_{len(self.plots) - 1}"
+                    if plot_key in self.editable_values:
+                        edited = self.editable_values[plot_key]
+                        ymin = edited.get('ymin', ymin)
+                        ymax = edited.get('ymax', ymax)
+                        if 'title' in edited:
+                            title = edited['title']
+
+                    plot_widget.ax.set_title(title, fontsize=10)
                     plot_widget.ax.set_ylim(ymin, ymax)
                     plot_widget.ax.set_yticks([ymin, ymax])
                     plot_widget.ax.set_box_aspect(1)
@@ -323,6 +329,8 @@ class MomentsTab(QWidget):
                             plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
                         if ymin <= -step <= ymax:
                             plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+
+                    plot_widget.add_editable_texts(ymin, ymax, title)
 
                     col += 1
                     if col >= 3:
@@ -371,6 +379,9 @@ class MomentsTab(QWidget):
     def add_plot(self, row, col):
         plot_widget = PlotWidget(self.moments_plotter, self.gait_cycle_plotter, self.plot_container)
         plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
+        plot_widget.ymin_double_clicked.connect(self.on_ymin_double_clicked)
+        plot_widget.ymax_double_clicked.connect(self.on_ymax_double_clicked)
+        plot_widget.title_double_clicked.connect(self.on_title_double_clicked)
         plot_widget.line_clicked.connect(self.on_line_clicked)
         plot_widget.setProperty("grid_pos", (row, col))
         self.plot_layout.addWidget(plot_widget, row, col)

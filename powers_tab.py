@@ -1,13 +1,16 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QScrollArea, QGridLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QScrollArea, QGridLayout, QInputDialog
 from PyQt5.QtCore import pyqtSignal
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
-from generic_plotter import GenericDataPlotter
+from generic_plotter import GenericDataPlotter, EditablePlotWidget
 
-class PlotWidget(QWidget):
+class PlotWidget(EditablePlotWidget):
     plot_double_clicked = pyqtSignal(QWidget)
+    ymin_double_clicked = pyqtSignal(QWidget)
+    ymax_double_clicked = pyqtSignal(QWidget)
+    title_double_clicked = pyqtSignal(QWidget)
     line_clicked = pyqtSignal(object)  # Signal for line clicks, emits (plotter_type, key)
 
     def __init__(self, powers_plotter, gait_cycle_plotter, parent=None):
@@ -16,19 +19,7 @@ class PlotWidget(QWidget):
         self.gait_cycle_plotter = gait_cycle_plotter
         self.lines = {}  # Lines for this plot
         self.scrubber_lines = {}  # side to scrubber line
-        self.figure = Figure(figsize=(4, 4), dpi=100)
-        self.canvas = FigureCanvas(self.figure)
-        self.ax = self.figure.add_subplot(111)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.canvas)
-        self.canvas.setFixedSize(200, 200)
-
-        self.figure.patch.set_facecolor('white')
-        self.ax.set_facecolor('white')
-
-        self.canvas.mpl_connect('button_press_event', self.on_mpl_click)
         self.canvas.mpl_connect('pick_event', self.on_line_pick)
 
     def on_mpl_click(self, event):
@@ -118,6 +109,7 @@ class PowersTab(QWidget):
         self.marker_types = None
         self.marker_labels = None
         self.highlighted_line = None  # Track the currently highlighted line
+        self.editable_values = {}
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -154,6 +146,9 @@ class PowersTab(QWidget):
             
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
+
+    def set_editable_values(self, editable_values):
+        self.editable_values = editable_values
 
     def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
         type_indices = [i for i, t in enumerate(marker_types) if t == 'POWERS']
@@ -263,24 +258,39 @@ class PowersTab(QWidget):
                     plot_widget.ax.text(-0.05, 0.50, 'W/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
                     plot_widget.ax.text(-0.05, 0.75, 'Gen', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
 
-                    if group.lower() in ['hip', 'knee', 'ankle']:
-                        ymin, ymax = -2.0, 3.0
-                        plot_widget.ax.set_ylim(ymin, ymax)
-                        plot_widget.ax.set_yticks([ymin, ymax])
-
-                        if ymin <= 0 <= ymax:
-                            plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7, zorder=-1)
-
-                        max_abs = max(abs(ymin), abs(ymax))
-                        for step in np.arange(0.5, max_abs + 0.5, 0.5):
-                            if ymin <= step <= ymax:
-                                plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5, zorder=-1)
-                            if ymin <= -step <= ymax:
-                                plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5, zorder=-1)
-
                 plot_widget.ax.set_box_aspect(1)
+
+                # Set default ymin, ymax
+                ymin, ymax = -2.0, 3.0
+
+                # Check for edited values
+                plot_key = f"powers_plot_{len(self.plots) - 1}"
+                if plot_key in self.editable_values:
+                    edited = self.editable_values[plot_key]
+                    ymin = edited.get('ymin', ymin)
+                    ymax = edited.get('ymax', ymax)
+                    if 'title' in edited:
+                        title = edited['title']
+
+                plot_widget.ax.set_title(title, fontsize=10)
+                plot_widget.ax.set_ylim(ymin, ymax)
+                plot_widget.ax.set_yticks([ymin, ymax])
+
+                # Always add a thick, darker grey line at y=0 if within range
+                if ymin <= 0 <= ymax:
+                    plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+
+                # Add horizontal grid lines at every 0.5 units in both directions from 0
+                max_abs = max(abs(ymin), abs(ymax))
+                for step in np.arange(0.5, max_abs + 0.5, 0.5):
+                    if ymin <= step <= ymax:
+                        plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+                    if ymin <= -step <= ymax:
+                        plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+
+                plot_widget.add_editable_texts(ymin, ymax, title)
                 plot_widget.canvas.draw()
-                
+
                 col += 1
                 if col >= 3:
                     col = 0
@@ -295,6 +305,9 @@ class PowersTab(QWidget):
     def add_plot(self, row, col):
         plot_widget = PlotWidget(self.powers_plotter, self.gait_cycle_plotter, self.plot_container)
         plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
+        plot_widget.ymin_double_clicked.connect(self.on_ymin_double_clicked)
+        plot_widget.ymax_double_clicked.connect(self.on_ymax_double_clicked)
+        plot_widget.title_double_clicked.connect(self.on_title_double_clicked)
         plot_widget.line_clicked.connect(self.on_line_clicked)
         plot_widget.setProperty("grid_pos", (row, col))
         self.plot_layout.addWidget(plot_widget, row, col)
@@ -434,6 +447,64 @@ class PowersTab(QWidget):
             button.setStyleSheet("QPushButton { background-color: white; color: black; }")
         else:
             button.setStyleSheet("QPushButton { background-color: grey; color: white; }")
+
+    def on_ymin_double_clicked(self, plot_widget):
+        # Handle ymin editing
+        # Find which plot this is
+        for i, pw in enumerate(self.plots):
+            if pw == plot_widget:
+                # Get current ymin
+                ylim = pw.ax.get_ylim()
+                current_ymin = ylim[0]
+                # Open input dialog
+                text, ok = QInputDialog.getText(self, 'Edit Y Min', f'Enter new Y min (current: {current_ymin:.1f}):')
+                if ok and text:
+                    try:
+                        new_ymin = float(text)
+                        # Emit signal
+                        key = f"powers_plot_{i}"
+                        self.editable_value_changed.emit(key, 'ymin', {'ymin': new_ymin})
+                    except ValueError:
+                        pass  # Invalid input, ignore
+                break
+
+    def on_ymax_double_clicked(self, plot_widget):
+        # Handle ymax editing
+        # Find which plot this is
+        for i, pw in enumerate(self.plots):
+            if pw == plot_widget:
+                # Get current ymax
+                ylim = pw.ax.get_ylim()
+                current_ymax = ylim[1]
+                # Open input dialog
+                text, ok = QInputDialog.getText(self, 'Edit Y Max', f'Enter new Y max (current: {current_ymax:.1f}):')
+                if ok and text:
+                    try:
+                        new_ymax = float(text)
+                        # Emit signal
+                        key = f"powers_plot_{i}"
+                        self.editable_value_changed.emit(key, 'ymax', {'ymax': new_ymax})
+                    except ValueError:
+                        pass  # Invalid input, ignore
+                break
+
+    def on_title_double_clicked(self, plot_widget):
+        # Handle title editing
+        # Find which plot this is
+        for i, pw in enumerate(self.plots):
+            if pw == plot_widget:
+                # Get current title
+                current_title = pw.ax.get_title()
+                # Open input dialog
+                text, ok = QInputDialog.getText(self, 'Edit Title', f'Enter new title (current: {current_title}):')
+                if ok and text:
+                    # Update the plot title directly
+                    pw.ax.set_title(text)
+                    pw.canvas.draw()
+                    # Emit signal to update editable values
+                    key = f"powers_plot_{i}"
+                    self.editable_value_changed.emit(key, 'title', {'title': text})
+                break
 
     def clear_data(self):
         self.clear_plots()
