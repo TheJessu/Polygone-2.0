@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QScrollArea, QGridLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QScrollArea, QGridLayout, QInputDialog
 from PyQt5.QtCore import pyqtSignal
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -63,6 +63,8 @@ class PlotWidget(QWidget):
         self.canvas.draw()
 
 class ForcesTab(QWidget):
+    editable_value_changed = pyqtSignal(str, str, dict)  # key, type, value_dict
+
     def __init__(self):
         super().__init__()
         self.forces_plotter = GenericDataPlotter('FORCES')
@@ -418,6 +420,61 @@ class ForcesTab(QWidget):
             button.setStyleSheet("QPushButton { background-color: white; color: black; }")
         else:
             button.setStyleSheet("QPushButton { background-color: grey; color: white; }")
+
+    def on_ymin_double_clicked(self, plot_widget):
+        # Handle ymin editing
+        # Find which plot this is
+        for i, pw in enumerate(self.plots):
+            if pw == plot_widget:
+                # Get current ymin
+                ylim = pw.ax.get_ylim()
+                current_ymin = ylim[0]
+                # Open input dialog
+                text, ok = QInputDialog.getText(self, 'Edit Y Min', f'Enter new Y min (current: {current_ymin:.1f}):')
+                if ok and text:
+                    try:
+                        new_ymin = float(text)
+                        # Emit signal
+                        key = f"forces_plot_{i}"
+                        self.editable_value_changed.emit(key, 'ymin', {'ymin': new_ymin})
+                    except ValueError:
+                        pass  # Invalid input, ignore
+                break
+
+    def on_ymax_double_clicked(self, plot_widget):
+        # Handle ymax editing
+        # Find which plot this is
+        for i, pw in enumerate(self.plots):
+            if pw == plot_widget:
+                # Get current ymax
+                ylim = pw.ax.get_ylim()
+                current_ymax = ylim[1]
+                # Open input dialog
+                text, ok = QInputDialog.getText(self, 'Edit Y Max', f'Enter new Y max (current: {current_ymax:.1f}):')
+                if ok and text:
+                    try:
+                        new_ymax = float(text)
+                        # Emit signal
+                        key = f"forces_plot_{i}"
+                        self.editable_value_changed.emit(key, 'ymax', {'ymax': new_ymax})
+                    except ValueError:
+                        pass  # Invalid input, ignore
+                break
+
+    def on_title_double_clicked(self, plot_widget):
+        # Handle title editing
+        # Find which plot this is
+        for i, pw in enumerate(self.plots):
+            if pw == plot_widget:
+                # Get current title
+                current_title = pw.ax.get_title()
+                # Open input dialog
+                text, ok = QInputDialog.getText(self, 'Edit Title', f'Enter new title (current: {current_title}):')
+                if ok and text:
+                    # Emit signal
+                    key = f"forces_plot_{i}"
+                    self.editable_value_changed.emit(key, 'title', {'title': text})
+                break
 
     def clear_data(self):
         self.clear_plots()

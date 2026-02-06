@@ -1,32 +1,24 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog
 from PyQt5.QtCore import pyqtSignal
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
 from pdfExport import PDFExporter
+from generic_plotter import EditablePlotWidget
 
-class PlotWidget(QWidget):
-    plot_double_clicked = pyqtSignal(QWidget)
-
+class GaitPlotWidget(EditablePlotWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.figure = Figure(figsize=(4, 4), dpi=100)
-        self.canvas = FigureCanvas(self.figure)
-        self.ax = self.figure.add_subplot(111)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.canvas)
+class PlotWidget(EditablePlotWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.canvas.setFixedSize(200, 200)
 
-        self.figure.patch.set_facecolor('white')
-        self.ax.set_facecolor('white')
-
-    def mouseDoubleClickEvent(self, event):
-        self.plot_double_clicked.emit(self)
-
 class GaitAnalysisTab(QWidget):
+    editable_value_changed = pyqtSignal(str, str, dict)  # key, type, value_dict
+
     def __init__(self):
         super().__init__()
         self.gait_cycle_plotter = GaitCyclePlotter()
@@ -60,11 +52,13 @@ class GaitAnalysisTab(QWidget):
         self.kinematics_plots = []
         self.kinetics_plots = []
         self.vlines = []
+        self.plot_keys = {}  # key to (plot_widget, group, comp, plot_type)
 
         self.markers_data = None
         self.marker_types = None
         self.marker_labels = None
         self.current_frame = 0
+        self.editable_values = {}
 
         self.setup_kinematics_plots()
         self.setup_kinetics_plots()
@@ -78,6 +72,9 @@ class GaitAnalysisTab(QWidget):
             for comp in components:
                 plot_widget = PlotWidget(self.kinematics_tab)
                 plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
+                plot_widget.ymin_double_clicked.connect(self.on_ymin_double_clicked)
+                plot_widget.ymax_double_clicked.connect(self.on_ymax_double_clicked)
+                plot_widget.title_double_clicked.connect(self.on_title_double_clicked)
                 self.kinematics_layout.addWidget(plot_widget, row, col)
                 self.kinematics_plots.append((plot_widget, group, comp))
                 col += 1
@@ -99,7 +96,7 @@ class GaitAnalysisTab(QWidget):
         for i, (group, comp, plot_type, y_label, *unit_factor) in enumerate(plots_config):
             row = i // 3
             col = i % 3
-            plot_widget = PlotWidget(self.kinetics_tab)
+            plot_widget = GaitPlotWidget(self.kinetics_tab)
             plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
             self.kinetics_layout.addWidget(plot_widget, row, col)
             self.kinetics_plots.append((plot_widget, group, comp, plot_type, y_label, unit_factor[0] if unit_factor else 1))
@@ -114,6 +111,9 @@ class GaitAnalysisTab(QWidget):
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
         self.plot_data()
+
+    def set_editable_values(self, editable_values):
+        self.editable_values = editable_values
 
     def set_current_frame(self, frame_index):
         self.current_frame = frame_index
@@ -165,6 +165,33 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp)
+            # Set default y-limits for kinematics (angles)
+            if group.lower() == 'spine':
+                ymin, ymax = -20, 20
+            elif group.lower() == 'pelvis':
+                if comp == 'x':
+                    ymin, ymax = -20, 20
+                elif comp == 'y':
+                    ymin, ymax = -5, 35
+                else:
+                    ymin, ymax = -30, 30
+            elif group.lower() == 'hip':
+                if comp == 'x':
+                    ymin, ymax = -15, 20
+                elif comp == 'y':
+                    ymin, ymax = -15, 60
+                else:
+                    ymin, ymax = -30, 40
+            elif group.lower() == 'knee':
+                ymin, ymax = -15, 90
+            elif group.lower() == 'footprogress':
+                ymin, ymax = -40, 40
+            else:
+                ymin, ymax = -50, 50  # default
+            plot_widget.ax.set_ylim(ymin, ymax)
+            plot_widget.ax.set_yticks([ymin, ymax])
+            # Add editable texts
+            plot_widget.add_editable_texts(ymin, ymax, title)
             plot_widget.canvas.draw()
             # Make plots with no name change invisible
             if title == f'{group} - {comp.upper()}':
@@ -222,6 +249,61 @@ class GaitAnalysisTab(QWidget):
     def on_plot_double_clicked(self, plot_widget):
         # Simple zoom, but since fixed layout, maybe just ignore or implement basic zoom
         pass
+
+    def on_ymin_double_clicked(self, plot_widget):
+        # Handle ymin editing
+        # Find which plot this is
+        for i, (pw, *_) in enumerate(self.kinematics_plots + self.kinetics_plots):
+            if pw == plot_widget:
+                # Get current ymin
+                ylim = pw.ax.get_ylim()
+                current_ymin = ylim[0]
+                # Open input dialog
+                text, ok = QInputDialog.getText(self, 'Edit Y Min', f'Enter new Y min (current: {current_ymin:.1f}):')
+                if ok and text:
+                    try:
+                        new_ymin = float(text)
+                        # Emit signal
+                        key = f"gait_plot_{i}"
+                        self.editable_value_changed.emit(key, 'ymin', {'ymin': new_ymin})
+                    except ValueError:
+                        pass  # Invalid input, ignore
+                break
+
+    def on_ymax_double_clicked(self, plot_widget):
+        # Handle ymax editing
+        # Find which plot this is
+        for i, (pw, *_) in enumerate(self.kinematics_plots + self.kinetics_plots):
+            if pw == plot_widget:
+                # Get current ymax
+                ylim = pw.ax.get_ylim()
+                current_ymax = ylim[1]
+                # Open input dialog
+                text, ok = QInputDialog.getText(self, 'Edit Y Max', f'Enter new Y max (current: {current_ymax:.1f}):')
+                if ok and text:
+                    try:
+                        new_ymax = float(text)
+                        # Emit signal
+                        key = f"gait_plot_{i}"
+                        self.editable_value_changed.emit(key, 'ymax', {'ymax': new_ymax})
+                    except ValueError:
+                        pass  # Invalid input, ignore
+                break
+
+    def on_title_double_clicked(self, plot_widget):
+        # Handle title editing
+        # Find which plot this is
+        for i, (pw, *_) in enumerate(self.kinematics_plots + self.kinetics_plots):
+            if pw == plot_widget:
+                # Get current title
+                current_title = pw.ax.get_title()
+                # Open input dialog
+                text, ok = QInputDialog.getText(self, 'Edit Title', f'Enter new title (current: {current_title}):')
+                if ok and text:
+                    # Emit signal
+                    key = f"gait_plot_{i}"
+                    self.editable_value_changed.emit(key, 'title', {'title': text})
+                break
 
     def export_to_pdf(self):
         """Export the gait analysis tab content to PDF."""

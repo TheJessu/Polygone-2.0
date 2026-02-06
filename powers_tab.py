@@ -63,6 +63,8 @@ class PlotWidget(QWidget):
         self.canvas.draw()
 
 class PowersTab(QWidget):
+    editable_value_changed = pyqtSignal(str, str, dict)  # key, type, value_dict
+
     def __init__(self):
         super().__init__()
         self.powers_plotter = GenericDataPlotter('POWERS')

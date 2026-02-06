@@ -1,10 +1,9 @@
-# TODO: Fix Plot Issues in All Tabs
+# TODO: Make Y-axis limits and plot titles editable
 
 ## Tasks
-- [ ] Remove y-axis labels in angles_tab.py
-- [ ] Remove y-axis labels in forces_tab.py
-- [ ] Remove y-axis labels in moments_tab.py
-- [ ] Remove y-axis labels in powers_tab.py
-- [ ] Remove y-axis labels in gait_cycle_plotter.py
-- [ ] Adjust subplot margins in all tabs to fix cut-off labels and small borders
-- [ ] Test the changes to ensure plots display correctly
+- [x] Create EditablePlotWidget class in generic_plotter.py
+- [x] Modify angles_tab.py to use EditablePlotWidget and handle edit signals
+- [x] Modify gait_analysis_tab.py to use EditablePlotWidget and handle edit signals
+- [x] Add editable values storage in data_plotter.py and pass to tabs
+- [x] Update plot_data methods to use editable values instead of hardcoded ones
+- [x] Test editing functionality and cross-tab updates

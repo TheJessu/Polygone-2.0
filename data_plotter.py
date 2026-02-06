@@ -3,6 +3,7 @@ from angles_tab import AnglesTab
 from forces_tab import ForcesTab
 from moments_tab import MomentsTab
 from powers_tab import PowersTab
+from gait_analysis_tab import GaitAnalysisTab
 from gait_cycle_plotter import GaitCyclePlotter
 import math
 import numpy as np
@@ -21,6 +22,9 @@ class DataPlotter(QWidget):
         self.gait_cycles = None
 
         self.gait_cycle_plotter = GaitCyclePlotter()
+
+        # Editable values storage: key is (group, component), value is {'ymin': val, 'ymax': val, 'title': str}
+        self.editable_values = {}
 
         self.plot_types_config = {
             'ANGLES': {'tab': AnglesTab(), 'y_label': 'Angle (degrees)', 'unit_conversion': 1},
@@ -43,6 +47,13 @@ class DataPlotter(QWidget):
 
         for plot_type, config in self.plot_types_config.items():
             self.tab_widget.addTab(config['tab'], plot_type)
+            # Connect editable value changed signal
+            config['tab'].editable_value_changed.connect(self.on_editable_value_changed)
+
+        # Add gait analysis tab
+        self.gait_analysis_tab = GaitAnalysisTab()
+        self.gait_analysis_tab.editable_value_changed.connect(self.on_editable_value_changed)
+        self.tab_widget.addTab(self.gait_analysis_tab, "Gait Analysis")
 
     def load_data(self, markers_data, marker_types, marker_labels, angle_units='degrees', body_mass=None):
         self.markers_data = markers_data
@@ -92,6 +103,20 @@ class DataPlotter(QWidget):
 
         self.plot_data()
     
+    def on_editable_value_changed(self, key, change_type, value_dict):
+        # Update editable values
+        if key not in self.editable_values:
+            self.editable_values[key] = {}
+        self.editable_values[key].update(value_dict)
+        # Update editable values in tabs
+        for _, config in self.plot_types_config.items():
+            if hasattr(config['tab'], 'set_editable_values'):
+                config['tab'].set_editable_values(self.editable_values)
+        if hasattr(self.gait_analysis_tab, 'set_editable_values'):
+            self.gait_analysis_tab.set_editable_values(self.editable_values)
+        # Replot all tabs
+        self.plot_data()
+
     def clear_data(self):
         self.markers_data = None
         self.marker_types = []

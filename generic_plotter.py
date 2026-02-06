@@ -1,5 +1,84 @@
 import numpy as np
 import math
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtCore import pyqtSignal
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
+class EditablePlotWidget(QWidget):
+    plot_double_clicked = pyqtSignal(QWidget)
+    ymin_double_clicked = pyqtSignal(QWidget)
+    ymax_double_clicked = pyqtSignal(QWidget)
+    title_double_clicked = pyqtSignal(QWidget)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.figure = Figure(figsize=(4, 4), dpi=100)
+        self.canvas = FigureCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.canvas)
+        self.canvas.setFixedSize(200, 200)
+
+        self.figure.patch.set_facecolor('white')
+        self.ax.set_facecolor('white')
+
+        self.text_objects = {}  # Store text objects for ymin, ymax, title
+
+        # Connect events
+        self.canvas.mpl_connect('button_press_event', self.on_mpl_click)
+        self.canvas.mpl_connect('pick_event', self.on_pick)
+
+    def on_mpl_click(self, event):
+        if event.dblclick:
+            self.plot_double_clicked.emit(self)
+
+    def on_pick(self, event):
+        # Handle picking of text objects
+        if hasattr(event.artist, '_type'):
+            if event.artist._type == 'ymin':
+                self.ymin_double_clicked.emit(self)
+            elif event.artist._type == 'ymax':
+                self.ymax_double_clicked.emit(self)
+            elif event.artist._type == 'title':
+                self.title_double_clicked.emit(self)
+
+    def start_title_edit(self):
+        # Hide the matplotlib title and show the QLineEdit for editing
+        self.ax.title.set_visible(False)
+        self.title_edit.setText(self.ax.title.get_text())
+        # Position the QLineEdit over the title
+        bbox = self.ax.title.get_window_extent(self.figure.canvas.get_renderer())
+        self.title_edit.setGeometry(int(bbox.x0), int(bbox.y0), int(bbox.width), int(bbox.height))
+        self.title_edit.show()
+        self.title_edit.setFocus()
+        self.title_edit.selectAll()
+        self.canvas.draw()
+
+    def finish_title_edit(self):
+        # Update the matplotlib title with the new text and hide the QLineEdit
+        new_title = self.title_edit.text()
+        self.ax.title.set_text(new_title)
+        self.ax.title.set_visible(True)
+        self.title_edit.hide()
+        self.canvas.draw()
+        # Emit signal to update editable values
+        self.title_double_clicked.emit(self)
+
+    def add_editable_texts(self, ymin, ymax, title):
+        # Make y-tick labels editable
+        ticklabels = self.ax.yaxis.get_ticklabels()
+        if len(ticklabels) >= 2:
+            ticklabels[0].set_picker(True)
+            ticklabels[0]._type = 'ymin'
+            ticklabels[1].set_picker(True)
+            ticklabels[1]._type = 'ymax'
+
+        # Make title editable
+        self.ax.title.set_picker(True)
+        self.ax.title._type = 'title'
 
 class GenericDataPlotter:
     def __init__(self, marker_type, body_mass=None):
