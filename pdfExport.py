@@ -10,7 +10,7 @@ class PDFExporter:
 
     def export_gait_analysis_to_pdf(self, gait_analysis_tab, filename=None):
         """
-        Export the gait analysis tab content to PDF, one page per tab.
+        Export the gait analysis tab content to PDF, 9 pages: 3 for each tab (All, Red, Green).
         """
         if filename is None:
             filename, _ = QFileDialog.getSaveFileName(
@@ -19,27 +19,41 @@ class PDFExporter:
             if not filename:
                 return
 
-        # Save current tab index
+        # Save current tab index and side filters
         current_index = gait_analysis_tab.tab_widget.currentIndex()
+        current_kinematics_side = gait_analysis_tab.kinematics_side_filter
+        current_kinetics_side = gait_analysis_tab.kinetics_side_filter
+        current_moments_side = gait_analysis_tab.moments_side_filter
+
+        tabs = [
+            ('kinematics', 0, gait_analysis_tab.kinematics_layout, 'kinematics_side_filter'),
+            ('kinetics', 1, gait_analysis_tab.kinetics_layout, 'kinetics_side_filter'),
+            ('moments', 2, gait_analysis_tab.moments_layout, 'moments_side_filter')
+        ]
+        sides = ['All', 'Red', 'Green']
 
         with PdfPages(filename) as pdf:
-            # Export Kinematics tab
-            gait_analysis_tab.tab_widget.setCurrentIndex(0)  # Make kinematics tab active
-            fig = self._export_layout_to_figure(gait_analysis_tab.kinematics_layout, "Gait 1 Kinematics")
-            if fig:
-                pdf.savefig(fig)
-                plt.close(fig)
+            for tab_name, tab_index, layout, side_attr in tabs:
+                for side in sides:
+                    # Set side filter
+                    setattr(gait_analysis_tab, side_attr, side)
+                    # Update plots
+                    gait_analysis_tab.plot_data()
+                    # Set tab active
+                    gait_analysis_tab.tab_widget.setCurrentIndex(tab_index)
+                    # Export page
+                    title = f"Gait 1 {tab_name.capitalize()} - {side}"
+                    fig = self._export_layout_to_figure(layout, title)
+                    if fig:
+                        pdf.savefig(fig)
+                        plt.close(fig)
 
-
-            # Export Kinetics tab
-            gait_analysis_tab.tab_widget.setCurrentIndex(1)  # Make kinetics tab active
-            fig = self._export_layout_to_figure(gait_analysis_tab.kinetics_layout, "Gait 1 Kinetics")
-            if fig:
-                pdf.savefig(fig)
-                plt.close(fig)
-
-        # Restore original tab
+        # Restore original tab and side filters
         gait_analysis_tab.tab_widget.setCurrentIndex(current_index)
+        gait_analysis_tab.kinematics_side_filter = current_kinematics_side
+        gait_analysis_tab.kinetics_side_filter = current_kinetics_side
+        gait_analysis_tab.moments_side_filter = current_moments_side
+        gait_analysis_tab.plot_data()  # Restore plots
 
     def _export_layout_to_figure(self, layout, title):
         rows = layout.rowCount()
