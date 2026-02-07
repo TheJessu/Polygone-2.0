@@ -60,6 +60,10 @@ class MainWindow(QMainWindow):
         self.gait_analysis_tab = GaitAnalysisTab()
         self.right_tabs.addTab(self.gait_analysis_tab, "Gait Analysis")
 
+        # Connect signals between DataPlotter and GaitAnalysisTab
+        self.data_plotter.editable_values_updated.connect(self.gait_analysis_tab.set_editable_values)
+        self.gait_analysis_tab.editable_value_changed.connect(self.data_plotter.on_editable_value_changed)
+
         # Set splitter proportions
         splitter.setSizes([1100, 500])
 
@@ -109,7 +113,7 @@ class MainWindow(QMainWindow):
                 angle_units = getattr(self.c3d_viewer, 'angle_units', 'degrees')
                 body_mass = self.c3d_viewer.get_body_mass()
                 self.data_plotter.load_data(markers_data, marker_types, marker_labels, angle_units, body_mass)
-                self.gait_analysis_tab.load_data(markers_data, marker_types, marker_labels)
+                self.gait_analysis_tab.load_data(markers_data, marker_types, marker_labels, body_mass)
                 # Update timeline controls
                 if markers_data is not None:
                     self.total_frames = markers_data.shape[0]
@@ -139,8 +143,8 @@ class MainWindow(QMainWindow):
                     gait_cycles['left'].append((left_strikes[i], left_strikes[i+1]))
                 for i in range(len(right_strikes) - 1):
                     gait_cycles['right'].append((right_strikes[i], right_strikes[i+1]))
-                self.data_plotter.gait_analysis_tab.set_gait_cycles(gait_cycles)
-                self.data_plotter.gait_analysis_tab.set_editable_values(self.data_plotter.editable_values)
+                self.gait_analysis_tab.set_gait_cycles(gait_cycles)
+                self.gait_analysis_tab.set_editable_values(self.data_plotter.editable_values)
                 self.status_bar.showMessage(f"Loaded C3D file: {file_path}")
             elif file_path.lower().endswith(('.avi', '.mp4')):
                 self.video_player.load_video(file_path)

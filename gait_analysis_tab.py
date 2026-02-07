@@ -86,12 +86,12 @@ class GaitAnalysisTab(QWidget):
             ('Hip', 'y', 'ANGLES', 'Angle (degrees)'),
             ('Knee', 'y', 'ANGLES', 'Angle (degrees)'),
             ('Footprogress', 'y', 'ANGLES', 'Angle (degrees)'),
-            ('Hi', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
-            ('Kne', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
-            ('Ankl', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
-            ('Hi', 'z', 'POWERS', 'Power (W/kg)'),
-            ('Kne', 'z', 'POWERS', 'Power (W/kg)'),
-            ('Ankl', 'z', 'POWERS', 'Power (W/kg)')
+            ('Hip', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
+            ('Knee', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
+            ('Ankle', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
+            ('Hip', 'z', 'POWERS', 'Power (W/kg)'),
+            ('Knee', 'z', 'POWERS', 'Power (W/kg)'),
+            ('Ankle', 'z', 'POWERS', 'Power (W/kg)')
         ]
         for i, (group, comp, plot_type, y_label, *unit_factor) in enumerate(plots_config):
             row = i // 3
@@ -114,6 +114,7 @@ class GaitAnalysisTab(QWidget):
 
     def set_editable_values(self, editable_values):
         self.editable_values = editable_values
+        self.plot_data()
 
     def set_current_frame(self, frame_index):
         self.current_frame = frame_index
@@ -188,16 +189,24 @@ class GaitAnalysisTab(QWidget):
                 ymin, ymax = -40, 40
             else:
                 ymin, ymax = -50, 50  # default
+            
+            # Check for edited values
+            plot_key = f"ANGLES_{group}_{comp}"
+            plot_widget.plot_key = plot_key
+            if plot_key in self.editable_values:
+                edited = self.editable_values[plot_key]
+                ymin = edited.get('ymin', ymin)
+                ymax = edited.get('ymax', ymax)
+                if 'title' in edited:
+                    title = edited['title']
+                    plot_widget.ax.set_title(title)
+
             plot_widget.ax.set_ylim(ymin, ymax)
             plot_widget.ax.set_yticks([ymin, ymax])
             # Add editable texts
             plot_widget.add_editable_texts(ymin, ymax, title)
             plot_widget.canvas.draw()
-            # Make plots with no name change invisible
-            if title == f'{group} - {comp.upper()}':
-                plot_widget.setVisible(False)
-            else:
-                plot_widget.setVisible(True)
+            plot_widget.setVisible(True)
 
         # Adjust subplot margins to prevent cut-off labels for kinematics
         for plot_widget, *_ in self.kinematics_plots:
@@ -216,20 +225,20 @@ class GaitAnalysisTab(QWidget):
                 else:
                     title = f'{group} - {comp.upper()}'
             elif plot_type == 'MOMENTS':
-                if group.lower() == 'hi' and comp == 'y':
+                if group.lower() == 'hip' and comp == 'y':
                     title = 'Hip Flex-Ext Moment'
-                elif group.lower() == 'kne' and comp == 'y':
+                elif group.lower() == 'knee' and comp == 'y':
                     title = 'Knee Flex-Ext Moment'
-                elif group.lower() == 'ankl' and comp == 'y':
+                elif group.lower() == 'ankle' and comp == 'y':
                     title = 'Dors-Plan Moment'
                 else:
                     title = f'{group} - {comp.upper()}'
             elif plot_type == 'POWERS':
-                if group.lower() == 'hi' and comp == 'z':
+                if group.lower() == 'hip' and comp == 'z':
                     title = 'Hip Power'
-                elif group.lower() == 'kne' and comp == 'z':
+                elif group.lower() == 'knee' and comp == 'z':
                     title = 'Knee Power'
-                elif group.lower() == 'ankl' and comp == 'z':
+                elif group.lower() == 'ankle' and comp == 'z':
                     title = 'Ankle Power'
                 else:
                     title = f'{group} - {comp.upper()}'
@@ -239,12 +248,23 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             plot_widget.ax.set_ylabel(y_label)
             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass)
+            
+            # Check for edited values
+            plot_key = f"{plot_type}_{group}_{comp}"
+            plot_widget.plot_key = plot_key
+            ymin, ymax = plot_widget.ax.get_ylim()
+            if plot_key in self.editable_values:
+                edited = self.editable_values[plot_key]
+                ymin = edited.get('ymin', ymin)
+                ymax = edited.get('ymax', ymax)
+                if 'title' in edited:
+                    title = edited['title']
+                    plot_widget.ax.set_title(title)
+            
+            plot_widget.ax.set_ylim(ymin, ymax)
+            plot_widget.add_editable_texts(ymin, ymax, title)
             plot_widget.canvas.draw()
-            # Make plots with no name change invisible
-            if title == f'{group} - {comp.upper()}':
-                plot_widget.setVisible(False)
-            else:
-                plot_widget.setVisible(True)
+            plot_widget.setVisible(True)
 
     def on_plot_double_clicked(self, plot_widget):
         # Simple zoom, but since fixed layout, maybe just ignore or implement basic zoom
@@ -264,7 +284,7 @@ class GaitAnalysisTab(QWidget):
                     try:
                         new_ymin = float(text)
                         # Emit signal
-                        key = f"gait_plot_{i}"
+                        key = pw.plot_key
                         self.editable_value_changed.emit(key, 'ymin', {'ymin': new_ymin})
                     except ValueError:
                         pass  # Invalid input, ignore
@@ -284,7 +304,7 @@ class GaitAnalysisTab(QWidget):
                     try:
                         new_ymax = float(text)
                         # Emit signal
-                        key = f"gait_plot_{i}"
+                        key = pw.plot_key
                         self.editable_value_changed.emit(key, 'ymax', {'ymax': new_ymax})
                     except ValueError:
                         pass  # Invalid input, ignore
@@ -301,7 +321,7 @@ class GaitAnalysisTab(QWidget):
                 text, ok = QInputDialog.getText(self, 'Edit Title', f'Enter new title (current: {current_title}):')
                 if ok and text:
                     # Emit signal
-                    key = f"gait_plot_{i}"
+                    key = pw.plot_key
                     self.editable_value_changed.emit(key, 'title', {'title': text})
                 break
 

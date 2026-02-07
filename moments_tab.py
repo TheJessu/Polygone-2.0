@@ -307,7 +307,8 @@ class MomentsTab(QWidget):
                             ymin, ymax = -0.5, 0.5
 
                     # Check for edited values
-                    plot_key = f"moments_plot_{len(self.plots) - 1}"
+                    plot_key = f"MOMENTS_{group}_{component}"
+                    plot_widget.plot_key = plot_key
                     if plot_key in self.editable_values:
                         edited = self.editable_values[plot_key]
                         ymin = edited.get('ymin', ymin)
@@ -370,6 +371,22 @@ class MomentsTab(QWidget):
                     self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                     if plot_current_frame is not None:
                         self.vlines.append(plot_widget.ax.axvline(x=plot_current_frame, color='red', linestyle='--', linewidth=1))
+                
+                # Set default ymin/ymax if not set
+                ymin, ymax = plot_widget.ax.get_ylim()
+                
+                # Check for edited values
+                plot_key = f"MOMENTS_{group}_{component}"
+                plot_widget.plot_key = plot_key
+                if plot_key in self.editable_values:
+                    edited = self.editable_values[plot_key]
+                    ymin = edited.get('ymin', ymin)
+                    ymax = edited.get('ymax', ymax)
+                    if 'title' in edited:
+                        plot_widget.ax.set_title(edited['title'])
+                
+                plot_widget.ax.set_ylim(ymin, ymax)
+                plot_widget.add_editable_texts(ymin, ymax, plot_widget.ax.get_title())
 
         # Adjust subplot margins to prevent cut-off labels
         for plot in self.plots:
@@ -536,7 +553,7 @@ class MomentsTab(QWidget):
                     try:
                         new_ymin = float(text)
                         # Emit signal
-                        key = f"moments_plot_{i}"
+                        key = pw.plot_key
                         self.editable_value_changed.emit(key, 'ymin', {'ymin': new_ymin})
                     except ValueError:
                         pass  # Invalid input, ignore
@@ -556,7 +573,7 @@ class MomentsTab(QWidget):
                     try:
                         new_ymax = float(text)
                         # Emit signal
-                        key = f"moments_plot_{i}"
+                        key = pw.plot_key
                         self.editable_value_changed.emit(key, 'ymax', {'ymax': new_ymax})
                     except ValueError:
                         pass  # Invalid input, ignore
@@ -573,7 +590,7 @@ class MomentsTab(QWidget):
                 text, ok = QInputDialog.getText(self, 'Edit Title', f'Enter new title (current: {current_title}):')
                 if ok and text:
                     # Emit signal
-                    key = f"moments_plot_{i}"
+                    key = pw.plot_key
                     self.editable_value_changed.emit(key, 'title', {'title': text})
                 break
 

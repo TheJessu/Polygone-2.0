@@ -296,7 +296,8 @@ class AnglesTab(QWidget):
                     ymin, ymax = -50, 50  # default
 
                 # Check for edited values
-                plot_key = f"angles_plot_{len(self.plots) - 1}"
+                plot_key = f"ANGLES_{group}_{component}"
+                plot_widget.plot_key = plot_key
                 if plot_key in self.editable_values:
                     edited = self.editable_values[plot_key]
                     ymin = edited.get('ymin', ymin)
@@ -502,7 +503,7 @@ class AnglesTab(QWidget):
                     try:
                         new_ymin = float(text)
                         # Emit signal
-                        key = f"angles_plot_{i}"
+                        key = pw.plot_key
                         self.editable_value_changed.emit(key, 'ymin', {'ymin': new_ymin})
                     except ValueError:
                         pass  # Invalid input, ignore
@@ -522,7 +523,7 @@ class AnglesTab(QWidget):
                     try:
                         new_ymax = float(text)
                         # Emit signal
-                        key = f"angles_plot_{i}"
+                        key = pw.plot_key
                         self.editable_value_changed.emit(key, 'ymax', {'ymax': new_ymax})
                     except ValueError:
                         pass  # Invalid input, ignore
@@ -542,7 +543,7 @@ class AnglesTab(QWidget):
                     pw.ax.set_title(text)
                     pw.canvas.draw()
                     # Emit signal to update editable values
-                    key = f"angles_plot_{i}"
+                    key = pw.plot_key
                     self.editable_value_changed.emit(key, 'title', {'title': text})
                 break
 

@@ -4,10 +4,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
-from generic_plotter import GenericDataPlotter
+from generic_plotter import GenericDataPlotter, EditablePlotWidget
 
-class PlotWidget(QWidget):
-    plot_double_clicked = pyqtSignal(QWidget)
+class PlotWidget(EditablePlotWidget):
     line_clicked = pyqtSignal(object)  # Signal for line clicks, emits (plotter_type, key)
 
     def __init__(self, forces_plotter, gait_cycle_plotter, parent=None):
@@ -16,25 +15,6 @@ class PlotWidget(QWidget):
         self.gait_cycle_plotter = gait_cycle_plotter
         self.lines = {}  # Lines for this plot
         self.scrubber_lines = {}  # side to scrubber line
-        self.figure = Figure(figsize=(4, 4), dpi=100)
-        self.canvas = FigureCanvas(self.figure)
-        self.ax = self.figure.add_subplot(111)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.canvas)
-        self.canvas.setFixedSize(200, 200)
-
-        self.figure.patch.set_facecolor('white')
-        self.ax.set_facecolor('white')
-
-        self.canvas.mpl_connect('button_press_event', self.on_mpl_click)
-        self.canvas.mpl_connect('pick_event', self.on_line_pick)
-
-    def on_mpl_click(self, event):
-        if event.dblclick:
-            self.plot_double_clicked.emit(self)
-
     def on_line_pick(self, event):
         # Handle line picking
         if hasattr(event.artist, 'get_label'):
@@ -115,6 +95,7 @@ class ForcesTab(QWidget):
         self.marker_types = None
         self.marker_labels = None
         self.highlighted_line = None  # Track the currently highlighted line
+        self.editable_values = {}  # key to edited values
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -152,6 +133,9 @@ class ForcesTab(QWidget):
             
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
+
+    def set_editable_values(self, editable_values):
+        self.editable_values = editable_values
 
     def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
         type_indices = [i for i, t in enumerate(marker_types) if t == 'FORCES']
@@ -237,6 +221,16 @@ class ForcesTab(QWidget):
                     if col >= 3:
                         col = 0
                         row += 1
+                    
+                    # Assign plot key for editing
+                    plot_widget.plot_key = f"FORCES_{group}_{component}"
+                    if plot_widget.plot_key in self.editable_values:
+                        edited = self.editable_values[plot_widget.plot_key]
+                        if 'ymin' in edited: plot_widget.ax.set_ylim(bottom=edited['ymin'])
+                        if 'ymax' in edited: plot_widget.ax.set_ylim(top=edited['ymax'])
+                        if 'title' in edited: plot_widget.ax.set_title(edited['title'])
+                    
+                    plot_widget.add_editable_texts(plot_widget.ax.get_ylim()[0], plot_widget.ax.get_ylim()[1], plot_widget.ax.get_title())
                     plot_widget.canvas.draw()
         else:
             component = selected_component.lower()
@@ -255,6 +249,16 @@ class ForcesTab(QWidget):
                 if col >= 3:
                     col = 0
                     row += 1
+                
+                # Assign plot key for editing
+                plot_widget.plot_key = f"FORCES_{group}_{component}"
+                if plot_widget.plot_key in self.editable_values:
+                    edited = self.editable_values[plot_widget.plot_key]
+                    if 'ymin' in edited: plot_widget.ax.set_ylim(bottom=edited['ymin'])
+                    if 'ymax' in edited: plot_widget.ax.set_ylim(top=edited['ymax'])
+                    if 'title' in edited: plot_widget.ax.set_title(edited['title'])
+                
+                plot_widget.add_editable_texts(plot_widget.ax.get_ylim()[0], plot_widget.ax.get_ylim()[1], plot_widget.ax.get_title())
                 plot_widget.canvas.draw()
 
         # Adjust subplot margins to prevent cut-off labels
@@ -272,6 +276,9 @@ class ForcesTab(QWidget):
     def add_plot(self, row, col):
         plot_widget = PlotWidget(self.forces_plotter, self.gait_cycle_plotter, self.plot_container)
         plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
+        plot_widget.ymin_double_clicked.connect(self.on_ymin_double_clicked)
+        plot_widget.ymax_double_clicked.connect(self.on_ymax_double_clicked)
+        plot_widget.title_double_clicked.connect(self.on_title_double_clicked)
         plot_widget.line_clicked.connect(self.on_line_clicked)
         plot_widget.setProperty("grid_pos", (row, col))
         self.plot_layout.addWidget(plot_widget, row, col)
@@ -435,7 +442,7 @@ class ForcesTab(QWidget):
                     try:
                         new_ymin = float(text)
                         # Emit signal
-                        key = f"forces_plot_{i}"
+                        key = pw.plot_key
                         self.editable_value_changed.emit(key, 'ymin', {'ymin': new_ymin})
                     except ValueError:
                         pass  # Invalid input, ignore
@@ -455,7 +462,7 @@ class ForcesTab(QWidget):
                     try:
                         new_ymax = float(text)
                         # Emit signal
-                        key = f"forces_plot_{i}"
+                        key = pw.plot_key
                         self.editable_value_changed.emit(key, 'ymax', {'ymax': new_ymax})
                     except ValueError:
                         pass  # Invalid input, ignore
@@ -472,7 +479,7 @@ class ForcesTab(QWidget):
                 text, ok = QInputDialog.getText(self, 'Edit Title', f'Enter new title (current: {current_title}):')
                 if ok and text:
                     # Emit signal
-                    key = f"forces_plot_{i}"
+                    key = pw.plot_key
                     self.editable_value_changed.emit(key, 'title', {'title': text})
                 break
 

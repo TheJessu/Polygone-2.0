@@ -3,12 +3,14 @@ from angles_tab import AnglesTab
 from forces_tab import ForcesTab
 from moments_tab import MomentsTab
 from powers_tab import PowersTab
-from gait_analysis_tab import GaitAnalysisTab
 from gait_cycle_plotter import GaitCyclePlotter
 import math
 import numpy as np
+from PyQt5.QtCore import pyqtSignal
 
 class DataPlotter(QWidget):
+    editable_values_updated = pyqtSignal(dict)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
@@ -49,11 +51,6 @@ class DataPlotter(QWidget):
             self.tab_widget.addTab(config['tab'], plot_type)
             # Connect editable value changed signal
             config['tab'].editable_value_changed.connect(self.on_editable_value_changed)
-
-        # Add gait analysis tab
-        self.gait_analysis_tab = GaitAnalysisTab()
-        self.gait_analysis_tab.editable_value_changed.connect(self.on_editable_value_changed)
-        self.tab_widget.addTab(self.gait_analysis_tab, "Gait Analysis")
 
     def load_data(self, markers_data, marker_types, marker_labels, angle_units='degrees', body_mass=None):
         self.markers_data = markers_data
@@ -112,8 +109,7 @@ class DataPlotter(QWidget):
         for _, config in self.plot_types_config.items():
             if hasattr(config['tab'], 'set_editable_values'):
                 config['tab'].set_editable_values(self.editable_values)
-        if hasattr(self.gait_analysis_tab, 'set_editable_values'):
-            self.gait_analysis_tab.set_editable_values(self.editable_values)
+        self.editable_values_updated.emit(self.editable_values)
         # Replot all tabs
         self.plot_data()
 
@@ -124,4 +120,3 @@ class DataPlotter(QWidget):
         self.gait_cycles = None
         for _, config in self.plot_types_config.items():
             config['tab'].clear_data()
-        self.gait_analysis_tab.clear_data()
