@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog, QComboBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog, QComboBox, QFileDialog, QCheckBox
 from PyQt5.QtCore import pyqtSignal
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -6,6 +6,7 @@ import numpy as np
 from gait_cycle_plotter import GaitCyclePlotter
 from pdfExport import PDFExporter
 from generic_plotter import EditablePlotWidget
+from multiline import MultilineImporter
 
 class GaitPlotWidget(EditablePlotWidget):
     def __init__(self, parent=None):
@@ -25,6 +26,7 @@ class GaitAnalysisTab(QWidget):
         self.gait_cycles = None
         self.pdf_exporter = PDFExporter()
         self.body_mass = None
+        self.multiline_importer = MultilineImporter()
 
         self.layout = QVBoxLayout(self)
 
@@ -48,12 +50,21 @@ class GaitAnalysisTab(QWidget):
         self.kinematics_dropdown.addItems(["All", "Red", "Green"])
         self.kinematics_dropdown.currentTextChanged.connect(self.on_kinematics_side_changed)
         dropdown_layout.addWidget(self.kinematics_dropdown)
+        self.kinematics_import_button = QPushButton("Import C3D")
+        self.kinematics_import_button.clicked.connect(self.import_c3d_for_kinematics)
+        dropdown_layout.addWidget(self.kinematics_import_button)
         dropdown_layout.addStretch()
         self.kinematics_tab_layout.addLayout(dropdown_layout)
+        self.kinematics_file_buttons_layout = QHBoxLayout()
+        self.kinematics_tab_layout.addLayout(self.kinematics_file_buttons_layout)
         self.kinematics_layout = QGridLayout()
         self.kinematics_tab_layout.addLayout(self.kinematics_layout)
         self.tab_widget.addTab(self.kinematics_tab, "Gait 1 Kinematics")
         self.kinematics_side_filter = "All"
+        self.kinematics_file_buttons = []
+        self.kinematics_visible_file_index = None
+        self.kinematics_red_visible_files = set()
+        self.kinematics_green_visible_files = set()
 
         # Kinetics Tab
         self.kinetics_tab = QWidget()
@@ -64,12 +75,21 @@ class GaitAnalysisTab(QWidget):
         self.kinetics_dropdown.addItems(["All", "Red", "Green"])
         self.kinetics_dropdown.currentTextChanged.connect(self.on_kinetics_side_changed)
         dropdown_layout.addWidget(self.kinetics_dropdown)
+        self.kinetics_import_button = QPushButton("Import C3D")
+        self.kinetics_import_button.clicked.connect(self.import_c3d_for_kinetics)
+        dropdown_layout.addWidget(self.kinetics_import_button)
         dropdown_layout.addStretch()
         self.kinetics_tab_layout.addLayout(dropdown_layout)
+        self.kinetics_file_buttons_layout = QHBoxLayout()
+        self.kinetics_tab_layout.addLayout(self.kinetics_file_buttons_layout)
         self.kinetics_layout = QGridLayout()
         self.kinetics_tab_layout.addLayout(self.kinetics_layout)
         self.tab_widget.addTab(self.kinetics_tab, "Gait 1 Kinetics")
         self.kinetics_side_filter = "All"
+        self.kinetics_file_buttons = []
+        self.kinetics_visible_file_index = None
+        self.kinetics_red_visible_files = set()
+        self.kinetics_green_visible_files = set()
 
         # Moments Tab
         self.moments_tab = QWidget()
@@ -80,12 +100,21 @@ class GaitAnalysisTab(QWidget):
         self.moments_dropdown.addItems(["All", "Red", "Green"])
         self.moments_dropdown.currentTextChanged.connect(self.on_moments_side_changed)
         dropdown_layout.addWidget(self.moments_dropdown)
+        self.moments_import_button = QPushButton("Import C3D")
+        self.moments_import_button.clicked.connect(self.import_c3d_for_moments)
+        dropdown_layout.addWidget(self.moments_import_button)
         dropdown_layout.addStretch()
         self.moments_tab_layout.addLayout(dropdown_layout)
+        self.moments_file_buttons_layout = QHBoxLayout()
+        self.moments_tab_layout.addLayout(self.moments_file_buttons_layout)
         self.moments_layout = QGridLayout()
         self.moments_tab_layout.addLayout(self.moments_layout)
         self.tab_widget.addTab(self.moments_tab, "Gait 1 Moments")
         self.moments_side_filter = "All"
+        self.moments_file_buttons = []
+        self.moments_visible_file_index = None
+        self.moments_red_visible_files = set()
+        self.moments_green_visible_files = set()
 
         self.kinematics_plots = []
         self.kinetics_plots = []
@@ -233,6 +262,28 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter)
+
+            # Plot multiline data
+            if self.multiline_importer.get_num_files() > 0:
+                for i, file_data in enumerate(self.multiline_importer.imported_files):
+                    if self.kinematics_side_filter == "All":
+                        if i == self.kinematics_visible_file_index:
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color='red')
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color='green')
+                    elif self.kinematics_side_filter == "Red":
+                        if i in self.kinematics_red_visible_files:
+                            num_red = len(self.kinematics_red_visible_files)
+                            idx_in_red = list(self.kinematics_red_visible_files).index(i)
+                            gradient = 0.3 + 0.7 * (idx_in_red / (num_red - 1)) if num_red > 1 else 0.8
+                            color = (1, gradient, gradient)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=color)
+                    elif self.kinematics_side_filter == "Green":
+                        if i in self.kinematics_green_visible_files:
+                            num_green = len(self.kinematics_green_visible_files)
+                            idx_in_green = list(self.kinematics_green_visible_files).index(i)
+                            gradient = 0.3 + 0.7 * (idx_in_green / (num_green - 1)) if num_green > 1 else 0.8
+                            color = (gradient, 1, gradient)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color=color)
             # Set default y-limits for kinematics (angles)
             if group.lower() == 'spine':
                 ymin, ymax = -20, 20
@@ -360,6 +411,30 @@ class GaitAnalysisTab(QWidget):
             plot_widget.add_editable_texts(ymin, ymax, title)
             plot_widget.canvas.draw()
             plot_widget.setVisible(True)
+            
+            # Plot multiline data for Kinetics
+            if self.multiline_importer.get_num_files() > 0:
+                for i, file_data in enumerate(self.multiline_importer.imported_files):
+                    if self.kinetics_side_filter == "All":
+                        if i == self.kinetics_visible_file_index:
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color='red')
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color='green')
+                    elif self.kinetics_side_filter == "Red":
+                        if i in self.kinetics_red_visible_files:
+                            num_red = len(self.kinetics_red_visible_files)
+                            # Avoid division by zero if num_red is 1
+                            idx_in_red = list(self.kinetics_red_visible_files).index(i)
+                            gradient = 0.3 + 0.7 * (idx_in_red / (num_red - 1)) if num_red > 1 else 0.8
+                            color = (1, gradient, gradient)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=color)
+                    elif self.kinetics_side_filter == "Green":
+                        if i in self.kinetics_green_visible_files:
+                            num_green = len(self.kinetics_green_visible_files)
+                            idx_in_green = list(self.kinetics_green_visible_files).index(i)
+                            gradient = 0.3 + 0.7 * (idx_in_green / (num_green - 1)) if num_green > 1 else 0.8
+                            color = (gradient, 1, gradient)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=color)
+            plot_widget.canvas.draw()
 
         # Plot moments
         for plot_widget, group, comp in self.moments_plots:
@@ -462,6 +537,29 @@ class GaitAnalysisTab(QWidget):
             plot_widget.add_editable_texts(ymin, ymax, title)
             plot_widget.canvas.draw()
             plot_widget.setVisible(True)
+            
+            # Plot multiline data for Moments
+            if self.multiline_importer.get_num_files() > 0:
+                for i, file_data in enumerate(self.multiline_importer.imported_files):
+                    if self.moments_side_filter == "All":
+                        if i == self.moments_visible_file_index:
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color='red')
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color='green')
+                    elif self.moments_side_filter == "Red":
+                        if i in self.moments_red_visible_files:
+                            num_red = len(self.moments_red_visible_files)
+                            idx_in_red = list(self.moments_red_visible_files).index(i)
+                            gradient = 0.3 + 0.7 * (idx_in_red / (num_red - 1)) if num_red > 1 else 0.8
+                            color = (1, gradient, gradient)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=color)
+                    elif self.moments_side_filter == "Green":
+                        if i in self.moments_green_visible_files:
+                            num_green = len(self.moments_green_visible_files)
+                            idx_in_green = list(self.moments_green_visible_files).index(i)
+                            gradient = 0.3 + 0.7 * (idx_in_green / (num_green - 1)) if num_green > 1 else 0.8
+                            color = (gradient, 1, gradient)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=color)
+            plot_widget.canvas.draw()
 
         # Adjust subplot margins to prevent cut-off labels for moments
         for plot_widget, *_ in self.moments_plots:
@@ -562,4 +660,226 @@ class GaitAnalysisTab(QWidget):
 
     def on_moments_side_changed(self, side):
         self.moments_side_filter = side
+        self.plot_data()
+
+    def import_c3d_for_kinematics(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Import C3D File", "", "C3D Files (*.c3d)")
+        if file_path:
+            if self.multiline_importer.import_c3d(file_path):
+                new_idx = self.multiline_importer.get_num_files() - 1
+                
+                # Set default visibility
+                if self.multiline_importer.get_num_files() == 1:
+                    self.kinematics_visible_file_index = 0
+                    self.kinetics_visible_file_index = 0
+                    self.moments_visible_file_index = 0
+                
+                self.kinematics_red_visible_files.add(new_idx)
+                self.kinematics_green_visible_files.add(new_idx)
+                self.kinetics_red_visible_files.add(new_idx)
+                self.kinetics_green_visible_files.add(new_idx)
+                self.moments_red_visible_files.add(new_idx)
+                self.moments_green_visible_files.add(new_idx)
+
+                self.update_kinematics_file_buttons()
+                self.update_kinetics_file_buttons()
+                self.update_moments_file_buttons()
+                self.plot_data()
+            else:
+                # Show error message
+                pass
+
+    def import_c3d_for_kinetics(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Import C3D File", "", "C3D Files (*.c3d)")
+        if file_path:
+            if self.multiline_importer.import_c3d(file_path):
+                new_idx = self.multiline_importer.get_num_files() - 1
+                
+                # Set default visibility
+                if self.multiline_importer.get_num_files() == 1:
+                    self.kinematics_visible_file_index = 0
+                    self.kinetics_visible_file_index = 0
+                    self.moments_visible_file_index = 0
+                
+                self.kinematics_red_visible_files.add(new_idx)
+                self.kinematics_green_visible_files.add(new_idx)
+                self.kinetics_red_visible_files.add(new_idx)
+                self.kinetics_green_visible_files.add(new_idx)
+                self.moments_red_visible_files.add(new_idx)
+                self.moments_green_visible_files.add(new_idx)
+
+                self.update_kinematics_file_buttons()
+                self.update_kinetics_file_buttons()
+                self.update_moments_file_buttons()
+                self.plot_data()
+            else:
+                # Show error message
+                pass
+
+    def update_kinematics_file_buttons(self):
+        # Clear existing buttons
+        for button in self.kinematics_file_buttons:
+            button.setParent(None)
+        self.kinematics_file_buttons = []
+        # Add new buttons
+        for i, file_data in enumerate(self.multiline_importer.imported_files):
+            button = QPushButton(file_data['filename'])
+            button.setCheckable(True)
+            button.clicked.connect(lambda checked, idx=i: self.on_kinematics_file_button_clicked(idx))
+            self.kinematics_file_buttons_layout.addWidget(button)
+            self.kinematics_file_buttons.append(button)
+        # Update visibility based on side filter
+        self.update_kinematics_file_buttons_visibility()
+
+    def update_kinetics_file_buttons(self):
+        # Clear existing buttons
+        for button in self.kinetics_file_buttons:
+            button.setParent(None)
+        self.kinetics_file_buttons = []
+        # Add new buttons
+        for i, file_data in enumerate(self.multiline_importer.imported_files):
+            button = QPushButton(file_data['filename'])
+            button.setCheckable(True)
+            button.clicked.connect(lambda checked, idx=i: self.on_kinetics_file_button_clicked(idx))
+            self.kinetics_file_buttons_layout.addWidget(button)
+            self.kinetics_file_buttons.append(button)
+        # Update visibility based on side filter
+        self.update_kinetics_file_buttons_visibility()
+
+    def update_kinematics_file_buttons_visibility(self):
+        if self.kinematics_side_filter == "All":
+            for button in self.kinematics_file_buttons:
+                button.setVisible(True)
+            # Only one visible at a time
+            for i, button in enumerate(self.kinematics_file_buttons):
+                button.setChecked(i == self.kinematics_visible_file_index)
+        elif self.kinematics_side_filter == "Red":
+            for button in self.kinematics_file_buttons:
+                button.setVisible(True)
+                button.setChecked(button in self.kinematics_red_visible_files)
+        elif self.kinematics_side_filter == "Green":
+            for button in self.kinematics_file_buttons:
+                button.setVisible(True)
+                button.setChecked(button in self.kinematics_green_visible_files)
+
+    def update_kinetics_file_buttons_visibility(self):
+        if self.kinetics_side_filter == "All":
+            for button in self.kinetics_file_buttons:
+                button.setVisible(True)
+            # Only one visible at a time
+            for i, button in enumerate(self.kinetics_file_buttons):
+                button.setChecked(i == self.kinetics_visible_file_index)
+        elif self.kinetics_side_filter == "Red":
+            for button in self.kinetics_file_buttons:
+                button.setVisible(True)
+                button.setChecked(button in self.kinetics_red_visible_files)
+        elif self.kinetics_side_filter == "Green":
+            for button in self.kinetics_file_buttons:
+                button.setVisible(True)
+                button.setChecked(button in self.kinetics_green_visible_files)
+
+    def on_kinematics_file_button_clicked(self, idx):
+        if self.kinematics_side_filter == "All":
+            self.kinematics_visible_file_index = idx
+        elif self.kinematics_side_filter == "Red":
+            if idx in self.kinematics_red_visible_files:
+                self.kinematics_red_visible_files.remove(idx)
+            else:
+                self.kinematics_red_visible_files.add(idx)
+        elif self.kinematics_side_filter == "Green":
+            if idx in self.kinematics_green_visible_files:
+                self.kinematics_green_visible_files.remove(idx)
+            else:
+                self.kinematics_green_visible_files.add(idx)
+        self.update_kinematics_file_buttons_visibility()
+        self.plot_data()
+
+    def on_kinetics_file_button_clicked(self, idx):
+        if self.kinetics_side_filter == "All":
+            self.kinetics_visible_file_index = idx
+        elif self.kinetics_side_filter == "Red":
+            if idx in self.kinetics_red_visible_files:
+                self.kinetics_red_visible_files.remove(idx)
+            else:
+                self.kinetics_red_visible_files.add(idx)
+        elif self.kinetics_side_filter == "Green":
+            if idx in self.kinetics_green_visible_files:
+                self.kinetics_green_visible_files.remove(idx)
+            else:
+                self.kinetics_green_visible_files.add(idx)
+        self.update_kinetics_file_buttons_visibility()
+        self.plot_data()
+
+    def import_c3d_for_moments(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Import C3D File", "", "C3D Files (*.c3d)")
+        if file_path:
+            if self.multiline_importer.import_c3d(file_path):
+                new_idx = self.multiline_importer.get_num_files() - 1
+                
+                # Set default visibility
+                if self.multiline_importer.get_num_files() == 1:
+                    self.kinematics_visible_file_index = 0
+                    self.kinetics_visible_file_index = 0
+                    self.moments_visible_file_index = 0
+                
+                self.kinematics_red_visible_files.add(new_idx)
+                self.kinematics_green_visible_files.add(new_idx)
+                self.kinetics_red_visible_files.add(new_idx)
+                self.kinetics_green_visible_files.add(new_idx)
+                self.moments_red_visible_files.add(new_idx)
+                self.moments_green_visible_files.add(new_idx)
+
+                self.update_kinematics_file_buttons()
+                self.update_kinetics_file_buttons()
+                self.update_moments_file_buttons()
+                self.plot_data()
+            else:
+                # Show error message
+                pass
+
+    def update_moments_file_buttons(self):
+        # Clear existing buttons
+        for button in self.moments_file_buttons:
+            button.setParent(None)
+        self.moments_file_buttons = []
+        # Add new buttons
+        for i, file_data in enumerate(self.multiline_importer.imported_files):
+            button = QPushButton(file_data['filename'])
+            button.setCheckable(True)
+            button.clicked.connect(lambda checked, idx=i: self.on_moments_file_button_clicked(idx))
+            self.moments_file_buttons_layout.addWidget(button)
+            self.moments_file_buttons.append(button)
+        # Update visibility based on side filter
+        self.update_moments_file_buttons_visibility()
+
+    def update_moments_file_buttons_visibility(self):
+        if self.moments_side_filter == "All":
+            for button in self.moments_file_buttons:
+                button.setVisible(True)
+            # Only one visible at a time
+            for i, button in enumerate(self.moments_file_buttons):
+                button.setChecked(i == self.moments_visible_file_index)
+        elif self.moments_side_filter == "Red":
+            for button in self.moments_file_buttons:
+                button.setVisible(True)
+                button.setChecked(button in self.moments_red_visible_files)
+        elif self.moments_side_filter == "Green":
+            for button in self.moments_file_buttons:
+                button.setVisible(True)
+                button.setChecked(button in self.moments_green_visible_files)
+
+    def on_moments_file_button_clicked(self, idx):
+        if self.moments_side_filter == "All":
+            self.moments_visible_file_index = idx
+        elif self.moments_side_filter == "Red":
+            if idx in self.moments_red_visible_files:
+                self.moments_red_visible_files.remove(idx)
+            else:
+                self.moments_red_visible_files.add(idx)
+        elif self.moments_side_filter == "Green":
+            if idx in self.moments_green_visible_files:
+                self.moments_green_visible_files.remove(idx)
+            else:
+                self.moments_green_visible_files.add(idx)
+        self.update_moments_file_buttons_visibility()
         self.plot_data()
