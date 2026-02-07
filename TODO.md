@@ -1,10 +1,10 @@
-# TODO: Modify Gait 1 Kinematics Tab
+# TODO: Add "Gait 1 Moments" Tab to GaitAnalysisTab
 
-## Tasks
-- [x] Modify `setup_kinematics_plots` in `gait_analysis_tab.py` to change the group for Footprogress y plot to 'Ankle' in the kinematics_plots list.
-- [x] Add title handling for 'ankle' group in the kinematics plotting section of `plot_data`.
-- [x] Add y-limit handling for 'ankle' group in the kinematics plotting section of `plot_data`.
-- [x] Update y-limits for 'ankle' in kinematics to -50, 50.
-- [x] Update y-limits for 'Ankle' in kinetics ANGLES to -50, 50.
-- [x] Add grey horizontal lines every 10 units from -50 to 50 for ankle y in kinematics.
-- [x] Add grey horizontal lines every 10 units from -50 to 50 for ankle y in kinetics ANGLES.
+- [ ] Add self.moments_tab = QWidget() and self.moments_layout = QGridLayout(self.moments_tab) in __init__
+- [ ] Add self.tab_widget.addTab(self.moments_tab, "Gait 1 Moments")
+- [ ] Add self.moments_plots = [] in __init__
+- [ ] Implement setup_moments_plots() method to create 3x3 grid for hip, knee, ankle x,y,z
+- [ ] Call self.setup_moments_plots() in __init__
+- [ ] Add plotting logic for moments_plots in plot_data() method
+- [ ] Add clearing logic for moments_plots in clear_data() method
+- [ ] Ensure PDF export includes the new tab in export_to_pdf method

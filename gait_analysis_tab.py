@@ -49,8 +49,14 @@ class GaitAnalysisTab(QWidget):
         self.kinetics_layout = QGridLayout(self.kinetics_tab)
         self.tab_widget.addTab(self.kinetics_tab, "Gait 1 Kinetics")
 
+        # Moments Tab
+        self.moments_tab = QWidget()
+        self.moments_layout = QGridLayout(self.moments_tab)
+        self.tab_widget.addTab(self.moments_tab, "Gait 1 Moments")
+
         self.kinematics_plots = []
         self.kinetics_plots = []
+        self.moments_plots = []
         self.vlines = []
         self.plot_keys = {}  # key to (plot_widget, group, comp, plot_type)
 
@@ -62,6 +68,7 @@ class GaitAnalysisTab(QWidget):
 
         self.setup_kinematics_plots()
         self.setup_kinetics_plots()
+        self.setup_moments_plots()
 
     def setup_kinematics_plots(self):
         groups = ['Spine', 'Pelvis', 'Hip', 'Knee', 'Footprogress']
@@ -105,6 +112,24 @@ class GaitAnalysisTab(QWidget):
             plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
             self.kinetics_layout.addWidget(plot_widget, row, col)
             self.kinetics_plots.append((plot_widget, group, comp, plot_type, y_label, unit_factor[0] if unit_factor else 1))
+
+    def setup_moments_plots(self):
+        # 3x3 grid for hip, knee, ankle x,y,z moments
+        groups = ['Hip', 'Knee', 'Ankle']
+        components = ['x', 'y', 'z']
+        row = 0
+        for group in groups:
+            col = 0
+            for comp in components:
+                plot_widget = GaitPlotWidget(self.moments_tab)
+                plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
+                plot_widget.ymin_double_clicked.connect(self.on_ymin_double_clicked)
+                plot_widget.ymax_double_clicked.connect(self.on_ymax_double_clicked)
+                plot_widget.title_double_clicked.connect(self.on_title_double_clicked)
+                self.moments_layout.addWidget(plot_widget, row, col)
+                self.moments_plots.append((plot_widget, group, comp))
+                col += 1
+            row += 1
 
     def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
         self.markers_data = markers_data
@@ -301,6 +326,113 @@ class GaitAnalysisTab(QWidget):
             plot_widget.canvas.draw()
             plot_widget.setVisible(True)
 
+        # Plot moments
+        for plot_widget, group, comp in self.moments_plots:
+            title = f'{group} - {comp.upper()}'
+            if group.lower() == 'hip' and comp == 'y':
+                title = f'{group} - Hip Flex-Ext Moment'
+            elif group.lower() == 'hip' and comp == 'x':
+                title = f'{group} - Hip Ab-Add Moment'
+            elif group.lower() == 'hip' and comp == 'z':
+                title = f'{group} - Hip Rotation Moment'
+            elif group.lower() == 'knee' and comp == 'y':
+                title = f'{group} - Knee Flex-Ext Moment'
+            elif group.lower() == 'knee' and comp == 'x':
+                title = f'{group} - Knee Valg-Var Moment'
+            elif group.lower() == 'knee' and comp == 'z':
+                title = f'{group} - Knee Rotation Moment'
+            elif group.lower() == 'ankle' and comp == 'y':
+                title = f'{group} - Dors-Plan Moment'
+            elif group.lower() == 'ankle' and comp == 'x':
+                title = f'{group} - Ankle Ab-Add Moment'
+            elif group.lower() == 'ankle' and comp == 'z':
+                title = f'{group} - Ankle Rotation Moment'
+            plot_widget.ax.set_title(title)
+            plot_widget.ax.set_xlabel('Gait Cycle (%)')
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', self.current_frame, component=comp, body_mass=self.body_mass)
+
+            # Set default y-limits for moments
+            if group.lower() == 'hip':
+                if comp == 'x':
+                    ymin, ymax = -1.0, 1.0
+                elif comp == 'y':
+                    ymin, ymax = -1.0, 2.0
+                elif comp == 'z':
+                    ymin, ymax = -0.5, 0.5
+            elif group.lower() == 'knee':
+                if comp == 'x':
+                    ymin, ymax = -1.0, 1.0
+                elif comp == 'y':
+                    ymin, ymax = -1.0, 2.0
+                elif comp == 'z':
+                    ymin, ymax = -0.5, 0.5
+            elif group.lower() == 'ankle':
+                if comp == 'x':
+                    ymin, ymax = -0.5, 0.5
+                elif comp == 'y':
+                    ymin, ymax = -1.0, 2.0
+                elif comp == 'z':
+                    ymin, ymax = -0.5, 0.5
+
+            # Check for edited values
+            plot_key = f"MOMENTS_{group}_{comp}"
+            plot_widget.plot_key = plot_key
+            if plot_key in self.editable_values:
+                edited = self.editable_values[plot_key]
+                ymin = edited.get('ymin', ymin)
+                ymax = edited.get('ymax', ymax)
+                if 'title' in edited:
+                    title = edited['title']
+                    plot_widget.ax.set_title(title)
+
+            plot_widget.ax.set_ylim(ymin, ymax)
+            plot_widget.ax.set_yticks([ymin, ymax])
+            # Clear any existing text labels to prevent overlap
+            for text in list(plot_widget.ax.texts):
+                text.remove()
+            # Add y-axis text labels at 75%, 50%, 25% based on moments_tab.py
+            if comp == 'x':
+                if group.lower() in ['hip', 'ankle']:
+                    plot_widget.ax.text(-0.05, 0.25, 'Add', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Abd', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                else:  # knee
+                    plot_widget.ax.text(-0.05, 0.25, 'Var', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Valg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+            elif comp == 'y' and group.lower() == 'ankle':
+                plot_widget.ax.text(-0.05, 0.25, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                plot_widget.ax.text(-0.05, 0.75, 'Plant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+            elif comp == 'y' and group.lower() in ['hip', 'knee']:
+                plot_widget.ax.text(-0.05, 0.25, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+            elif comp == 'z':
+                plot_widget.ax.text(-0.05, 0.25, 'Int', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+
+            # Always add a thick, darker grey line at y=0 if within range
+            if ymin <= 0 <= ymax:
+                plot_widget.ax.axhline(y=0, color='#555555', linestyle='-', linewidth=1.5, alpha=0.7)
+            # Add horizontal grid lines at every 0.5 units in both directions from 0
+            max_abs = max(abs(ymin), abs(ymax))
+            for step in np.arange(0.5, max_abs + 0.5, 0.5):
+                if ymin <= step <= ymax:
+                    plot_widget.ax.axhline(y=step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+                if ymin <= -step <= ymax:
+                    plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+
+            plot_widget.add_editable_texts(ymin, ymax, title)
+            plot_widget.canvas.draw()
+            plot_widget.setVisible(True)
+
+        # Adjust subplot margins to prevent cut-off labels for moments
+        for plot_widget, *_ in self.moments_plots:
+            plot_widget.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
+            plot_widget.canvas.draw()
+
     def on_plot_double_clicked(self, plot_widget):
         # Simple zoom, but since fixed layout, maybe just ignore or implement basic zoom
         pass
@@ -308,7 +440,7 @@ class GaitAnalysisTab(QWidget):
     def on_ymin_double_clicked(self, plot_widget):
         # Handle ymin editing
         # Find which plot this is
-        for i, (pw, *_) in enumerate(self.kinematics_plots + self.kinetics_plots):
+        for i, (pw, *_) in enumerate(self.kinematics_plots + self.kinetics_plots + self.moments_plots):
             if pw == plot_widget:
                 # Get current ymin
                 ylim = pw.ax.get_ylim()
@@ -328,7 +460,7 @@ class GaitAnalysisTab(QWidget):
     def on_ymax_double_clicked(self, plot_widget):
         # Handle ymax editing
         # Find which plot this is
-        for i, (pw, *_) in enumerate(self.kinematics_plots + self.kinetics_plots):
+        for i, (pw, *_) in enumerate(self.kinematics_plots + self.kinetics_plots + self.moments_plots):
             if pw == plot_widget:
                 # Get current ymax
                 ylim = pw.ax.get_ylim()
@@ -378,6 +510,9 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.clear()
             plot_widget.canvas.draw()
         for plot_widget, *_ in self.kinetics_plots:
+            plot_widget.ax.clear()
+            plot_widget.canvas.draw()
+        for plot_widget, *_ in self.moments_plots:
             plot_widget.ax.clear()
             plot_widget.canvas.draw()
         self.vlines = []
