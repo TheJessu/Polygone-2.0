@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog, QComboBox
 from PyQt5.QtCore import pyqtSignal
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -41,18 +41,51 @@ class GaitAnalysisTab(QWidget):
 
         # Kinematics Tab
         self.kinematics_tab = QWidget()
-        self.kinematics_layout = QGridLayout(self.kinematics_tab)
+        self.kinematics_tab_layout = QVBoxLayout(self.kinematics_tab)
+        dropdown_layout = QHBoxLayout()
+        dropdown_layout.addWidget(QLabel("Side:"))
+        self.kinematics_dropdown = QComboBox()
+        self.kinematics_dropdown.addItems(["All", "Red", "Green"])
+        self.kinematics_dropdown.currentTextChanged.connect(self.on_kinematics_side_changed)
+        dropdown_layout.addWidget(self.kinematics_dropdown)
+        dropdown_layout.addStretch()
+        self.kinematics_tab_layout.addLayout(dropdown_layout)
+        self.kinematics_layout = QGridLayout()
+        self.kinematics_tab_layout.addLayout(self.kinematics_layout)
         self.tab_widget.addTab(self.kinematics_tab, "Gait 1 Kinematics")
+        self.kinematics_side_filter = "All"
 
         # Kinetics Tab
         self.kinetics_tab = QWidget()
-        self.kinetics_layout = QGridLayout(self.kinetics_tab)
+        self.kinetics_tab_layout = QVBoxLayout(self.kinetics_tab)
+        dropdown_layout = QHBoxLayout()
+        dropdown_layout.addWidget(QLabel("Side:"))
+        self.kinetics_dropdown = QComboBox()
+        self.kinetics_dropdown.addItems(["All", "Red", "Green"])
+        self.kinetics_dropdown.currentTextChanged.connect(self.on_kinetics_side_changed)
+        dropdown_layout.addWidget(self.kinetics_dropdown)
+        dropdown_layout.addStretch()
+        self.kinetics_tab_layout.addLayout(dropdown_layout)
+        self.kinetics_layout = QGridLayout()
+        self.kinetics_tab_layout.addLayout(self.kinetics_layout)
         self.tab_widget.addTab(self.kinetics_tab, "Gait 1 Kinetics")
+        self.kinetics_side_filter = "All"
 
         # Moments Tab
         self.moments_tab = QWidget()
-        self.moments_layout = QGridLayout(self.moments_tab)
+        self.moments_tab_layout = QVBoxLayout(self.moments_tab)
+        dropdown_layout = QHBoxLayout()
+        dropdown_layout.addWidget(QLabel("Side:"))
+        self.moments_dropdown = QComboBox()
+        self.moments_dropdown.addItems(["All", "Red", "Green"])
+        self.moments_dropdown.currentTextChanged.connect(self.on_moments_side_changed)
+        dropdown_layout.addWidget(self.moments_dropdown)
+        dropdown_layout.addStretch()
+        self.moments_tab_layout.addLayout(dropdown_layout)
+        self.moments_layout = QGridLayout()
+        self.moments_tab_layout.addLayout(self.moments_layout)
         self.tab_widget.addTab(self.moments_tab, "Gait 1 Moments")
+        self.moments_side_filter = "All"
 
         self.kinematics_plots = []
         self.kinetics_plots = []
@@ -178,6 +211,8 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.clear()
         for plot_widget, *_ in self.kinetics_plots:
             plot_widget.ax.clear()
+        for plot_widget, *_ in self.moments_plots:
+            plot_widget.ax.clear()
         self.vlines = []
 
         # Plot kinematics
@@ -197,7 +232,7 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else "Foot Progression" if comp == "z" else comp.upper()}'
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp)
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter)
             # Set default y-limits for kinematics (angles)
             if group.lower() == 'spine':
                 ymin, ymax = -20, 20
@@ -284,7 +319,7 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             plot_widget.ax.set_ylabel(y_label)
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass)
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.kinetics_side_filter)
 
             # Check for edited values
             plot_key = f"{plot_type}_{group}_{comp}"
@@ -349,7 +384,7 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - Ankle Rotation Moment'
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', self.current_frame, component=comp, body_mass=self.body_mass)
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.moments_side_filter)
 
             # Set default y-limits for moments
             if group.lower() == 'hip':
@@ -516,3 +551,15 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.clear()
             plot_widget.canvas.draw()
         self.vlines = []
+
+    def on_kinematics_side_changed(self, side):
+        self.kinematics_side_filter = side
+        self.plot_data()
+
+    def on_kinetics_side_changed(self, side):
+        self.kinetics_side_filter = side
+        self.plot_data()
+
+    def on_moments_side_changed(self, side):
+        self.moments_side_filter = side
+        self.plot_data()
