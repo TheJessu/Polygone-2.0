@@ -271,7 +271,8 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else "Foot Progression" if comp == "z" else comp.upper()}'
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter)
+            if self.main_visible:
+                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter)
 
             # Plot multiline data
             if self.multiline_importer.get_num_files() > 0:
@@ -376,7 +377,8 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             plot_widget.ax.set_ylabel(y_label)
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.kinetics_side_filter)
+            if self.main_visible:
+                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.kinetics_side_filter)
 
             # Check for edited values
             plot_key = f"{plot_type}_{group}_{comp}"
@@ -758,10 +760,15 @@ class GaitAnalysisTab(QWidget):
             for button in self.kinematics_file_buttons:
                 button.setVisible(True)
                 button.setChecked(button in self.kinematics_green_visible_files)
-        # Set button colors based on checked state
+        # Set button colors based on checked state and side filter
         for button in self.kinematics_file_buttons:
             if button.isChecked():
-                button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+                if self.kinematics_side_filter == "Red":
+                    button.setStyleSheet(f"QPushButton {{ background-color: {self.red_colors[0]}; color: white; }}")
+                elif self.kinematics_side_filter == "Green":
+                    button.setStyleSheet(f"QPushButton {{ background-color: {self.green_colors[0]}; color: white; }}")
+                else:
+                    button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
@@ -780,10 +787,15 @@ class GaitAnalysisTab(QWidget):
             for button in self.kinetics_file_buttons:
                 button.setVisible(True)
                 button.setChecked(button in self.kinetics_green_visible_files)
-        # Set button colors based on checked state
+        # Set button colors based on checked state and side filter
         for button in self.kinetics_file_buttons:
             if button.isChecked():
-                button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+                if self.kinetics_side_filter == "Red":
+                    button.setStyleSheet(f"QPushButton {{ background-color: {self.red_colors[0]}; color: white; }}")
+                elif self.kinetics_side_filter == "Green":
+                    button.setStyleSheet(f"QPushButton {{ background-color: {self.green_colors[0]}; color: white; }}")
+                else:
+                    button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
@@ -876,10 +888,15 @@ class GaitAnalysisTab(QWidget):
             for button in self.moments_file_buttons:
                 button.setVisible(True)
                 button.setChecked(button in self.moments_green_visible_files)
-        # Set button colors based on checked state
+        # Set button colors based on checked state and side filter
         for button in self.moments_file_buttons:
             if button.isChecked():
-                button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+                if self.moments_side_filter == "Red":
+                    button.setStyleSheet(f"QPushButton {{ background-color: {self.red_colors[0]}; color: white; }}")
+                elif self.moments_side_filter == "Green":
+                    button.setStyleSheet(f"QPushButton {{ background-color: {self.green_colors[0]}; color: white; }}")
+                else:
+                    button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
