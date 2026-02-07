@@ -136,8 +136,8 @@ class MainWindow(QMainWindow):
                         # Set gait info for data plotter
                 self.data_plotter.set_gait_info(events_data, frame_rate, first_frame)
                 # Set gait cycles for gait analysis tab
-                left_strikes = sorted([int(e['time'] * frame_rate) for e in events_data if e.get('foot') == 'left' and e.get('type') == 'strike'])
-                right_strikes = sorted([int(e['time'] * frame_rate) for e in events_data if e.get('foot') == 'right' and e.get('type') == 'strike'])
+                left_strikes = sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'left' and e.get('type') == 'strike'])
+                right_strikes = sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'right' and e.get('type') == 'strike'])
                 gait_cycles = {'left': [], 'right': []}
                 for i in range(len(left_strikes) - 1):
                     gait_cycles['left'].append((left_strikes[i], left_strikes[i+1]))
