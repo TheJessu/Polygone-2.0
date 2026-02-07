@@ -9,6 +9,7 @@ from data_plotter import DataPlotter
 from gait_analysis_tab import GaitAnalysisTab
 from timeline_widget import TimelineWidget
 from PyQt5.QtWidgets import QTabWidget
+from average import AverageTab
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -59,6 +60,10 @@ class MainWindow(QMainWindow):
         # Create gait analysis tab
         self.gait_analysis_tab = GaitAnalysisTab()
         self.right_tabs.addTab(self.gait_analysis_tab, "Gait Analysis")
+
+        # Create average tab
+        self.average_tab = AverageTab()
+        self.right_tabs.addTab(self.average_tab, "Average")
 
         # Connect signals between DataPlotter and GaitAnalysisTab
         self.data_plotter.editable_values_updated.connect(self.gait_analysis_tab.set_editable_values)
