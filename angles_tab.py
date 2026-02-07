@@ -226,7 +226,9 @@ class AnglesTab(QWidget):
                 elif group.lower() == 'knee':
                     title = f'{group} - {"Knee Flexion-Extension" if component == "y" else "Knee Rotation" if component == "z" else "Knee Valg/Varus"}'
                 elif group.lower() == 'footprogress':
-                    title = f'{group} - {"Dorsi-Plantarflexion" if component == "y" else "Foot Progression" if component == "z" else component.upper()}'
+                    title = f'{group} - {" Foot Dorsi-Plantarflexion" if component == "y" else "Foot Progression" if component == "z" else component.upper()}'
+                elif group.lower() == 'ankle':
+                    title = f'{group} - {"Ankle Valg/Varus" if component == "x" else "Dorsi-Plantarflexion" if component == "y" else component.upper()}'
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)', fontsize=8, labelpad=-1)
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', '', current_frame, component=component, plot_widget=plot_widget)

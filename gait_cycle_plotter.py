@@ -143,6 +143,8 @@ class GaitCyclePlotter:
                 ymin, ymax = -15, 90
             elif selected_group.lower() == 'footprogress':
                 ymin, ymax = -40, 40
+            elif selected_group.lower() == 'ankle':
+                ymin, ymax = -50, 50
             ax.set_ylim(ymin, ymax)
             ax.set_yticks([ymin, ymax])
             # Always add a thick, darker grey line at y=0 if within range
@@ -177,11 +179,11 @@ class GaitCyclePlotter:
                     ymin, ymax = -0.5, 0.5
             elif selected_group.lower() == 'ankle':
                 if component == 'x':
-                    ymin, ymax = -0.5, 0.5
+                   ymin, ymax = -0.5, 0.5
                 elif component == 'y':
                     ymin, ymax = -1.0, 2.0
                 elif component == 'z':
-                    ymin, ymax = -0.5, 0.5
+                   ymin, ymax = -0.5, 0.5
             ax.set_ylim(ymin, ymax)
             ax.set_yticks([ymin, ymax])
             # Always add a thick, darker grey line at y=0 if within range

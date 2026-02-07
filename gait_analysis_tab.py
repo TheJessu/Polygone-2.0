@@ -79,13 +79,18 @@ class GaitAnalysisTab(QWidget):
                 self.kinematics_plots.append((plot_widget, group, comp))
                 col += 1
             row += 1
+        # Modify the Footprogress y plot to Ankle y
+        for i, (plot_widget, group, comp) in enumerate(self.kinematics_plots):
+            if group == 'Footprogress' and comp == 'y':
+                self.kinematics_plots[i] = (plot_widget, 'Ankle', 'y')
+                break
 
     def setup_kinetics_plots(self):
         # 3x3 grid
         plots_config = [
             ('Hip', 'y', 'ANGLES', 'Angle (degrees)'),
             ('Knee', 'y', 'ANGLES', 'Angle (degrees)'),
-            ('Footprogress', 'y', 'ANGLES', 'Angle (degrees)'),
+            ('Ankle', 'y', 'ANGLES', 'Angle (degrees)'),
             ('Hip', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
             ('Knee', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
             ('Ankle', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
@@ -161,6 +166,8 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - {"Hip Ab-Adduction" if comp == "x" else "Hip Flexion-Extension" if comp == "y" else "Hip Rotation"}'
             elif group.lower() == 'knee':
                 title = f'{group} - {"Knee Flexion-Extension" if comp == "y" else comp.upper()}'
+            elif group.lower() == 'ankle':
+                title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else comp.upper()}'
             elif group.lower() == 'footprogress':
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else "Foot Progression" if comp == "z" else comp.upper()}'
             plot_widget.ax.set_title(title)
@@ -185,6 +192,8 @@ class GaitAnalysisTab(QWidget):
                     ymin, ymax = -30, 40
             elif group.lower() == 'knee':
                 ymin, ymax = -15, 90
+            elif group.lower() == 'ankle':
+                ymin, ymax = -50, 50
             elif group.lower() == 'footprogress':
                 ymin, ymax = -40, 40
             else:
@@ -202,7 +211,10 @@ class GaitAnalysisTab(QWidget):
                     plot_widget.ax.set_title(title)
 
             plot_widget.ax.set_ylim(ymin, ymax)
-            plot_widget.ax.set_yticks([ymin, ymax])
+            if group.lower() == 'ankle' and comp == 'y':
+                plot_widget.ax.set_yticks([-50, 50])
+            else:
+                plot_widget.ax.set_yticks([ymin, ymax])
             # Add editable texts
             plot_widget.add_editable_texts(ymin, ymax, title)
             plot_widget.canvas.draw()
@@ -220,7 +232,7 @@ class GaitAnalysisTab(QWidget):
                     title = 'Hip Flexion-Extension'
                 elif group.lower() == 'knee' and comp == 'y':
                     title = 'Knee Flexion-Extension'
-                elif group.lower() == 'footprogress' and comp == 'y':
+                elif group.lower() == 'ankle' and comp == 'y':
                     title = 'Dorsi-Plantarflexion'
                 else:
                     title = f'{group} - {comp.upper()}'
@@ -248,7 +260,7 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             plot_widget.ax.set_ylabel(y_label)
             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass)
-            
+
             # Check for edited values
             plot_key = f"{plot_type}_{group}_{comp}"
             plot_widget.plot_key = plot_key
@@ -260,8 +272,31 @@ class GaitAnalysisTab(QWidget):
                 if 'title' in edited:
                     title = edited['title']
                     plot_widget.ax.set_title(title)
-            
+            else:
+                # Set default y-limits for kinetics
+                if plot_type == 'MOMENTS':
+                    ymin, ymax = -1.0, 2.0
+                elif group.lower() == 'ankle' and comp == 'y':
+                    ymin, ymax = -50, 50
+
             plot_widget.ax.set_ylim(ymin, ymax)
+            if plot_type == 'MOMENTS':
+                # plot_widget.ax.set_yticks([-1, 2])
+                # Clear any existing text labels to prevent overlap
+                for text in list(plot_widget.ax.texts):
+                    text.remove()
+                # Add y-axis text labels at 75%, 50%, 25% based on moments_tab.py
+                if group.lower() == 'ankle':
+                    plot_widget.ax.text(-0.05, 0.25, 'Dors', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Plant', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                elif group.lower() in ['hip', 'knee']:
+                    plot_widget.ax.text(-0.05, 0.25, 'Flex', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.50, 'Nm/kg', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+                    plot_widget.ax.text(-0.05, 0.75, 'Ext', transform=plot_widget.ax.transAxes, ha='right', va='center', fontsize=8)
+            if group.lower() == 'ankle' and comp == 'y' and plot_type == 'ANGLES':
+                for y in range(-50, 51, 10):
+                    plot_widget.ax.axhline(y=y, color='grey', linestyle='-', linewidth=0.5)
             plot_widget.add_editable_texts(ymin, ymax, title)
             plot_widget.canvas.draw()
             plot_widget.setVisible(True)

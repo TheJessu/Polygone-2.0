@@ -1,9 +1,10 @@
-# TODO: Make Y-axis limits and plot titles editable
+# TODO: Modify Gait 1 Kinematics Tab
 
 ## Tasks
-- [x] Create EditablePlotWidget class in generic_plotter.py
-- [x] Modify angles_tab.py to use EditablePlotWidget and handle edit signals
-- [x] Modify gait_analysis_tab.py to use EditablePlotWidget and handle edit signals
-- [x] Add editable values storage in data_plotter.py and pass to tabs
-- [x] Update plot_data methods to use editable values instead of hardcoded ones
-- [x] Test editing functionality and cross-tab updates
+- [x] Modify `setup_kinematics_plots` in `gait_analysis_tab.py` to change the group for Footprogress y plot to 'Ankle' in the kinematics_plots list.
+- [x] Add title handling for 'ankle' group in the kinematics plotting section of `plot_data`.
+- [x] Add y-limit handling for 'ankle' group in the kinematics plotting section of `plot_data`.
+- [x] Update y-limits for 'ankle' in kinematics to -50, 50.
+- [x] Update y-limits for 'Ankle' in kinetics ANGLES to -50, 50.
+- [x] Add grey horizontal lines every 10 units from -50 to 50 for ankle y in kinematics.
+- [x] Add grey horizontal lines every 10 units from -50 to 50 for ankle y in kinetics ANGLES.
