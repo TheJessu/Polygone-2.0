@@ -8,7 +8,7 @@ class GaitCyclePlotter:
     def __init__(self):
         self.lines = {}
 
-    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, current_frame=None, unit_conversion_factor=1, component='magnitude', body_mass=None, plot_widget=None, side_filter="All", color=None):
+    def plot_gait_cycle_data(self, ax, markers_data, marker_labels, marker_types, selected_group, gait_cycles, plot_type, y_label, current_frame=None, unit_conversion_factor=1, component='magnitude', body_mass=None, plot_widget=None, side_filter="All", color=None, linestyle=None):
         if gait_cycles is None or not (gait_cycles.get('left') or gait_cycles.get('right')):
             # No gait cycles defined, set xlabel and ylabel but don't plot anything
             ax.set_xlabel('Gait Cycle (%)')
@@ -72,7 +72,7 @@ class GaitCyclePlotter:
             mean_left = np.mean(all_left_cycles_norm, axis=0)
             std_left = np.std(all_left_cycles_norm, axis=0)
             line_color = color if color else 'red'
-            line, = ax.plot(x_axis_norm, mean_left, color=line_color, linewidth=2, label='Mean Left', picker=5)
+            line, = ax.plot(x_axis_norm, mean_left, color=line_color, linewidth=2, linestyle=linestyle if linestyle else '-', label='Mean Left', picker=5)
             key = f'{selected_group}_{component}_mean_left'
             self.lines[key] = (line, key, 'Mean Left', mean_left)
             ax.fill_between(x_axis_norm, mean_left - std_left, mean_left + std_left, color=line_color, alpha=0.2)
@@ -81,7 +81,7 @@ class GaitCyclePlotter:
             mean_right = np.mean(all_right_cycles_norm, axis=0)
             std_right = np.std(all_right_cycles_norm, axis=0)
             line_color = color if color else 'green'
-            line, = ax.plot(x_axis_norm, mean_right, color=line_color, linewidth=2, label='Mean Right', picker=5)
+            line, = ax.plot(x_axis_norm, mean_right, color=line_color, linewidth=2, linestyle=linestyle if linestyle else '-', label='Mean Right', picker=5)
             key = f'{selected_group}_{component}_mean_right'
             self.lines[key] = (line, key, 'Mean Right', mean_right)
             ax.fill_between(x_axis_norm, mean_right - std_right, mean_right + std_right, color=line_color, alpha=0.2)
