@@ -67,12 +67,17 @@ class AverageSubTab(QWidget):
                 
                 self.plot_layout.addWidget(plot_widget, row, col)
                 self.plots.append(plot_widget)
-                
+
                 col += 1
                 if col >= 3:
                     col = 0
                     row += 1
-        
+
+        # Adjust subplot margins to prevent cut-off labels
+        for plot in self.plots:
+            plot.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
+            plot.canvas.draw()
+
         self.plot_container.adjustSize()
 
     def setup_plot_appearance(self, plot_widget, group, component):
@@ -121,15 +126,7 @@ class AverageSubTab(QWidget):
                 title = 'Ankle Power'
 
         ax.set_title(title, fontsize=10)
-        ax.set_xlabel('Gait Cycle (%)', fontsize=8)
-        
-        # Set Y Label
-        if self.plot_type == 'POWERS':
-            ax.set_ylabel('Power (W/kg)')
-        elif self.plot_type == 'MOMENTS':
-            ax.set_ylabel('Moment (Nm/kg)')
-        elif self.plot_type == 'ANGLES':
-            ax.set_ylabel('Angle (degrees)')
+        ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
 
         # Set limits and text labels
         ymin, ymax = -50, 50
