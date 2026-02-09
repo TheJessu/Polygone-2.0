@@ -407,9 +407,18 @@ class AverageTab(QWidget):
                         target_dict = angles_data if plot_type == 'ANGLES' else moments_data if plot_type == 'MOMENTS' else powers_data
                         if group not in target_dict: target_dict[group] = {}
                         
-                        for k, comp in enumerate(['x', 'y', 'z']):
-                            if comp not in target_dict[group]: target_dict[group][comp] = []
-                            interp_val = np.interp(x_new, x_old, cycle_data[:, k])
+                        for comp in ['x', 'y', 'z']:
+                            if comp not in target_dict[group]:
+                                target_dict[group][comp] = []
+
+                            if comp == 'x':
+                                data_col = cycle_data[:, 1]
+                            elif comp == 'y':
+                                data_col = cycle_data[:, 0]
+                            else:  # 'z'
+                                data_col = cycle_data[:, 2]
+
+                            interp_val = np.interp(x_new, x_old, data_col)
                             target_dict[group][comp].append(interp_val)
                             
             except Exception as e:
