@@ -7,6 +7,7 @@ from gait_cycle_plotter import GaitCyclePlotter
 from pdfExport import PDFExporter
 from generic_plotter import EditablePlotWidget
 from multiline import MultilineImporter
+from pxdExport import PXDExporter
 
 class GaitPlotWidget(EditablePlotWidget):
     def __init__(self, parent=None):
@@ -27,6 +28,7 @@ class GaitAnalysisTab(QWidget):
         self.pdf_exporter = PDFExporter()
         self.body_mass = None
         self.multiline_importer = MultilineImporter()
+        self.imported_averages = None
 
         self.red_colors = ['#A30000', '#FF0000', '#FF5C5C', '#E34234', '#F88379']
         self.green_colors = ['#008000', '#00D100', '#00FF00', '#004700', '#AFE1AF']
@@ -39,6 +41,9 @@ class GaitAnalysisTab(QWidget):
         button_layout = QHBoxLayout()
         self.export_pdf_button = QPushButton("Export PDF")
         self.export_pdf_button.clicked.connect(self.export_to_pdf)
+        self.import_avg_button = QPushButton("Import Averages")
+        self.import_avg_button.clicked.connect(self.import_averages)
+        button_layout.addWidget(self.import_avg_button)
         button_layout.addWidget(self.export_pdf_button)
         button_layout.addStretch()
         self.layout.addLayout(button_layout)
@@ -272,6 +277,14 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             if self.main_visible:
+                if self.imported_averages and 'ANGLES' in self.imported_averages:
+                    if group in self.imported_averages['ANGLES'] and comp in self.imported_averages['ANGLES'][group]:
+                        avg = self.imported_averages['ANGLES'][group][comp]
+                        mean = np.array(avg['mean'])
+                        std = np.array(avg['std'])
+                        x = np.linspace(0, 100, len(mean))
+                        plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
+                        plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
                 self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter)
 
             # Plot multiline data
@@ -378,6 +391,14 @@ class GaitAnalysisTab(QWidget):
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
             plot_widget.ax.set_ylabel(y_label)
             if self.main_visible:
+                if self.imported_averages and plot_type in self.imported_averages:
+                    if group in self.imported_averages[plot_type] and comp in self.imported_averages[plot_type][group]:
+                        avg = self.imported_averages[plot_type][group][comp]
+                        mean = np.array(avg['mean'])
+                        std = np.array(avg['std'])
+                        x = np.linspace(0, 100, len(mean))
+                        plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
+                        plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
                 self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.kinetics_side_filter)
 
             # Check for edited values
@@ -462,6 +483,14 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - Ankle Rotation Moment'
             plot_widget.ax.set_title(title)
             plot_widget.ax.set_xlabel('Gait Cycle (%)')
+            if self.imported_averages and 'MOMENTS' in self.imported_averages:
+                if group in self.imported_averages['MOMENTS'] and comp in self.imported_averages['MOMENTS'][group]:
+                    avg = self.imported_averages['MOMENTS'][group][comp]
+                    mean = np.array(avg['mean'])
+                    std = np.array(avg['std'])
+                    x = np.linspace(0, 100, len(mean))
+                    plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
+                    plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.moments_side_filter)
 
             # Set default y-limits for moments
@@ -920,3 +949,9 @@ class GaitAnalysisTab(QWidget):
         self.main_visible = not self.main_visible
         self.main_toggle_button.setChecked(self.main_visible)
         self.plot_data()
+
+    def import_averages(self):
+        data = PXDExporter.import_averages(self)
+        if data:
+            self.imported_averages = data
+            self.plot_data()

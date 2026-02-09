@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QHBoxLayout, QLabel, QSpinBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QHBoxLayout, QLabel, QSpinBox, QPushButton
 from angles_tab import AnglesTab
 from forces_tab import ForcesTab
 from moments_tab import MomentsTab
@@ -7,6 +7,7 @@ from gait_cycle_plotter import GaitCyclePlotter
 import math
 import numpy as np
 from PyQt5.QtCore import pyqtSignal
+from pxdExport import PXDExporter
 
 class DataPlotter(QWidget):
     editable_values_updated = pyqtSignal(dict)
@@ -14,6 +15,14 @@ class DataPlotter(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
+        
+        btn_layout = QHBoxLayout()
+        self.import_avg_btn = QPushButton("Import Averages")
+        self.import_avg_btn.clicked.connect(self.import_averages)
+        btn_layout.addWidget(self.import_avg_btn)
+        btn_layout.addStretch()
+        self.layout.addLayout(btn_layout)
+
         self.tab_widget = QTabWidget()
         self.layout.addWidget(self.tab_widget)
 
@@ -120,3 +129,11 @@ class DataPlotter(QWidget):
         self.gait_cycles = None
         for _, config in self.plot_types_config.items():
             config['tab'].clear_data()
+
+    def import_averages(self):
+        data = PXDExporter.import_averages(self)
+        if data:
+            for plot_type, config in self.plot_types_config.items():
+                if hasattr(config['tab'], 'set_imported_averages'):
+                    config['tab'].set_imported_averages(data.get(plot_type, {}))
+            self.plot_data()

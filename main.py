@@ -1,4 +1,7 @@
 import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from PyQt5.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QWidget, QLabel, QSplitter, QVBoxLayout, QSlider, QPushButton
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent

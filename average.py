@@ -3,6 +3,7 @@ import c3d
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTabWidget, QGridLayout, QFileDialog, QScrollArea, QLabel, QComboBox, QProgressDialog
 from PyQt5.QtCore import Qt
 from generic_plotter import EditablePlotWidget
+from pxdExport import PXDExporter
 
 class AverageSubTab(QWidget):
     def __init__(self, plot_type):
@@ -269,6 +270,9 @@ class AverageTab(QWidget):
         self.import_btn = QPushButton("Import C3D Files")
         self.import_btn.clicked.connect(self.import_files)
         btn_layout.addWidget(self.import_btn)
+        self.export_btn = QPushButton("Export Averages")
+        self.export_btn.clicked.connect(self.export_averages)
+        btn_layout.addWidget(self.export_btn)
         btn_layout.addStretch()
         self.layout.addLayout(btn_layout)
         
@@ -416,3 +420,11 @@ class AverageTab(QWidget):
         self.angles_tab.set_data(angles_data)
         self.moments_tab.set_data(moments_data)
         self.powers_tab.set_data(powers_data)
+
+    def export_averages(self):
+        data = {
+            'ANGLES': self.angles_tab.data,
+            'MOMENTS': self.moments_tab.data,
+            'POWERS': self.powers_tab.data
+        }
+        PXDExporter.export_averages(data, self)

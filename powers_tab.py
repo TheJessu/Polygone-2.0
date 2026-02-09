@@ -110,6 +110,7 @@ class PowersTab(QWidget):
         self.marker_labels = None
         self.highlighted_line = None  # Track the currently highlighted line
         self.editable_values = {}
+        self.imported_averages = {}
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -243,6 +244,15 @@ class PowersTab(QWidget):
                 # Set labelsplot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)', fontsize=8, labelpad=-5)
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)', fontsize=8, labelpad=-1)
                 plot_widget.ax.set_ylabel('Power (W/kg)')
+
+                if use_gait_cycle and self.imported_averages:
+                    if group in self.imported_averages and component in self.imported_averages[group]:
+                        avg = self.imported_averages[group][component]
+                        mean = np.array(avg['mean'])
+                        std = np.array(avg['std'])
+                        x = np.linspace(0, 100, len(mean))
+                        plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
+                        plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
 
                 # Plot data
                 if use_gait_cycle:
@@ -515,3 +525,8 @@ class PowersTab(QWidget):
         self.powers_plotter.lines = {}
         self.gait_cycle_plotter.lines = {}
         self.highlighted_line = None
+
+    def set_imported_averages(self, data):
+        self.imported_averages = data
+        if self.markers_data is not None:
+             self.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots, self.frame_range)
