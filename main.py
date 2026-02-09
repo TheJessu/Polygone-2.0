@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
         # Connect signals between DataPlotter and GaitAnalysisTab
         self.data_plotter.editable_values_updated.connect(self.gait_analysis_tab.set_editable_values)
         self.gait_analysis_tab.editable_value_changed.connect(self.data_plotter.on_editable_value_changed)
+        self.data_plotter.editable_values_updated.connect(self.average_tab.set_editable_values)
 
         # Set splitter proportions
         splitter.setSizes([1100, 500])

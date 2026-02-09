@@ -31,6 +31,7 @@ class AverageSubTab(QWidget):
         
         self.plots = [] 
         self.data = {} # Stores aggregated data: data[group][component] = list of arrays
+        self.editable_values = {}
         
         # Default groups to show empty plots
         if plot_type == 'ANGLES':
@@ -40,6 +41,10 @@ class AverageSubTab(QWidget):
         else:
             self.groups = []
             
+        self.update_layout()
+
+    def set_editable_values(self, editable_values):
+        self.editable_values = editable_values
         self.update_layout()
 
     def update_layout(self):
@@ -124,9 +129,6 @@ class AverageSubTab(QWidget):
                 title = 'Knee Power'
             elif group.lower() == 'ankle' and component == 'z':
                 title = 'Ankle Power'
-
-        ax.set_title(title, fontsize=10)
-        ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
 
         # Set limits and text labels
         ymin, ymax = -50, 50
@@ -219,6 +221,17 @@ class AverageSubTab(QWidget):
                 ax.text(-0.05, 0.50, 'W/kg', transform=ax.transAxes, ha='right', va='center', fontsize=8)
                 ax.text(-0.05, 0.75, 'Gen', transform=ax.transAxes, ha='right', va='center', fontsize=8)
 
+        # Check for edited values
+        plot_key = f"{self.plot_type}_{group}_{component}"
+        if plot_key in self.editable_values:
+            edited = self.editable_values[plot_key]
+            ymin = edited.get('ymin', ymin)
+            ymax = edited.get('ymax', ymax)
+            if 'title' in edited:
+                title = edited['title']
+
+        ax.set_title(title, fontsize=10)
+        ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
         ax.set_ylim(ymin, ymax)
         ax.set_yticks([ymin, ymax])
         ax.set_xlim(0, 100)
@@ -283,6 +296,11 @@ class AverageTab(QWidget):
         self.tab_widget.addTab(self.angles_tab, "Angles")
         self.tab_widget.addTab(self.moments_tab, "Moments")
         self.tab_widget.addTab(self.powers_tab, "Powers")
+
+    def set_editable_values(self, editable_values):
+        self.angles_tab.set_editable_values(editable_values)
+        self.moments_tab.set_editable_values(editable_values)
+        self.powers_tab.set_editable_values(editable_values)
 
     def import_files(self):
         files, _ = QFileDialog.getOpenFileNames(self, "Import C3D Files", "", "C3D Files (*.c3d)")
