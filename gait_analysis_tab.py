@@ -842,11 +842,18 @@ class GaitAnalysisTab(QWidget):
                 is_visible = (i in self.kinematics_red_visible_files)
             elif self.kinematics_side_filter == "Green":
                 is_visible = (i in self.kinematics_green_visible_files)
-            
+
             button.setChecked(is_visible)
-            
+
             if self.highlighted_section == 'kinematics' and self.highlighted_line_key and f"_file_{i}" in self.highlighted_line_key:
-                button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+                if is_visible:
+                    button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+                else:
+                    # Dehighlight since the line is no longer visible
+                    self.gait_cycle_plotter.highlight_line(self.highlighted_line_key, highlight=False)
+                    self.highlighted_line_key = None
+                    self.highlighted_section = None
+                    button.setStyleSheet("QPushButton { background-color: white; color: black; }")
             elif is_visible:
                 button.setStyleSheet("QPushButton { background-color: #ADD8E6; color: black; }")
             else:
@@ -861,11 +868,18 @@ class GaitAnalysisTab(QWidget):
                 is_visible = (i in self.kinetics_red_visible_files)
             elif self.kinetics_side_filter == "Green":
                 is_visible = (i in self.kinetics_green_visible_files)
-            
+
             button.setChecked(is_visible)
-            
+
             if self.highlighted_section == 'kinetics' and self.highlighted_line_key and f"_file_{i}" in self.highlighted_line_key:
-                button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+                if is_visible:
+                    button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+                else:
+                    # Dehighlight since the line is no longer visible
+                    self.gait_cycle_plotter.highlight_line(self.highlighted_line_key, highlight=False)
+                    self.highlighted_line_key = None
+                    self.highlighted_section = None
+                    button.setStyleSheet("QPushButton { background-color: white; color: black; }")
             elif is_visible:
                 button.setStyleSheet("QPushButton { background-color: #ADD8E6; color: black; }")
             else:
@@ -956,11 +970,18 @@ class GaitAnalysisTab(QWidget):
                 is_visible = (i in self.moments_red_visible_files)
             elif self.moments_side_filter == "Green":
                 is_visible = (i in self.moments_green_visible_files)
-            
+
             button.setChecked(is_visible)
-            
+
             if self.highlighted_section == 'moments' and self.highlighted_line_key and f"_file_{i}" in self.highlighted_line_key:
-                button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+                if is_visible:
+                    button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+                else:
+                    # Dehighlight since the line is no longer visible
+                    self.gait_cycle_plotter.highlight_line(self.highlighted_line_key, highlight=False)
+                    self.highlighted_line_key = None
+                    self.highlighted_section = None
+                    button.setStyleSheet("QPushButton { background-color: white; color: black; }")
             elif is_visible:
                 button.setStyleSheet("QPushButton { background-color: #ADD8E6; color: black; }")
             else:
