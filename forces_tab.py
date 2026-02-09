@@ -29,7 +29,7 @@ class PlotWidget(EditablePlotWidget):
                     self.line_clicked.emit(('forces', key))
                     return
             # Check gait_cycle_plotter lines
-            for line_key, (line, _, _, _) in self.gait_cycle_plotter.lines.items():
+            for line_key, (line, _, _, _, _) in self.gait_cycle_plotter.lines.items():
                 if line == event.artist:
                     self.line_clicked.emit(('gait', line_key))
                     return

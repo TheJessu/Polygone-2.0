@@ -10,13 +10,33 @@ from multiline import MultilineImporter
 from pxdExport import PXDExporter
 
 class GaitPlotWidget(EditablePlotWidget):
-    def __init__(self, parent=None):
+    line_clicked = pyqtSignal(str)
+
+    def __init__(self, gait_cycle_plotter, parent=None):
         super().__init__(parent)
+        self.gait_cycle_plotter = gait_cycle_plotter
+        self.canvas.mpl_connect('pick_event', self.on_line_pick)
+
+    def on_line_pick(self, event):
+        for key, (line, _, _, _, _) in self.gait_cycle_plotter.lines.items():
+            if line == event.artist:
+                self.line_clicked.emit(key)
+                return
 
 class PlotWidget(EditablePlotWidget):
-    def __init__(self, parent=None):
+    line_clicked = pyqtSignal(str)
+
+    def __init__(self, gait_cycle_plotter, parent=None):
         super().__init__(parent)
+        self.gait_cycle_plotter = gait_cycle_plotter
         self.canvas.setFixedSize(200, 200)
+        self.canvas.mpl_connect('pick_event', self.on_line_pick)
+
+    def on_line_pick(self, event):
+        for key, (line, _, _, _, _) in self.gait_cycle_plotter.lines.items():
+            if line == event.artist:
+                self.line_clicked.emit(key)
+                return
 
 class GaitAnalysisTab(QWidget):
     editable_value_changed = pyqtSignal(str, str, dict)  # key, type, value_dict
@@ -143,6 +163,8 @@ class GaitAnalysisTab(QWidget):
         self.marker_labels = None
         self.current_frame = 0
         self.editable_values = {}
+        self.highlighted_line_key = None
+        self.highlighted_section = None
 
         self.setup_kinematics_plots()
         self.setup_kinetics_plots()
@@ -155,11 +177,12 @@ class GaitAnalysisTab(QWidget):
         for group in groups:
             col = 0
             for comp in components:
-                plot_widget = PlotWidget(self.kinematics_tab)
+                plot_widget = PlotWidget(self.gait_cycle_plotter, self.kinematics_tab)
                 plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
                 plot_widget.ymin_double_clicked.connect(self.on_ymin_double_clicked)
                 plot_widget.ymax_double_clicked.connect(self.on_ymax_double_clicked)
                 plot_widget.title_double_clicked.connect(self.on_title_double_clicked)
+                plot_widget.line_clicked.connect(lambda key: self.on_line_clicked(key, 'kinematics'))
                 self.kinematics_layout.addWidget(plot_widget, row, col)
                 self.kinematics_plots.append((plot_widget, group, comp))
                 col += 1
@@ -186,8 +209,9 @@ class GaitAnalysisTab(QWidget):
         for i, (group, comp, plot_type, y_label, *unit_factor) in enumerate(plots_config):
             row = i // 3
             col = i % 3
-            plot_widget = GaitPlotWidget(self.kinetics_tab)
+            plot_widget = GaitPlotWidget(self.gait_cycle_plotter, self.kinetics_tab)
             plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
+            plot_widget.line_clicked.connect(lambda key: self.on_line_clicked(key, 'kinetics'))
             self.kinetics_layout.addWidget(plot_widget, row, col)
             self.kinetics_plots.append((plot_widget, group, comp, plot_type, y_label, unit_factor[0] if unit_factor else 1))
 
@@ -199,11 +223,12 @@ class GaitAnalysisTab(QWidget):
         for group in groups:
             col = 0
             for comp in components:
-                plot_widget = GaitPlotWidget(self.moments_tab)
+                plot_widget = GaitPlotWidget(self.gait_cycle_plotter, self.moments_tab)
                 plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
                 plot_widget.ymin_double_clicked.connect(self.on_ymin_double_clicked)
                 plot_widget.ymax_double_clicked.connect(self.on_ymax_double_clicked)
                 plot_widget.title_double_clicked.connect(self.on_title_double_clicked)
+                plot_widget.line_clicked.connect(lambda key: self.on_line_clicked(key, 'moments'))
                 self.moments_layout.addWidget(plot_widget, row, col)
                 self.moments_plots.append((plot_widget, group, comp))
                 col += 1
@@ -259,6 +284,7 @@ class GaitAnalysisTab(QWidget):
         for plot_widget, *_ in self.moments_plots:
             plot_widget.ax.clear()
         self.vlines = []
+        self.gait_cycle_plotter.lines = {}
 
         # Plot kinematics
         for plot_widget, group, comp in self.kinematics_plots:
@@ -286,7 +312,7 @@ class GaitAnalysisTab(QWidget):
                         x = np.linspace(0, 100, len(mean))
                         plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
                         plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
-                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter)
+                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter, key_suffix="_main")
 
             # Plot multiline data
             if self.multiline_importer.get_num_files() > 0:
@@ -294,18 +320,18 @@ class GaitAnalysisTab(QWidget):
                     linestyle = self.line_styles[i % len(self.line_styles)]
                     if self.kinematics_side_filter == "All":
                         if i == self.kinematics_visible_file_index:
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=self.red_colors[0], linestyle=linestyle)
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color=self.green_colors[0], linestyle=linestyle)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=self.red_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color=self.green_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
                     elif self.kinematics_side_filter == "Red":
                         if i in self.kinematics_red_visible_files:
                             idx_in_red = list(self.kinematics_red_visible_files).index(i)
                             color = self.red_colors[idx_in_red % len(self.red_colors)]
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=color, linestyle=linestyle)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")
                     elif self.kinematics_side_filter == "Green":
                         if i in self.kinematics_green_visible_files:
                             idx_in_green = list(self.kinematics_green_visible_files).index(i)
                             color = self.green_colors[idx_in_green % len(self.green_colors)]
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color=color, linestyle=linestyle)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")
             # Set default y-limits for kinematics (angles)
             if group.lower() == 'spine':
                 ymin, ymax = -20, 20
@@ -401,7 +427,7 @@ class GaitAnalysisTab(QWidget):
                         x = np.linspace(0, 100, len(mean))
                         plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
                         plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
-                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.kinetics_side_filter)
+                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.kinetics_side_filter, key_suffix="_main")
 
             # Check for edited values
             plot_key = f"{plot_type}_{group}_{comp}"
@@ -449,18 +475,18 @@ class GaitAnalysisTab(QWidget):
                     linestyle = self.line_styles[i % len(self.line_styles)]
                     if self.kinetics_side_filter == "All":
                         if i == self.kinetics_visible_file_index:
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=self.red_colors[0], linestyle=linestyle)
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=self.green_colors[0], linestyle=linestyle)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=self.red_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=self.green_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
                     elif self.kinetics_side_filter == "Red":
                         if i in self.kinetics_red_visible_files:
                             idx_in_red = list(self.kinetics_red_visible_files).index(i)
                             color = self.red_colors[idx_in_red % len(self.red_colors)]
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=color, linestyle=linestyle)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")
                     elif self.kinetics_side_filter == "Green":
                         if i in self.kinetics_green_visible_files:
                             idx_in_green = list(self.kinetics_green_visible_files).index(i)
                             color = self.green_colors[idx_in_green % len(self.green_colors)]
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=color, linestyle=linestyle)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")
             plot_widget.canvas.draw()
 
         # Plot moments
@@ -494,7 +520,7 @@ class GaitAnalysisTab(QWidget):
                     x = np.linspace(0, 100, len(mean))
                     plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
                     plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.moments_side_filter)
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.moments_side_filter, key_suffix="_main")
 
             # Set default y-limits for moments
             if group.lower() == 'hip':
@@ -579,18 +605,18 @@ class GaitAnalysisTab(QWidget):
                     linestyle = self.line_styles[i % len(self.line_styles)]
                     if self.moments_side_filter == "All":
                         if i == self.moments_visible_file_index:
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=self.red_colors[0], linestyle=linestyle)
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=self.green_colors[0], linestyle=linestyle)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=self.red_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=self.green_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
                     elif self.moments_side_filter == "Red":
                         if i in self.moments_red_visible_files:
                             idx_in_red = list(self.moments_red_visible_files).index(i)
                             color = self.red_colors[idx_in_red % len(self.red_colors)]
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=color, linestyle=linestyle)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Red", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")
                     elif self.moments_side_filter == "Green":
                         if i in self.moments_green_visible_files:
                             idx_in_green = list(self.moments_green_visible_files).index(i)
                             color = self.green_colors[idx_in_green % len(self.green_colors)]
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=color, linestyle=linestyle)
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'MOMENTS', '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")
             plot_widget.canvas.draw()
 
         # Adjust subplot margins to prevent cut-off labels for moments
@@ -601,6 +627,28 @@ class GaitAnalysisTab(QWidget):
     def on_plot_double_clicked(self, plot_widget):
         # Simple zoom, but since fixed layout, maybe just ignore or implement basic zoom
         pass
+
+    def on_line_clicked(self, key, section):
+        if key == self.highlighted_line_key:
+            self.gait_cycle_plotter.highlight_line(key, highlight=False)
+            self.highlighted_line_key = None
+            self.highlighted_section = None
+        else:
+            if self.highlighted_line_key:
+                self.gait_cycle_plotter.highlight_line(self.highlighted_line_key, highlight=False)
+            
+            self.gait_cycle_plotter.highlight_line(key, highlight=True, color='blue')
+            self.highlighted_line_key = key
+            self.highlighted_section = section
+        
+        # Update buttons
+        self.update_kinematics_file_buttons_visibility()
+        self.update_kinetics_file_buttons_visibility()
+        self.update_moments_file_buttons_visibility()
+        
+        # Redraw plots to show highlight
+        for plot_widget, *_ in self.kinematics_plots + self.kinetics_plots + self.moments_plots:
+            plot_widget.canvas.draw()
 
     def on_ymin_double_clicked(self, plot_widget):
         # Handle ymin editing
@@ -802,6 +850,9 @@ class GaitAnalysisTab(QWidget):
                     button.setStyleSheet(f"QPushButton {{ background-color: {self.green_colors[0]}; color: white; }}")
                 else:
                     button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+            elif self.highlighted_section == 'kinematics' and self.highlighted_line_key and f"_file_{self.kinematics_file_buttons.index(button)}" in self.highlighted_line_key:
+                # Highlight button if corresponding line is highlighted
+                button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
@@ -829,6 +880,9 @@ class GaitAnalysisTab(QWidget):
                     button.setStyleSheet(f"QPushButton {{ background-color: {self.green_colors[0]}; color: white; }}")
                 else:
                     button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+            elif self.highlighted_section == 'kinetics' and self.highlighted_line_key and f"_file_{self.kinetics_file_buttons.index(button)}" in self.highlighted_line_key:
+                # Highlight button if corresponding line is highlighted
+                button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
@@ -930,6 +984,9 @@ class GaitAnalysisTab(QWidget):
                     button.setStyleSheet(f"QPushButton {{ background-color: {self.green_colors[0]}; color: white; }}")
                 else:
                     button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+            elif self.highlighted_section == 'moments' and self.highlighted_line_key and f"_file_{self.moments_file_buttons.index(button)}" in self.highlighted_line_key:
+                # Highlight button if corresponding line is highlighted
+                button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
