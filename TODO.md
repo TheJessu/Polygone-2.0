@@ -1,7 +1,9 @@
-# TODO: Add Line Styles to Imported Plot Lines in Gait Analysis Tabs
+# TODO for Gait Analysis Tab Button Colors and Multi-Import
 
-## Tasks
-- [x] Add line_styles list in GaitAnalysisTab.__init__
-- [x] Modify plot_data method in GaitAnalysisTab to compute linestyle for each file and pass it to plot_gait_cycle_data
-- [x] Update plot_gait_cycle_data in GaitCyclePlotter to accept linestyle parameter and apply it to ax.plot
-- [ ] Test the changes to ensure lines are plotted with varying styles and colors
+- [x] Modify update_kinematics_file_buttons_visibility to set checked buttons to light blue (#ADD8E6) regardless of side filter
+- [x] Modify update_kinetics_file_buttons_visibility to set checked buttons to light blue (#ADD8E6) regardless of side filter
+- [x] Modify update_moments_file_buttons_visibility to set checked buttons to light blue (#ADD8E6) regardless of side filter
+- [x] Modify import_c3d_for_kinematics to allow multiple file selection and import up to 5 files
+- [x] Modify import_c3d_for_kinetics to allow multiple file selection and import up to 5 files
+- [x] Modify import_c3d_for_moments to allow multiple file selection and import up to 5 files
+- [ ] Verify changes work as expected (buttons light blue when plot lines visible, white when invisible, blue when highlighted; multi-import works up to 5 files)

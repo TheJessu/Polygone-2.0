@@ -732,69 +732,76 @@ class GaitAnalysisTab(QWidget):
 
     def on_kinematics_side_changed(self, side):
         self.kinematics_side_filter = side
+        self.update_kinematics_file_buttons_visibility()
         self.plot_data()
 
     def on_kinetics_side_changed(self, side):
         self.kinetics_side_filter = side
+        self.update_kinetics_file_buttons_visibility()
         self.plot_data()
 
     def on_moments_side_changed(self, side):
         self.moments_side_filter = side
+        self.update_moments_file_buttons_visibility()
         self.plot_data()
 
     def import_c3d_for_kinematics(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Import C3D File", "", "C3D Files (*.c3d)")
-        if file_path:
-            if self.multiline_importer.import_c3d(file_path):
-                new_idx = self.multiline_importer.get_num_files() - 1
-                
-                # Set default visibility
-                if self.multiline_importer.get_num_files() == 1:
-                    self.kinematics_visible_file_index = 0
-                    self.kinetics_visible_file_index = 0
-                    self.moments_visible_file_index = 0
-                
-                self.kinematics_red_visible_files.add(new_idx)
-                self.kinematics_green_visible_files.add(new_idx)
-                self.kinetics_red_visible_files.add(new_idx)
-                self.kinetics_green_visible_files.add(new_idx)
-                self.moments_red_visible_files.add(new_idx)
-                self.moments_green_visible_files.add(new_idx)
-
-                self.update_kinematics_file_buttons()
-                self.update_kinetics_file_buttons()
-                self.update_moments_file_buttons()
-                self.plot_data()
-            else:
-                # Show error message
-                pass
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Import C3D Files", "", "C3D Files (*.c3d)")
+        if file_paths:
+            for file_path in file_paths:
+                if self.multiline_importer.get_num_files() >= 5:
+                    break  # Stop if limit reached
+                if self.multiline_importer.import_c3d(file_path):
+                    new_idx = self.multiline_importer.get_num_files() - 1
+                    
+                    # Set default visibility
+                    if self.multiline_importer.get_num_files() == 1:
+                        self.kinematics_visible_file_index = 0
+                        self.kinetics_visible_file_index = 0
+                        self.moments_visible_file_index = 0
+                    
+                    self.kinematics_red_visible_files.add(new_idx)
+                    self.kinematics_green_visible_files.add(new_idx)
+                    self.kinetics_red_visible_files.add(new_idx)
+                    self.kinetics_green_visible_files.add(new_idx)
+                    self.moments_red_visible_files.add(new_idx)
+                    self.moments_green_visible_files.add(new_idx)
+                else:
+                    # Show error message for failed import
+                    pass
+            self.update_kinematics_file_buttons()
+            self.update_kinetics_file_buttons()
+            self.update_moments_file_buttons()
+            self.plot_data()
 
     def import_c3d_for_kinetics(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Import C3D File", "", "C3D Files (*.c3d)")
-        if file_path:
-            if self.multiline_importer.import_c3d(file_path):
-                new_idx = self.multiline_importer.get_num_files() - 1
-                
-                # Set default visibility
-                if self.multiline_importer.get_num_files() == 1:
-                    self.kinematics_visible_file_index = 0
-                    self.kinetics_visible_file_index = 0
-                    self.moments_visible_file_index = 0
-                
-                self.kinematics_red_visible_files.add(new_idx)
-                self.kinematics_green_visible_files.add(new_idx)
-                self.kinetics_red_visible_files.add(new_idx)
-                self.kinetics_green_visible_files.add(new_idx)
-                self.moments_red_visible_files.add(new_idx)
-                self.moments_green_visible_files.add(new_idx)
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Import C3D Files", "", "C3D Files (*.c3d)")
+        if file_paths:
+            for file_path in file_paths:
+                if self.multiline_importer.get_num_files() >= 5:
+                    break  # Stop if limit reached
+                if self.multiline_importer.import_c3d(file_path):
+                    new_idx = self.multiline_importer.get_num_files() - 1
 
-                self.update_kinematics_file_buttons()
-                self.update_kinetics_file_buttons()
-                self.update_moments_file_buttons()
-                self.plot_data()
-            else:
-                # Show error message
-                pass
+                    # Set default visibility
+                    if self.multiline_importer.get_num_files() == 1:
+                        self.kinematics_visible_file_index = 0
+                        self.kinetics_visible_file_index = 0
+                        self.moments_visible_file_index = 0
+
+                    self.kinematics_red_visible_files.add(new_idx)
+                    self.kinematics_green_visible_files.add(new_idx)
+                    self.kinetics_red_visible_files.add(new_idx)
+                    self.kinetics_green_visible_files.add(new_idx)
+                    self.moments_red_visible_files.add(new_idx)
+                    self.moments_green_visible_files.add(new_idx)
+                else:
+                    # Show error message for failed import
+                    pass
+            self.update_kinematics_file_buttons()
+            self.update_kinetics_file_buttons()
+            self.update_moments_file_buttons()
+            self.plot_data()
 
     def update_kinematics_file_buttons(self):
         # Clear existing buttons
@@ -827,62 +834,40 @@ class GaitAnalysisTab(QWidget):
         self.update_kinetics_file_buttons_visibility()
 
     def update_kinematics_file_buttons_visibility(self):
-        if self.kinematics_side_filter == "All":
-            for button in self.kinematics_file_buttons:
-                button.setVisible(True)
-            # Only one visible at a time
-            for i, button in enumerate(self.kinematics_file_buttons):
-                button.setChecked(i == self.kinematics_visible_file_index)
-        elif self.kinematics_side_filter == "Red":
-            for button in self.kinematics_file_buttons:
-                button.setVisible(True)
-                button.setChecked(button in self.kinematics_red_visible_files)
-        elif self.kinematics_side_filter == "Green":
-            for button in self.kinematics_file_buttons:
-                button.setVisible(True)
-                button.setChecked(button in self.kinematics_green_visible_files)
-        # Set button colors based on checked state and side filter
-        for button in self.kinematics_file_buttons:
-            if button.isChecked():
-                if self.kinematics_side_filter == "Red":
-                    button.setStyleSheet(f"QPushButton {{ background-color: {self.red_colors[0]}; color: white; }}")
-                elif self.kinematics_side_filter == "Green":
-                    button.setStyleSheet(f"QPushButton {{ background-color: {self.green_colors[0]}; color: white; }}")
-                else:
-                    button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
-            elif self.highlighted_section == 'kinematics' and self.highlighted_line_key and f"_file_{self.kinematics_file_buttons.index(button)}" in self.highlighted_line_key:
-                # Highlight button if corresponding line is highlighted
+        for i, button in enumerate(self.kinematics_file_buttons):
+            is_visible = False
+            if self.kinematics_side_filter == "All":
+                is_visible = (i == self.kinematics_visible_file_index)
+            elif self.kinematics_side_filter == "Red":
+                is_visible = (i in self.kinematics_red_visible_files)
+            elif self.kinematics_side_filter == "Green":
+                is_visible = (i in self.kinematics_green_visible_files)
+            
+            button.setChecked(is_visible)
+            
+            if self.highlighted_section == 'kinematics' and self.highlighted_line_key and f"_file_{i}" in self.highlighted_line_key:
                 button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+            elif is_visible:
+                button.setStyleSheet("QPushButton { background-color: #ADD8E6; color: black; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
     def update_kinetics_file_buttons_visibility(self):
-        if self.kinetics_side_filter == "All":
-            for button in self.kinetics_file_buttons:
-                button.setVisible(True)
-            # Only one visible at a time
-            for i, button in enumerate(self.kinetics_file_buttons):
-                button.setChecked(i == self.kinetics_visible_file_index)
-        elif self.kinetics_side_filter == "Red":
-            for button in self.kinetics_file_buttons:
-                button.setVisible(True)
-                button.setChecked(button in self.kinetics_red_visible_files)
-        elif self.kinetics_side_filter == "Green":
-            for button in self.kinetics_file_buttons:
-                button.setVisible(True)
-                button.setChecked(button in self.kinetics_green_visible_files)
-        # Set button colors based on checked state and side filter
-        for button in self.kinetics_file_buttons:
-            if button.isChecked():
-                if self.kinetics_side_filter == "Red":
-                    button.setStyleSheet(f"QPushButton {{ background-color: {self.red_colors[0]}; color: white; }}")
-                elif self.kinetics_side_filter == "Green":
-                    button.setStyleSheet(f"QPushButton {{ background-color: {self.green_colors[0]}; color: white; }}")
-                else:
-                    button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
-            elif self.highlighted_section == 'kinetics' and self.highlighted_line_key and f"_file_{self.kinetics_file_buttons.index(button)}" in self.highlighted_line_key:
-                # Highlight button if corresponding line is highlighted
+        for i, button in enumerate(self.kinetics_file_buttons):
+            is_visible = False
+            if self.kinetics_side_filter == "All":
+                is_visible = (i == self.kinetics_visible_file_index)
+            elif self.kinetics_side_filter == "Red":
+                is_visible = (i in self.kinetics_red_visible_files)
+            elif self.kinetics_side_filter == "Green":
+                is_visible = (i in self.kinetics_green_visible_files)
+            
+            button.setChecked(is_visible)
+            
+            if self.highlighted_section == 'kinetics' and self.highlighted_line_key and f"_file_{i}" in self.highlighted_line_key:
                 button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+            elif is_visible:
+                button.setStyleSheet("QPushButton { background-color: #ADD8E6; color: black; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
@@ -919,31 +904,33 @@ class GaitAnalysisTab(QWidget):
         self.plot_data()
 
     def import_c3d_for_moments(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Import C3D File", "", "C3D Files (*.c3d)")
-        if file_path:
-            if self.multiline_importer.import_c3d(file_path):
-                new_idx = self.multiline_importer.get_num_files() - 1
-                
-                # Set default visibility
-                if self.multiline_importer.get_num_files() == 1:
-                    self.kinematics_visible_file_index = 0
-                    self.kinetics_visible_file_index = 0
-                    self.moments_visible_file_index = 0
-                
-                self.kinematics_red_visible_files.add(new_idx)
-                self.kinematics_green_visible_files.add(new_idx)
-                self.kinetics_red_visible_files.add(new_idx)
-                self.kinetics_green_visible_files.add(new_idx)
-                self.moments_red_visible_files.add(new_idx)
-                self.moments_green_visible_files.add(new_idx)
-
-                self.update_kinematics_file_buttons()
-                self.update_kinetics_file_buttons()
-                self.update_moments_file_buttons()
-                self.plot_data()
-            else:
-                # Show error message
-                pass
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Import C3D Files", "", "C3D Files (*.c3d)")
+        if file_paths:
+            for file_path in file_paths:
+                if self.multiline_importer.get_num_files() >= 5:
+                    break  # Stop if limit reached
+                if self.multiline_importer.import_c3d(file_path):
+                    new_idx = self.multiline_importer.get_num_files() - 1
+                    
+                    # Set default visibility
+                    if self.multiline_importer.get_num_files() == 1:
+                        self.kinematics_visible_file_index = 0
+                        self.kinetics_visible_file_index = 0
+                        self.moments_visible_file_index = 0
+                    
+                    self.kinematics_red_visible_files.add(new_idx)
+                    self.kinematics_green_visible_files.add(new_idx)
+                    self.kinetics_red_visible_files.add(new_idx)
+                    self.kinetics_green_visible_files.add(new_idx)
+                    self.moments_red_visible_files.add(new_idx)
+                    self.moments_green_visible_files.add(new_idx)
+                else:
+                    # Show error message for failed import
+                    pass
+            self.update_kinematics_file_buttons()
+            self.update_kinetics_file_buttons()
+            self.update_moments_file_buttons()
+            self.plot_data()
 
     def update_moments_file_buttons(self):
         # Clear existing buttons
@@ -961,32 +948,21 @@ class GaitAnalysisTab(QWidget):
         self.update_moments_file_buttons_visibility()
 
     def update_moments_file_buttons_visibility(self):
-        if self.moments_side_filter == "All":
-            for button in self.moments_file_buttons:
-                button.setVisible(True)
-            # Only one visible at a time
-            for i, button in enumerate(self.moments_file_buttons):
-                button.setChecked(i == self.moments_visible_file_index)
-        elif self.moments_side_filter == "Red":
-            for button in self.moments_file_buttons:
-                button.setVisible(True)
-                button.setChecked(button in self.moments_red_visible_files)
-        elif self.moments_side_filter == "Green":
-            for button in self.moments_file_buttons:
-                button.setVisible(True)
-                button.setChecked(button in self.moments_green_visible_files)
-        # Set button colors based on checked state and side filter
-        for button in self.moments_file_buttons:
-            if button.isChecked():
-                if self.moments_side_filter == "Red":
-                    button.setStyleSheet(f"QPushButton {{ background-color: {self.red_colors[0]}; color: white; }}")
-                elif self.moments_side_filter == "Green":
-                    button.setStyleSheet(f"QPushButton {{ background-color: {self.green_colors[0]}; color: white; }}")
-                else:
-                    button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
-            elif self.highlighted_section == 'moments' and self.highlighted_line_key and f"_file_{self.moments_file_buttons.index(button)}" in self.highlighted_line_key:
-                # Highlight button if corresponding line is highlighted
+        for i, button in enumerate(self.moments_file_buttons):
+            is_visible = False
+            if self.moments_side_filter == "All":
+                is_visible = (i == self.moments_visible_file_index)
+            elif self.moments_side_filter == "Red":
+                is_visible = (i in self.moments_red_visible_files)
+            elif self.moments_side_filter == "Green":
+                is_visible = (i in self.moments_green_visible_files)
+            
+            button.setChecked(is_visible)
+            
+            if self.highlighted_section == 'moments' and self.highlighted_line_key and f"_file_{i}" in self.highlighted_line_key:
                 button.setStyleSheet("QPushButton { background-color: blue; color: white; }")
+            elif is_visible:
+                button.setStyleSheet("QPushButton { background-color: #ADD8E6; color: black; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
