@@ -356,27 +356,37 @@ class ForcesTab(QWidget):
     def on_line_clicked(self, line_info):
         plotter_type, key = line_info
 
-        # Unhighlight previous line
-        if self.highlighted_line is not None:
-            prev_plotter_type, prev_key = self.highlighted_line
-            if prev_plotter_type == 'forces':
-                self.forces_plotter.highlight_line(prev_key, highlight=False)
-            elif prev_plotter_type == 'gait':
-                self.gait_cycle_plotter.highlight_line(prev_key, highlight=False)
+        # Check if clicking the same line to de-highlight
+        if self.highlighted_line == line_info:
+            # De-highlight
+            if plotter_type == 'forces':
+                self.forces_plotter.highlight_line(key, highlight=False)
+            elif plotter_type == 'gait':
+                self.gait_cycle_plotter.highlight_line(key, highlight=False)
+            self.highlighted_line = None
+            self.value_label.setText("")
+        else:
+            # Unhighlight previous line
+            if self.highlighted_line is not None:
+                prev_plotter_type, prev_key = self.highlighted_line
+                if prev_plotter_type == 'forces':
+                    self.forces_plotter.highlight_line(prev_key, highlight=False)
+                elif prev_plotter_type == 'gait':
+                    self.gait_cycle_plotter.highlight_line(prev_key, highlight=False)
 
-        # Highlight new line
-        if plotter_type == 'forces':
-            self.forces_plotter.highlight_line(key, highlight=True)
-        elif plotter_type == 'gait':
-            self.gait_cycle_plotter.highlight_line(key, highlight=True)
-        self.highlighted_line = line_info
+            # Highlight new line
+            if plotter_type == 'forces':
+                self.forces_plotter.highlight_line(key, highlight=True)
+            elif plotter_type == 'gait':
+                self.gait_cycle_plotter.highlight_line(key, highlight=True)
+            self.highlighted_line = line_info
 
-        # Update display info
-        if plotter_type == 'forces':
-            info = self.forces_plotter.get_line_info(key, self.current_frame, self.gait_cycles)
-        elif plotter_type == 'gait':
-            info = self.gait_cycle_plotter.get_line_info(key, self.current_frame, self.gait_cycles, 'FORCES')
-        self.value_label.setText(info)
+            # Update display info
+            if plotter_type == 'forces':
+                info = self.forces_plotter.get_line_info(key, self.current_frame, self.gait_cycles)
+            elif plotter_type == 'gait':
+                info = self.gait_cycle_plotter.get_line_info(key, self.current_frame, self.gait_cycles, 'FORCES')
+            self.value_label.setText(info)
 
         # Redraw all plots
         for plot in self.plots:

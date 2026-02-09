@@ -236,7 +236,12 @@ class GenericDataPlotter:
             line, _, _, _, original_color, original_linewidth = self.lines[key]
             if highlight:
                 line.set_linewidth(4)
-                line.set_color('blue')
+                if original_color == 'red':
+                    line.set_color('darkred')
+                elif original_color == 'green':
+                    line.set_color('darkgreen')
+                else:
+                    line.set_color('blue')  # fallback
             else:
                 # Reset to original color and linewidth
                 line.set_linewidth(original_linewidth)

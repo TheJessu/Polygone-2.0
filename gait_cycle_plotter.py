@@ -243,7 +243,12 @@ class GaitCyclePlotter:
             line, _, _, _ = self.lines[line_key]
             if highlight:
                 line.set_linewidth(4)
-                line.set_color('blue')
+                if 'mean_left' in line_key:
+                    line.set_color('darkred')
+                elif 'mean_right' in line_key:
+                    line.set_color('darkgreen')
+                else:
+                    line.set_color('blue')  # fallback
             else:
                 # Reset to original color
                 if 'mean_left' in line_key:
