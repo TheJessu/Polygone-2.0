@@ -15,6 +15,7 @@ class GaitPlotWidget(EditablePlotWidget):
     def __init__(self, gait_cycle_plotter, parent=None):
         super().__init__(parent)
         self.gait_cycle_plotter = gait_cycle_plotter
+        self.canvas.setFixedSize(200, 200)
         self.canvas.mpl_connect('pick_event', self.on_line_pick)
 
     def on_line_pick(self, event):
@@ -286,7 +287,7 @@ class GaitAnalysisTab(QWidget):
             elif group.lower() == 'footprogress':
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else "Foot Progression" if comp == "z" else comp.upper()}'
             plot_widget.ax.set_title(title, fontsize=10)
-            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
+            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=5, labelpad=-1)
             if self.main_visible:
                 if self.imported_averages and 'ANGLES' in self.imported_averages:
                     if group in self.imported_averages['ANGLES'] and comp in self.imported_averages['ANGLES'][group]:
@@ -401,7 +402,7 @@ class GaitAnalysisTab(QWidget):
             else:
                 title = f'{group} - {comp.upper()}'
             plot_widget.ax.set_title(title, fontsize=10)
-            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
+            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=5, labelpad=-1)
             if plot_type in ['ANGLES', 'MOMENTS']:
                 plot_widget.ax.set_ylabel('')
             else:
@@ -479,7 +480,7 @@ class GaitAnalysisTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels for kinetics
         for plot_widget, *_ in self.kinetics_plots:
-            plot_widget.figure.subplots_adjust(left=0.3, right=0.9, top=0.85, bottom=0.25)
+            plot_widget.figure.subplots_adjust(left=0.25, right=0.95, top=0.9, bottom=0.2)
             plot_widget.canvas.draw()
 
         # Plot moments
@@ -504,7 +505,7 @@ class GaitAnalysisTab(QWidget):
             elif group.lower() == 'ankle' and comp == 'z':
                 title = f'{group} - Ankle Rotation Moment'
             plot_widget.ax.set_title(title, fontsize=10)
-            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
+            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=5, labelpad=-1)
             if self.imported_averages and 'MOMENTS' in self.imported_averages:
                 if group in self.imported_averages['MOMENTS'] and comp in self.imported_averages['MOMENTS'][group]:
                     avg = self.imported_averages['MOMENTS'][group][comp]
@@ -614,7 +615,7 @@ class GaitAnalysisTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels for moments
         for plot_widget, *_ in self.moments_plots:
-            plot_widget.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
+            plot_widget.figure.subplots_adjust(left=0.25, right=0.95, top=0.9, bottom=0.2)
             plot_widget.canvas.draw()
 
     def on_plot_double_clicked(self, plot_widget):

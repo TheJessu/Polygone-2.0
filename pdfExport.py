@@ -47,7 +47,7 @@ class PDFExporter:
                     used_c3d_files, used_pxd = self._collect_used_files(gait_analysis_tab, tab_name, side)
                     fig = self._export_layout_to_figure(layout, title, used_c3d_files, used_pxd)
                     if fig:
-                        pdf.savefig(fig)
+                        pdf.savefig(fig, dpi=300)
                         plt.close(fig)
 
         # Restore original tab and side filters
