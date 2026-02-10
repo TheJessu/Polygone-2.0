@@ -60,6 +60,7 @@ class DataPlotter(QWidget):
             self.tab_widget.addTab(config['tab'], plot_type)
             # Connect editable value changed signal
             config['tab'].editable_value_changed.connect(self.on_editable_value_changed)
+        self.tab_widget.currentChanged.connect(self.on_tab_changed)
 
     def load_data(self, markers_data, marker_types, marker_labels, angle_units='degrees', body_mass=None):
         self.markers_data = markers_data
@@ -84,8 +85,9 @@ class DataPlotter(QWidget):
 
     def set_current_frame(self, frame_index):
         self.current_frame = frame_index
-        for plot_type, config in self.plot_types_config.items():
-            config['tab'].set_current_frame(frame_index)
+        current_tab = self.tab_widget.currentWidget()
+        if current_tab:
+            current_tab.set_current_frame(frame_index)
 
     def set_gait_info(self, events_data, frame_rate=100, first_frame=0):
         if not events_data:
@@ -137,3 +139,8 @@ class DataPlotter(QWidget):
                 if hasattr(config['tab'], 'set_imported_averages'):
                     config['tab'].set_imported_averages(data.get(plot_type, {}))
             self.plot_data()
+
+    def on_tab_changed(self, index):
+        current_tab = self.tab_widget.widget(index)
+        if current_tab:
+            current_tab.set_current_frame(self.current_frame)
