@@ -33,14 +33,13 @@ class MainWindow(QMainWindow):
         content_layout = QHBoxLayout()
         main_layout.addLayout(content_layout, 1)
 
-        # Create marker outliner
-        self.marker_outliner = MarkerOutliner()
-        self.marker_outliner.setMaximumWidth(350)
-        content_layout.addWidget(self.marker_outliner)
-
-        # Create splitter for main content
+        # Create splitter for main content including marker outliner
         splitter = QSplitter(Qt.Horizontal)
         content_layout.addWidget(splitter)
+
+        # Create marker outliner
+        self.marker_outliner = MarkerOutliner()
+        splitter.addWidget(self.marker_outliner)
 
         # Create C3D viewer
         self.c3d_viewer = C3DViewer()
@@ -76,7 +75,7 @@ class MainWindow(QMainWindow):
         self.data_plotter.editable_values_updated.connect(self.average_tab.set_editable_values)
 
         # Set splitter proportions
-        splitter.setSizes([1100, 500])
+        splitter.setSizes([250, 1100, 500])
 
         # Create timeline controls at bottom
         self.timeline_widget = TimelineWidget()

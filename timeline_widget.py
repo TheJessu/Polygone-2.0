@@ -102,7 +102,7 @@ class TimelineWidget(QWidget):
         self.draw_events(width, height)
 
         # Draw scrubber
-        self.scrubber = self.scene.addRect(0, height - 35, 10, 30, QPen(Qt.red), QBrush(Qt.red))
+        self.scrubber = self.scene.addRect(0, height - 35, 10, 30, QPen(Qt.blue), QBrush(Qt.blue))
 
         # Add current frame label on scrubber
         font = QFont("Arial", 8)

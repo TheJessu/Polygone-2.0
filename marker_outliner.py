@@ -68,8 +68,7 @@ class MarkerOutliner(QWidget):
                 marker_item.setData(0, Qt.UserRole, marker_index)  # Store marker index
                 type_item.addChild(marker_item)
 
-        # Expand all type groups by default
-        self.marker_list.expandAll()
+        # Type groups are now collapsed by default
 
     def clear_markers(self):
         """Clear the marker list."""
