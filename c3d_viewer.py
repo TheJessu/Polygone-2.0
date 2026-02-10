@@ -114,6 +114,7 @@ class C3DViewer(QWidget):
         self.force_plate_actors = []  # Store force plate actors
         self.segments = [] # Store segment data for drawing lines
         self.body_mass = None  # Body mass from C3D file
+        self.segment_indices = [] # Store precomputed indices for segments
 
         # Initialize interactor and picker
         self.iren.Initialize()
@@ -447,6 +448,7 @@ class C3DViewer(QWidget):
 
             # Create lines between markers based on segments
             marker_label_to_index = {label: i for i, label in enumerate(self.marker_labels)}
+            self.segment_indices = []
             for segment in self.segments:
                 color_name = segment.get('color')
                 if not color_name or color_name not in self.vtk_colors:
@@ -459,6 +461,7 @@ class C3DViewer(QWidget):
                     marker2_index = marker_label_to_index.get(marker2_label)
 
                     if marker1_index is not None and marker2_index is not None:
+                        self.segment_indices.append((marker1_index, marker2_index))
                         p1 = markers[0, marker1_index, :3]
                         p2 = markers[0, marker2_index, :3]
 
@@ -498,6 +501,7 @@ class C3DViewer(QWidget):
         self.line_actors.clear()
         self.line_sources.clear()
         self.force_plate_visualizer.clear()  # Clear force plate actors
+        self.segment_indices = []
         self.ren.RemoveActor(self.grid_actor)
         self.markers_data = None
         self.trajectory_update_counter = 0  # Reset counter
@@ -565,22 +569,13 @@ class C3DViewer(QWidget):
             self.update_trajectories(frame_index, self.selected_markers)
 
             # Update line positions
-            marker_label_to_index = {label: i for i, label in enumerate(self.marker_labels)}
-            line_idx = 0
-            for segment in self.segments:
-                for link in segment.get('links', []):
-                    marker1_label, marker2_label = link
-                    marker1_index = marker_label_to_index.get(marker1_label)
-                    marker2_index = marker_label_to_index.get(marker2_label)
-
-                    if marker1_index is not None and marker2_index is not None:
-                        p1 = self.markers_data[frame_index, marker1_index, :3]
-                        p2 = self.markers_data[frame_index, marker2_index, :3]
-                        
-                        if line_idx < len(self.line_sources):
-                            self.line_sources[line_idx].SetPoint1(p1)
-                            self.line_sources[line_idx].SetPoint2(p2)
-                            line_idx += 1
+            if hasattr(self, 'segment_indices'):
+                for i, (idx1, idx2) in enumerate(self.segment_indices):
+                    if i < len(self.line_sources):
+                        p1 = self.markers_data[frame_index, idx1, :3]
+                        p2 = self.markers_data[frame_index, idx2, :3]
+                        self.line_sources[i].SetPoint1(p1)
+                        self.line_sources[i].SetPoint2(p2)
 
             # Update force plate visualization
             self.force_plate_visualizer.update_force_visualization(frame_index)

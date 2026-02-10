@@ -69,6 +69,8 @@ class MainWindow(QMainWindow):
         self.average_tab = AverageTab()
         self.right_tabs.addTab(self.average_tab, "Average")
 
+        self.right_tabs.currentChanged.connect(self.on_tab_changed)
+
         # Connect signals between DataPlotter and GaitAnalysisTab
         self.data_plotter.editable_values_updated.connect(self.gait_analysis_tab.set_editable_values)
         self.gait_analysis_tab.editable_value_changed.connect(self.data_plotter.on_editable_value_changed)
@@ -199,8 +201,11 @@ class MainWindow(QMainWindow):
             self.timeline_widget.set_current_frame(self.current_frame)
             self.c3d_viewer.set_frame(self.current_frame)
             self.marker_outliner.set_frame(self.current_frame)
-            self.data_plotter.set_current_frame(self.current_frame)
-            self.gait_analysis_tab.set_current_frame(self.current_frame)
+            
+            if self.right_tabs.currentWidget() == self.data_plotter:
+                self.data_plotter.set_current_frame(self.current_frame)
+            elif self.right_tabs.currentWidget() == self.gait_analysis_tab:
+                self.gait_analysis_tab.set_current_frame(self.current_frame)
 
     def update_frame_label(self):
         """Update the frame display label."""
@@ -211,6 +216,14 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, 'c3d_viewer') and hasattr(self.c3d_viewer, 'vtk_widget'):
             self.c3d_viewer.vtk_widget.GetRenderWindow().Render()
+
+    def on_tab_changed(self, index):
+        """Update the content of the newly selected tab."""
+        widget = self.right_tabs.widget(index)
+        if widget == self.data_plotter:
+            self.data_plotter.set_current_frame(self.current_frame)
+        elif widget == self.gait_analysis_tab:
+            self.gait_analysis_tab.set_current_frame(self.current_frame)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
