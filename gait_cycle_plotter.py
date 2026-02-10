@@ -240,7 +240,7 @@ class GaitCyclePlotter:
     def highlight_line(self, line_key, highlight=True, color=None):
         """Highlight or unhighlight a line."""
         if line_key in self.lines:
-            line, _, _, _, original_color = self.lines[line_key]
+            line, _, _, _, original_color = self.lines[line_key] # unpack all 5 elements
             if highlight:
                 line.set_linewidth(4)
                 if color:
@@ -261,7 +261,7 @@ class GaitCyclePlotter:
         if line_key not in self.lines:
             return ""
         line, _, label, plot_data, _ = self.lines[line_key]
-        # Determine side from line_key
+                # Determine side from line_key
         if 'mean_left' in line_key:
             side = 'left'
         elif 'mean_right' in line_key:

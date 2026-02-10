@@ -190,15 +190,15 @@ class GaitAnalysisTab(QWidget):
     def setup_kinetics_plots(self):
         # 3x3 grid
         plots_config = [
-            ('Hip', 'y', 'ANGLES', 'Angle (degrees)'),
-            ('Knee', 'y', 'ANGLES', 'Angle (degrees)'),
-            ('Ankle', 'y', 'ANGLES', 'Angle (degrees)'),
-            ('Hip', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
-            ('Knee', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
-            ('Ankle', 'y', 'MOMENTS', 'Moment (Nm/kg)'),
-            ('Hip', 'z', 'POWERS', 'Power (W/kg)'),
-            ('Knee', 'z', 'POWERS', 'Power (W/kg)'),
-            ('Ankle', 'z', 'POWERS', 'Power (W/kg)')
+            ('Hip', 'y', 'ANGLES'),
+            ('Knee', 'y', 'ANGLES'),
+            ('Ankle', 'y', 'ANGLES'),
+            ('Hip', 'y', 'MOMENTS'),
+            ('Knee', 'y', 'MOMENTS'),
+            ('Ankle', 'y', 'MOMENTS'),
+            ('Hip', 'z', 'POWERS'),
+            ('Knee', 'z', 'POWERS'),
+            ('Ankle', 'z', 'POWERS')
         ]
         for i, (group, comp, plot_type, y_label, *unit_factor) in enumerate(plots_config):
             row = i // 3
@@ -251,21 +251,6 @@ class GaitAnalysisTab(QWidget):
                 # Remove old vline
                 vline.remove()
         self.vlines = []
-        # Removed scrubber line for kinematics plots as per user request
-        # for plot_widget, *_ in self.kinematics_plots:
-        #     if self.gait_cycles:
-        #         for side in ['left', 'right']:
-        #             for start, end in self.gait_cycles.get(side, []):
-        #                 if start <= self.current_frame < end:
-        #                     cycle_len = end - start
-        #                     if cycle_len > 0:
-        #                         percentage = (self.current_frame - start) / cycle_len * 100
-        #                         vline = plot_widget.ax.axvline(x=percentage, color='red', linestyle='--', linewidth=2)
-        #                         self.vlines.append(vline)
-        #                         break
-        #             if self.vlines:
-        #                 break
-        #     plot_widget.canvas.draw()
 
     def plot_data(self):
         if self.markers_data is None or not self.gait_cycles:
@@ -284,6 +269,7 @@ class GaitAnalysisTab(QWidget):
         # Plot kinematics
         for plot_widget, group, comp in self.kinematics_plots:
             title = f'{group} - {comp.upper()}'
+
             if group.lower() == 'spine':
                 title = f'{group} - {"Trunk Sway" if comp == "x" else "Trunk Tilt" if comp == "y" else "Trunk Rotation"}'
             elif group.lower() == 'pelvis':
@@ -294,9 +280,10 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - {"Knee Flexion-Extension" if comp == "y" else "Knee Rotation" if comp == "z" else "Knee Valg/Varus"}'
             elif group.lower() == 'ankle':
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else comp.upper()}'
+
             elif group.lower() == 'footprogress':
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else "Foot Progression" if comp == "z" else comp.upper()}'
-            plot_widget.ax.set_title(title)
+            plot_widget.ax.set_title(title, fontsize=10)
             plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
             if self.main_visible:
                 if self.imported_averages and 'ANGLES' in self.imported_averages:
@@ -306,7 +293,8 @@ class GaitAnalysisTab(QWidget):
                         std = np.array(avg['std'])
                         x = np.linspace(0, 100, len(mean))
                         plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
-                        plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
+                        plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)                
+
                 self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter, key_suffix="_main")
 
             # Plot multiline data
@@ -315,13 +303,13 @@ class GaitAnalysisTab(QWidget):
                     linestyle = self.line_styles[i % len(self.line_styles)]
                     if self.kinematics_side_filter == "All":
                         if i == self.kinematics_visible_file_index:
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=self.red_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color=self.green_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=self.red_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")                
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color=self.green_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")                
                     elif self.kinematics_side_filter == "Red":
                         if i in self.kinematics_red_visible_files:
                             idx_in_red = list(self.kinematics_red_visible_files).index(i)
                             color = self.red_colors[idx_in_red % len(self.red_colors)]
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")                
                     elif self.kinematics_side_filter == "Green":
                         if i in self.kinematics_green_visible_files:
                             idx_in_green = list(self.kinematics_green_visible_files).index(i)
@@ -522,7 +510,7 @@ class GaitAnalysisTab(QWidget):
                     std = np.array(avg['std'])
                     x = np.linspace(0, 100, len(mean))
                     plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
-                    plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
+                    plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)                
             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', '', self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.moments_side_filter, key_suffix="_main")
 
             # Set default y-limits for moments
@@ -1041,7 +1029,7 @@ class GaitAnalysisTab(QWidget):
             self.plot_data()
 
     def import_averages(self):
-        data = PXDExporter.import_averages(self)
+        data = PXDExporter.import_averages(self)        
         if data:
             self.imported_averages = data
             self.plot_data()
