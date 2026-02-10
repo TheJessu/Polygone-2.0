@@ -302,17 +302,17 @@ class GaitAnalysisTab(QWidget):
 
             # Plot multiline data
             if self.multiline_importer.get_num_files() > 0:
-                for i, file_data in enumerate(self.multiline_importer.imported_files):
+                for i, file_data in reversed(list(enumerate(self.multiline_importer.imported_files))):
                     linestyle = self.line_styles[i % len(self.line_styles)]
                     if self.kinematics_side_filter == "All":
                         if i == self.kinematics_visible_file_index:
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=self.red_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")                
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color=self.green_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")                
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=self.red_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Green", color=self.green_colors[0], linestyle=linestyle, key_suffix=f"_file_{i}")
                     elif self.kinematics_side_filter == "Red":
                         if i in self.kinematics_red_visible_files:
                             idx_in_red = list(self.kinematics_red_visible_files).index(i)
                             color = self.red_colors[idx_in_red % len(self.red_colors)]
-                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")                
+                            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], 'ANGLES', '', self.current_frame, component=comp, side_filter="Red", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")
                     elif self.kinematics_side_filter == "Green":
                         if i in self.kinematics_green_visible_files:
                             idx_in_green = list(self.kinematics_green_visible_files).index(i)
@@ -460,7 +460,7 @@ class GaitAnalysisTab(QWidget):
             
             # Plot multiline data for Kinetics
             if self.multiline_importer.get_num_files() > 0:
-                for i, file_data in enumerate(self.multiline_importer.imported_files):
+                for i, file_data in reversed(list(enumerate(self.multiline_importer.imported_files))):
                     linestyle = self.line_styles[i % len(self.line_styles)]
                     if self.kinetics_side_filter == "All":
                         if i == self.kinetics_visible_file_index:
@@ -595,7 +595,7 @@ class GaitAnalysisTab(QWidget):
             
             # Plot multiline data for Moments
             if self.multiline_importer.get_num_files() > 0:
-                for i, file_data in enumerate(self.multiline_importer.imported_files):
+                for i, file_data in reversed(list(enumerate(self.multiline_importer.imported_files))):
                     linestyle = self.line_styles[i % len(self.line_styles)]
                     if self.moments_side_filter == "All":
                         if i == self.moments_visible_file_index:

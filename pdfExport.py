@@ -45,7 +45,7 @@ class PDFExporter:
                     # Export page
                     title = f"Gait 1 {tab_name.capitalize()} - {side}"
                     used_c3d_files, used_pxd = self._collect_used_files(gait_analysis_tab, tab_name, side)
-                    fig = self._export_layout_to_figure(layout, title, used_c3d_files, used_pxd)
+                    fig = self._export_layout_to_figure(layout, title, used_c3d_files, used_pxd, side)
                     if fig:
                         pdf.savefig(fig, dpi=300)
                         plt.close(fig)
@@ -108,7 +108,7 @@ class PDFExporter:
 
         return sorted(list(used_c3d_files)), used_pxd
 
-    def _export_layout_to_figure(self, layout, title, used_c3d_files=None, used_pxd=None):
+    def _export_layout_to_figure(self, layout, title, used_c3d_files=None, used_pxd=None, side=None):
         rows = layout.rowCount()
         cols = layout.columnCount()
 
@@ -116,8 +116,11 @@ class PDFExporter:
             return None
 
         # Create a figure for the PDF page.
-        # Increased size for better visibility: 10 x 14 inches.
-        fig = plt.figure(figsize=(10, 14))
+        # Adjust size based on side: larger for 'All' pages
+        if side == 'All':
+            fig = plt.figure(figsize=(12, 16))
+        else:
+            fig = plt.figure(figsize=(10, 14))
         fig.suptitle(title, fontsize=16, fontweight='bold')
 
         # Add text below the title if files were used

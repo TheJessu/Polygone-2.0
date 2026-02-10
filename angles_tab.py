@@ -168,7 +168,7 @@ class AnglesTab(QWidget):
         self.group_buttons.clear()
         self.group_visibility.clear()
 
-        grey_out_groups = ['Absankl', 'Ankle', 'Elbow', 'Shoulder', 'Thorax', 'Wrist']
+        grey_out_groups = ['Absankl', 'Elbow', 'Shoulder', 'Thorax', 'Wrist', 'Head', 'Neck']
         for group in self.groups:
             button = QPushButton(group)
             button.setCheckable(True)
