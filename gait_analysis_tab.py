@@ -375,7 +375,7 @@ class GaitAnalysisTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels for kinematics
         for plot_widget, *_ in self.kinematics_plots:
-            plot_widget.figure.subplots_adjust(left=0.3, right=0.95, top=0.9, bottom=0.2)
+            plot_widget.figure.subplots_adjust(left=0.25, right=0.95, top=0.9, bottom=0.2)
             plot_widget.canvas.draw()
 
         # Plot kinetics
@@ -514,7 +514,7 @@ class GaitAnalysisTab(QWidget):
                     x = np.linspace(0, 100, len(mean))
                     plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
                     plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.moments_side_filter, key_suffix="_main")
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', '', self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.moments_side_filter, key_suffix="_main")
 
             # Set default y-limits for moments
             if group.lower() == 'hip':
