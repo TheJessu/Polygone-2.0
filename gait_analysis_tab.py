@@ -1,5 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog, QComboBox, QFileDialog, QCheckBox, QScrollArea
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QStyle
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
@@ -103,6 +105,7 @@ class GaitAnalysisTab(QWidget):
         self.tab_widget.addTab(self.kinematics_tab, "Gait 1 Kinematics")
         self.kinematics_side_filter = "All"
         self.kinematics_file_buttons = []
+        self.kinematics_delete_buttons = []
         self.kinematics_visible_file_index = None
         self.kinematics_red_visible_files = set()
         self.kinematics_green_visible_files = set()
@@ -814,13 +817,33 @@ class GaitAnalysisTab(QWidget):
         for button in self.kinematics_file_buttons:
             button.setParent(None)
         self.kinematics_file_buttons = []
+        # Clear layout properly, including sub-layouts
+        def clear_layout(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                if item.widget():
+                    item.widget().setParent(None)
+                elif item.layout():
+                    clear_layout(item.layout())
+        clear_layout(self.kinematics_file_buttons_layout)
         # Add new buttons
         for i, file_data in enumerate(self.multiline_importer.imported_files):
+            # Create horizontal layout for file button and delete button
+            file_layout = QHBoxLayout()
             button = QPushButton(file_data['filename'])
             button.setCheckable(True)
             button.clicked.connect(lambda checked, idx=i: self.on_kinematics_file_button_clicked(idx))
-            self.kinematics_file_buttons_layout.addWidget(button)
+            file_layout.addWidget(button)
             self.kinematics_file_buttons.append(button)
+
+            # Add delete button
+            delete_button = QPushButton()
+            delete_button.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
+            delete_button.setFixedSize(20, 20)
+            delete_button.clicked.connect(lambda checked, idx=i: self.delete_c3d_file(idx))
+            file_layout.addWidget(delete_button)
+
+            self.kinematics_file_buttons_layout.addLayout(file_layout)
         # Update visibility based on side filter
         self.update_kinematics_file_buttons_visibility()
 
@@ -829,13 +852,33 @@ class GaitAnalysisTab(QWidget):
         for button in self.kinetics_file_buttons:
             button.setParent(None)
         self.kinetics_file_buttons = []
+        # Clear layout properly, including sub-layouts
+        def clear_layout(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                if item.widget():
+                    item.widget().setParent(None)
+                elif item.layout():
+                    clear_layout(item.layout())
+        clear_layout(self.kinetics_file_buttons_layout)
         # Add new buttons
         for i, file_data in enumerate(self.multiline_importer.imported_files):
+            # Create horizontal layout for file button and delete button
+            file_layout = QHBoxLayout()
             button = QPushButton(file_data['filename'])
             button.setCheckable(True)
             button.clicked.connect(lambda checked, idx=i: self.on_kinetics_file_button_clicked(idx))
-            self.kinetics_file_buttons_layout.addWidget(button)
+            file_layout.addWidget(button)
             self.kinetics_file_buttons.append(button)
+
+            # Add delete button
+            delete_button = QPushButton()
+            delete_button.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
+            delete_button.setFixedSize(20, 20)
+            delete_button.clicked.connect(lambda checked, idx=i: self.delete_c3d_file(idx))
+            file_layout.addWidget(delete_button)
+
+            self.kinetics_file_buttons_layout.addLayout(file_layout)
         # Update visibility based on side filter
         self.update_kinetics_file_buttons_visibility()
 
@@ -963,13 +1006,33 @@ class GaitAnalysisTab(QWidget):
         for button in self.moments_file_buttons:
             button.setParent(None)
         self.moments_file_buttons = []
+        # Clear layout properly, including sub-layouts
+        def clear_layout(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                if item.widget():
+                    item.widget().setParent(None)
+                elif item.layout():
+                    clear_layout(item.layout())
+        clear_layout(self.moments_file_buttons_layout)
         # Add new buttons
         for i, file_data in enumerate(self.multiline_importer.imported_files):
+            # Create horizontal layout for file button and delete button
+            file_layout = QHBoxLayout()
             button = QPushButton(file_data['filename'])
             button.setCheckable(True)
             button.clicked.connect(lambda checked, idx=i: self.on_moments_file_button_clicked(idx))
-            self.moments_file_buttons_layout.addWidget(button)
+            file_layout.addWidget(button)
             self.moments_file_buttons.append(button)
+
+            # Add delete button
+            delete_button = QPushButton()
+            delete_button.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
+            delete_button.setFixedSize(20, 20)
+            delete_button.clicked.connect(lambda checked, idx=i: self.delete_c3d_file(idx))
+            file_layout.addWidget(delete_button)
+
+            self.moments_file_buttons_layout.addLayout(file_layout)
         # Update visibility based on side filter
         self.update_moments_file_buttons_visibility()
 
@@ -1060,3 +1123,49 @@ class GaitAnalysisTab(QWidget):
                 self.imported_averages = data
                 self.imported_pxd_filename = filename.split('/')[-1].split('\\')[-1]
                 self.plot_data()
+
+    def delete_c3d_file(self, idx):
+        """Delete a C3D file and adjust indices."""
+        if 0 <= idx < len(self.multiline_importer.imported_files):
+            # Remove from importer
+            del self.multiline_importer.imported_files[idx]
+
+            # Adjust visible indices
+            def adjust_set(s):
+                new_s = set()
+                for i in s:
+                    if i > idx:
+                        new_s.add(i - 1)
+                    elif i < idx:
+                        new_s.add(i)
+                return new_s
+
+            self.kinematics_red_visible_files = adjust_set(self.kinematics_red_visible_files)
+            self.kinematics_green_visible_files = adjust_set(self.kinematics_green_visible_files)
+            self.kinetics_red_visible_files = adjust_set(self.kinetics_red_visible_files)
+            self.kinetics_green_visible_files = adjust_set(self.kinetics_green_visible_files)
+            self.moments_red_visible_files = adjust_set(self.moments_red_visible_files)
+            self.moments_green_visible_files = adjust_set(self.moments_green_visible_files)
+
+            # Adjust visible_file_index
+            if self.kinematics_visible_file_index is not None:
+                if self.kinematics_visible_file_index == idx:
+                    self.kinematics_visible_file_index = None
+                elif self.kinematics_visible_file_index > idx:
+                    self.kinematics_visible_file_index -= 1
+            if self.kinetics_visible_file_index is not None:
+                if self.kinetics_visible_file_index == idx:
+                    self.kinetics_visible_file_index = None
+                elif self.kinetics_visible_file_index > idx:
+                    self.kinetics_visible_file_index -= 1
+            if self.moments_visible_file_index is not None:
+                if self.moments_visible_file_index == idx:
+                    self.moments_visible_file_index = None
+                elif self.moments_visible_file_index > idx:
+                    self.moments_visible_file_index -= 1
+
+            # Update buttons
+            self.update_kinematics_file_buttons()
+            self.update_kinetics_file_buttons()
+            self.update_moments_file_buttons()
+            self.plot_data()

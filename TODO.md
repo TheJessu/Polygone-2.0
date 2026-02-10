@@ -1,4 +1,8 @@
-- [x] Remove QSpinBox from import in data_plotter.py
-- [x] Remove plots_layout code (label, spinbox, stretch) in __init__
-- [x] Remove on_max_plots_changed method
-- [x] Decrease padding around highlight info text area in all tab files (angles_tab.py, forces_tab.py, moments_tab.py, powers_tab.py)
+# TODO for Adding Delete Icon to Imported C3D File Buttons
+
+- [ ] Add necessary imports (QIcon, QStyle) to gait_analysis_tab.py
+- [ ] Add delete_c3d_file method to handle file removal and index adjustments
+- [ ] Modify update_kinematics_file_buttons to use QVBoxLayout and add delete buttons
+- [ ] Modify update_kinetics_file_buttons similarly
+- [ ] Modify update_moments_file_buttons similarly
+- [ ] Test the functionality by importing C3D files and deleting them
