@@ -179,7 +179,7 @@ class PowersTab(QWidget):
         self.group_buttons.clear()
         self.group_visibility.clear()
 
-        grey_out_groups = ['Absankl', 'Elbow', 'Shoulder', 'Thorax', 'Wrist', 'Head', 'Neck', 'Pelvis', 'Spine', 'Footprogress', 'Groundreaction']  # Example groups to grey out
+        grey_out_groups = ['Absankl', 'Elbow', 'Shoulder', 'Thorax', 'Wrist', 'Head', 'Neck', 'Pelvis', 'Spine', 'Footprogress', 'Groundreaction', 'Wrist', 'Waist', 'Shoulder', 'Elbow']  # Example groups to grey out
         for group in self.groups:
             button = QPushButton(group)
             button.setCheckable(True)
@@ -309,7 +309,7 @@ class PowersTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels
         for plot in self.plots:
-            plot.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
+            plot.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.1)
             plot.canvas.draw()
 
 

@@ -411,7 +411,7 @@ class MomentsTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels
         for plot in self.plots:
-            plot.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
+            plot.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.1)
             plot.canvas.draw()
 
     def add_plot(self, row, col):

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QHBoxLayout, QLabel, QSpinBox, QPushButton
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QHBoxLayout, QLabel, QPushButton
 from angles_tab import AnglesTab
 from forces_tab import ForcesTab
 from moments_tab import MomentsTab
@@ -45,16 +45,6 @@ class DataPlotter(QWidget):
         }
 
         self.max_plots = 4
-        plots_layout = QHBoxLayout()
-        plots_layout.addWidget(QLabel("Max Plots:"))
-        self.plots_spinbox = QSpinBox()
-        self.plots_spinbox.setMinimum(1)
-        self.plots_spinbox.setMaximum(12)
-        self.plots_spinbox.setValue(self.max_plots)
-        self.plots_spinbox.valueChanged.connect(self.on_max_plots_changed)
-        plots_layout.addWidget(self.plots_spinbox)
-        plots_layout.addStretch()
-        self.layout.addLayout(plots_layout)
 
         for plot_type, config in self.plot_types_config.items():
             self.tab_widget.addTab(config['tab'], plot_type)
@@ -79,9 +69,7 @@ class DataPlotter(QWidget):
             tab = config['tab']
             tab.plot_data(self.markers_data, self.marker_types, self.marker_labels, self.current_frame, self.max_plots)
 
-    def on_max_plots_changed(self, value):
-        self.max_plots = value
-        self.plot_data()
+
 
     def set_current_frame(self, frame_index):
         self.current_frame = frame_index

@@ -379,7 +379,7 @@ class GaitAnalysisTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels for kinematics
         for plot_widget, *_ in self.kinematics_plots:
-            plot_widget.figure.subplots_adjust(left=0.25, right=0.95, top=0.9, bottom=0.2)
+            plot_widget.figure.subplots_adjust(left=0.25, right=0.98, top=0.9, bottom=0.2)
             plot_widget.canvas.draw()
 
         # Plot kinetics
@@ -492,7 +492,7 @@ class GaitAnalysisTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels for kinetics
         for plot_widget, *_ in self.kinetics_plots:
-            plot_widget.figure.subplots_adjust(left=0.25, right=0.95, top=0.9, bottom=0.2)
+            plot_widget.figure.subplots_adjust(left=0.25, right=0.98, top=0.9, bottom=0.2)
             plot_widget.canvas.draw()
 
         # Plot moments
@@ -627,7 +627,7 @@ class GaitAnalysisTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels for moments
         for plot_widget, *_ in self.moments_plots:
-            plot_widget.figure.subplots_adjust(left=0.25, right=0.95, top=0.9, bottom=0.2)
+            plot_widget.figure.subplots_adjust(left=0.25, right=0.98, top=0.9, bottom=0.2)
             plot_widget.canvas.draw()
 
     def on_plot_double_clicked(self, plot_widget):
