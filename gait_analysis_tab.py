@@ -190,17 +190,19 @@ class GaitAnalysisTab(QWidget):
     def setup_kinetics_plots(self):
         # 3x3 grid
         plots_config = [
-            ('Hip', 'y', 'ANGLES'),
-            ('Knee', 'y', 'ANGLES'),
-            ('Ankle', 'y', 'ANGLES'),
-            ('Hip', 'y', 'MOMENTS'),
-            ('Knee', 'y', 'MOMENTS'),
-            ('Ankle', 'y', 'MOMENTS'),
-            ('Hip', 'z', 'POWERS'),
-            ('Knee', 'z', 'POWERS'),
-            ('Ankle', 'z', 'POWERS')
+            ('Hip', 'y', 'ANGLES', ''),
+            ('Knee', 'y', 'ANGLES', ''),
+            ('Ankle', 'y', 'ANGLES', ''),
+            ('Hip', 'y', 'MOMENTS', ''),
+            ('Knee', 'y', 'MOMENTS', ''),
+            ('Ankle', 'y', 'MOMENTS', ''),
+            ('Hip', 'z', 'POWERS', ''),
+            ('Knee', 'z', 'POWERS', ''),
+            ('Ankle', 'z', 'POWERS', '')
         ]
-        for i, (group, comp, plot_type, y_label, *unit_factor) in enumerate(plots_config):
+        for i, (group, comp, plot_type, *rest) in enumerate(plots_config):
+            y_label = rest[0] if rest else ''
+            unit_factor = rest[1:] if len(rest) > 1 else []
             row = i // 3
             col = i % 3
             plot_widget = GaitPlotWidget(self.gait_cycle_plotter, self.kinetics_tab)

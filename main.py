@@ -2,9 +2,9 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QWidget, QLabel, QSplitter, QVBoxLayout, QSlider, QPushButton
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QDragEnterEvent, QDropEvent
+from PyQt5.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QWidget, QLabel, QSplitter, QVBoxLayout, QSlider, QPushButton, QSizePolicy
+from PyQt5.QtCore import Qt, QTimer, QSize
+from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QResizeEvent
 from c3d_viewer import C3DViewer
 from video_player import VideoPlayer
 from marker_outliner import MarkerOutliner
@@ -19,9 +19,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("C3D and Video Viewer")
         self.setGeometry(100, 100, 1920, 1080)
+        self.setMinimumSize(QSize(800, 600))  # Set minimum size for the window
 
         # Create central widget and main layout
         central_widget = QWidget()
+        central_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Allow expanding
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
         main_layout.setSpacing(0)
@@ -204,6 +206,12 @@ class MainWindow(QMainWindow):
     def update_frame_label(self):
         """Update the frame display label."""
         self.frame_label.setText(f"Frame: {self.current_frame + 1}/{self.total_frames}")
+
+    def resizeEvent(self, event: QResizeEvent):
+        """Handle resize event to update VTK render window."""
+        super().resizeEvent(event)
+        if hasattr(self, 'c3d_viewer') and hasattr(self.c3d_viewer, 'vtk_widget'):
+            self.c3d_viewer.vtk_widget.GetRenderWindow().Render()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

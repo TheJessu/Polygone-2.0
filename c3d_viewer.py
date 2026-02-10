@@ -2,6 +2,7 @@ import vtk
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QResizeEvent
 import c3d
 import numpy as np
 import json
