@@ -251,20 +251,21 @@ class GaitAnalysisTab(QWidget):
                 # Remove old vline
                 vline.remove()
         self.vlines = []
-        for plot_widget, *_ in self.kinematics_plots:
-            if self.gait_cycles:
-                for side in ['left', 'right']:
-                    for start, end in self.gait_cycles.get(side, []):
-                        if start <= self.current_frame < end:
-                            cycle_len = end - start
-                            if cycle_len > 0:
-                                percentage = (self.current_frame - start) / cycle_len * 100
-                                vline = plot_widget.ax.axvline(x=percentage, color='red', linestyle='--', linewidth=2)
-                                self.vlines.append(vline)
-                                break
-                    if self.vlines:
-                        break
-            plot_widget.canvas.draw()
+        # Removed scrubber line for kinematics plots as per user request
+        # for plot_widget, *_ in self.kinematics_plots:
+        #     if self.gait_cycles:
+        #         for side in ['left', 'right']:
+        #             for start, end in self.gait_cycles.get(side, []):
+        #                 if start <= self.current_frame < end:
+        #                     cycle_len = end - start
+        #                     if cycle_len > 0:
+        #                         percentage = (self.current_frame - start) / cycle_len * 100
+        #                         vline = plot_widget.ax.axvline(x=percentage, color='red', linestyle='--', linewidth=2)
+        #                         self.vlines.append(vline)
+        #                         break
+        #             if self.vlines:
+        #                 break
+        #     plot_widget.canvas.draw()
 
     def plot_data(self):
         if self.markers_data is None or not self.gait_cycles:
@@ -290,7 +291,7 @@ class GaitAnalysisTab(QWidget):
             elif group.lower() == 'hip':
                 title = f'{group} - {"Hip Ab-Adduction" if comp == "x" else "Hip Flexion-Extension" if comp == "y" else "Hip Rotation"}'
             elif group.lower() == 'knee':
-                title = f'{group} - {"Knee Flexion-Extension" if comp == "y" else comp.upper()}'
+                title = f'{group} - {"Knee Flexion-Extension" if comp == "y" else "Knee Rotation" if comp == "z" else "Knee Valg/Varus"}'
             elif group.lower() == 'ankle':
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else comp.upper()}'
             elif group.lower() == 'footprogress':
@@ -411,7 +412,10 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - {comp.upper()}'
             plot_widget.ax.set_title(title, fontsize=10)
             plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
-            plot_widget.ax.set_ylabel(y_label)
+            if plot_type in ['ANGLES', 'MOMENTS']:
+                plot_widget.ax.set_ylabel('')
+            else:
+                plot_widget.ax.set_ylabel(y_label)
             if self.main_visible:
                 if self.imported_averages and plot_type in self.imported_averages:
                     if group in self.imported_averages[plot_type] and comp in self.imported_averages[plot_type][group]:
@@ -481,6 +485,11 @@ class GaitAnalysisTab(QWidget):
                             idx_in_green = list(self.kinetics_green_visible_files).index(i)
                             color = self.green_colors[idx_in_green % len(self.green_colors)]
                             self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, file_data['markers_data'], file_data['marker_labels'], file_data['marker_types'], group, file_data['gait_cycles'], plot_type, '', self.current_frame, component=comp, body_mass=file_data['body_mass'], side_filter="Green", color=color, linestyle=linestyle, key_suffix=f"_file_{i}")
+            plot_widget.canvas.draw()
+
+        # Adjust subplot margins to prevent cut-off labels for kinetics
+        for plot_widget, *_ in self.kinetics_plots:
+            plot_widget.figure.subplots_adjust(left=0.3, right=0.9, top=0.85, bottom=0.25)
             plot_widget.canvas.draw()
 
         # Plot moments
