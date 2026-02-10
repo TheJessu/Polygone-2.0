@@ -42,9 +42,10 @@ class ForcePlateVisualizer:
 
             actor = vtk.vtkActor()
             actor.SetMapper(mapper)
-            actor.GetProperty().SetColor(0.8, 0.8, 0.8)
-            actor.GetProperty().SetOpacity(0.3)
+            actor.GetProperty().SetColor(0.5, 0.5, 0.5)
+            actor.GetProperty().SetOpacity(0.7)
             actor.GetProperty().SetRepresentationToSurface()
+            actor.GetProperty().SetLighting(False)
 
             self.actors.append(actor)
             self.renderer.AddActor(actor)
@@ -60,8 +61,8 @@ class ForcePlateVisualizer:
             text_actor = vtk.vtkActor()
             text_actor.SetMapper(text_mapper)
             text_actor.GetProperty().SetColor(1.0, 1.0, 1.0)  # White
-            text_actor.SetPosition(center[0], center[1], center[2] + 5)
-            text_actor.SetScale(50, 50, 50)
+            text_actor.SetPosition(center[0], center[1], center[2])
+            text_actor.SetScale(100, 100, 100)
             
             self.text_actors.append(text_actor)
             self.renderer.AddActor(text_actor)

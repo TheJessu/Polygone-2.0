@@ -51,6 +51,21 @@ class C3DViewer(QWidget):
         self.front_view_button.clicked.connect(self.set_front_view)
         self.button_layout.addWidget(self.front_view_button)
 
+        # Side 2 view button
+        self.side2_view_button = QPushButton("Side 2 View")
+        self.side2_view_button.clicked.connect(self.set_side2_view)
+        self.button_layout.addWidget(self.side2_view_button)
+
+        # Back view button
+        self.back_view_button = QPushButton("Back View")
+        self.back_view_button.clicked.connect(self.set_back_view)
+        self.button_layout.addWidget(self.back_view_button)
+
+        # Top view button
+        self.top_view_button = QPushButton("Top View")
+        self.top_view_button.clicked.connect(self.set_top_view)
+        self.button_layout.addWidget(self.top_view_button)
+
         self.layout.addLayout(self.button_layout)
 
         # Create VTK render window interactor
@@ -699,24 +714,7 @@ class C3DViewer(QWidget):
         self.vtk_widget.GetRenderWindow().Render()
 
     def set_side_view(self):
-        """Set the camera to side view (looking along Y-axis)."""
-        if self.markers_data is not None:
-            bounds = self.ren.ComputeVisiblePropBounds()
-            center = [(bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2, (bounds[4] + bounds[5]) / 2]
-            distance = max(bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]) * 2
-
-            camera = self.ren.GetActiveCamera()
-            camera.SetPosition(center[0], center[1] + distance, center[2])  # Look from positive Y
-            camera.SetFocalPoint(center[0], center[1], center[2])
-            camera.SetViewUp(0, 0, 1)  # Z up
-
-            self.ren.ResetCameraClippingRange()
-            self.vtk_widget.GetRenderWindow().Render()
-
-
-
-    def set_front_view(self):
-        """Set the camera to front view (looking along X-axis)."""
+        """Set the camera to side view (looking along X-axis from positive X)."""
         if self.markers_data is not None:
             bounds = self.ren.ComputeVisiblePropBounds()
             center = [(bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2, (bounds[4] + bounds[5]) / 2]
@@ -726,6 +724,68 @@ class C3DViewer(QWidget):
             camera.SetPosition(center[0] + distance, center[1], center[2])  # Look from positive X
             camera.SetFocalPoint(center[0], center[1], center[2])
             camera.SetViewUp(0, 0, 1)  # Z up
+
+            self.ren.ResetCameraClippingRange()
+            self.vtk_widget.GetRenderWindow().Render()
+
+
+
+    def set_front_view(self):
+        """Set the camera to front view (looking along Y-axis from negative Y)."""
+        if self.markers_data is not None:
+            bounds = self.ren.ComputeVisiblePropBounds()
+            center = [(bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2, (bounds[4] + bounds[5]) / 2]
+            distance = max(bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]) * 2
+
+            camera = self.ren.GetActiveCamera()
+            camera.SetPosition(center[0], center[1] - distance, center[2])  # Look from negative Y
+            camera.SetFocalPoint(center[0], center[1], center[2])
+            camera.SetViewUp(0, 0, 1)  # Z up
+
+            self.ren.ResetCameraClippingRange()
+            self.vtk_widget.GetRenderWindow().Render()
+
+    def set_side2_view(self):
+        """Set the camera to side 2 view (looking from the other side along X-axis)."""
+        if self.markers_data is not None:
+            bounds = self.ren.ComputeVisiblePropBounds()
+            center = [(bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2, (bounds[4] + bounds[5]) / 2]
+            distance = max(bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]) * 2
+
+            camera = self.ren.GetActiveCamera()
+            camera.SetPosition(center[0] - distance, center[1], center[2])  # Look from negative X
+            camera.SetFocalPoint(center[0], center[1], center[2])
+            camera.SetViewUp(0, 0, 1)  # Z up
+
+            self.ren.ResetCameraClippingRange()
+            self.vtk_widget.GetRenderWindow().Render()
+
+    def set_back_view(self):
+        """Set the camera to back view (looking along Y-axis from negative Y)."""
+        if self.markers_data is not None:
+            bounds = self.ren.ComputeVisiblePropBounds()
+            center = [(bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2, (bounds[4] + bounds[5]) / 2]
+            distance = max(bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]) * 2
+
+            camera = self.ren.GetActiveCamera()
+            camera.SetPosition(center[0], center[1] - distance, center[2])  # Look from negative Y
+            camera.SetFocalPoint(center[0], center[1], center[2])
+            camera.SetViewUp(0, 0, 1)  # Z up
+
+            self.ren.ResetCameraClippingRange()
+            self.vtk_widget.GetRenderWindow().Render()
+
+    def set_top_view(self):
+        """Set the camera to top view (looking along positive Z-axis)."""
+        if self.markers_data is not None:
+            bounds = self.ren.ComputeVisiblePropBounds()
+            center = [(bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2, (bounds[4] + bounds[5]) / 2]
+            distance = max(bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]) * 2
+
+            camera = self.ren.GetActiveCamera()
+            camera.SetPosition(center[0], center[1], center[2] + distance)  # Look from positive Z
+            camera.SetFocalPoint(center[0], center[1], center[2])
+            camera.SetViewUp(0, 1, 0)  # Y up for top view
 
             self.ren.ResetCameraClippingRange()
             self.vtk_widget.GetRenderWindow().Render()
