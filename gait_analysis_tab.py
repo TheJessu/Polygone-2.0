@@ -64,8 +64,16 @@ class GaitAnalysisTab(QWidget):
         self.export_pdf_button.clicked.connect(self.export_to_pdf)
         self.import_avg_button = QPushButton("Import Averages")
         self.import_avg_button.clicked.connect(self.import_averages)
+        self.import_c3d_button = QPushButton("Import C3D")
+        self.import_c3d_button.clicked.connect(self.import_c3d_for_gait_analysis)
+        self.main_toggle_button = QPushButton("Toggle Main C3D")
+        self.main_toggle_button.setCheckable(True)
+        self.main_toggle_button.setChecked(self.main_visible)
+        self.main_toggle_button.clicked.connect(self.toggle_main_visibility)
         button_layout.addWidget(self.import_avg_button)
         button_layout.addWidget(self.export_pdf_button)
+        button_layout.addWidget(self.main_toggle_button)
+        button_layout.addWidget(self.import_c3d_button)
         button_layout.addStretch()
         self.layout.addLayout(button_layout)
 
@@ -81,14 +89,6 @@ class GaitAnalysisTab(QWidget):
         self.kinematics_dropdown.addItems(["All", "Red", "Green"])
         self.kinematics_dropdown.currentTextChanged.connect(self.on_kinematics_side_changed)
         dropdown_layout.addWidget(self.kinematics_dropdown)
-        self.kinematics_import_button = QPushButton("Import C3D")
-        self.kinematics_import_button.clicked.connect(self.import_c3d_for_kinematics)
-        dropdown_layout.addWidget(self.kinematics_import_button)
-        self.main_toggle_button = QPushButton("Toggle Main C3D")
-        self.main_toggle_button.setCheckable(True)
-        self.main_toggle_button.setChecked(self.main_visible)
-        self.main_toggle_button.clicked.connect(self.toggle_main_visibility)
-        dropdown_layout.addWidget(self.main_toggle_button)
         dropdown_layout.addStretch()
         self.kinematics_tab_layout.addLayout(dropdown_layout)
         self.kinematics_file_buttons_layout = QHBoxLayout()
@@ -111,9 +111,6 @@ class GaitAnalysisTab(QWidget):
         self.kinetics_dropdown.addItems(["All", "Red", "Green"])
         self.kinetics_dropdown.currentTextChanged.connect(self.on_kinetics_side_changed)
         dropdown_layout.addWidget(self.kinetics_dropdown)
-        self.kinetics_import_button = QPushButton("Import C3D")
-        self.kinetics_import_button.clicked.connect(self.import_c3d_for_kinetics)
-        dropdown_layout.addWidget(self.kinetics_import_button)
         dropdown_layout.addStretch()
         self.kinetics_tab_layout.addLayout(dropdown_layout)
         self.kinetics_file_buttons_layout = QHBoxLayout()
@@ -136,9 +133,6 @@ class GaitAnalysisTab(QWidget):
         self.moments_dropdown.addItems(["All", "Red", "Green"])
         self.moments_dropdown.currentTextChanged.connect(self.on_moments_side_changed)
         dropdown_layout.addWidget(self.moments_dropdown)
-        self.moments_import_button = QPushButton("Import C3D")
-        self.moments_import_button.clicked.connect(self.import_c3d_for_moments)
-        dropdown_layout.addWidget(self.moments_import_button)
         dropdown_layout.addStretch()
         self.moments_tab_layout.addLayout(dropdown_layout)
         self.moments_file_buttons_layout = QHBoxLayout()
@@ -302,7 +296,7 @@ class GaitAnalysisTab(QWidget):
             elif group.lower() == 'footprogress':
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else "Foot Progression" if comp == "z" else comp.upper()}'
             plot_widget.ax.set_title(title)
-            plot_widget.ax.set_xlabel('Gait Cycle (%)')
+            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
             if self.main_visible:
                 if self.imported_averages and 'ANGLES' in self.imported_averages:
                     if group in self.imported_averages['ANGLES'] and comp in self.imported_averages['ANGLES'][group]:
@@ -381,7 +375,7 @@ class GaitAnalysisTab(QWidget):
 
         # Adjust subplot margins to prevent cut-off labels for kinematics
         for plot_widget, *_ in self.kinematics_plots:
-            plot_widget.figure.subplots_adjust(left=0.25, right=0.9, top=0.85, bottom=0.15)
+            plot_widget.figure.subplots_adjust(left=0.3, right=0.95, top=0.9, bottom=0.2)
             plot_widget.canvas.draw()
 
         # Plot kinetics
@@ -415,8 +409,8 @@ class GaitAnalysisTab(QWidget):
                     title = f'{group} - {comp.upper()}'
             else:
                 title = f'{group} - {comp.upper()}'
-            plot_widget.ax.set_title(title)
-            plot_widget.ax.set_xlabel('Gait Cycle (%)')
+            plot_widget.ax.set_title(title, fontsize=10)
+            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
             plot_widget.ax.set_ylabel(y_label)
             if self.main_visible:
                 if self.imported_averages and plot_type in self.imported_averages:
@@ -511,7 +505,7 @@ class GaitAnalysisTab(QWidget):
             elif group.lower() == 'ankle' and comp == 'z':
                 title = f'{group} - Ankle Rotation Moment'
             plot_widget.ax.set_title(title)
-            plot_widget.ax.set_xlabel('Gait Cycle (%)')
+            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
             if self.imported_averages and 'MOMENTS' in self.imported_averages:
                 if group in self.imported_averages['MOMENTS'] and comp in self.imported_averages['MOMENTS'][group]:
                     avg = self.imported_averages['MOMENTS'][group][comp]
@@ -983,7 +977,7 @@ class GaitAnalysisTab(QWidget):
                     self.highlighted_section = None
                     button.setStyleSheet("QPushButton { background-color: white; color: black; }")
             elif is_visible:
-                button.setStyleSheet("QPushButton { background-color: #ADD8E6; color: black; }")
+                button.setStyleSheet("QPushButton { background-color: #005A9C; color: black; }")
             else:
                 button.setStyleSheet("QPushButton { background-color: white; color: black; }")
 
@@ -1007,6 +1001,35 @@ class GaitAnalysisTab(QWidget):
         self.main_visible = not self.main_visible
         self.main_toggle_button.setChecked(self.main_visible)
         self.plot_data()
+
+    def import_c3d_for_gait_analysis(self):
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Import C3D Files", "", "C3D Files (*.c3d)")
+        if file_paths:
+            for file_path in file_paths:
+                if self.multiline_importer.get_num_files() >= 5:
+                    break  # Stop if limit reached
+                if self.multiline_importer.import_c3d(file_path):
+                    new_idx = self.multiline_importer.get_num_files() - 1
+
+                    # Set default visibility
+                    if self.multiline_importer.get_num_files() == 1:
+                        self.kinematics_visible_file_index = 0
+                        self.kinetics_visible_file_index = 0
+                        self.moments_visible_file_index = 0
+
+                    self.kinematics_red_visible_files.add(new_idx)
+                    self.kinematics_green_visible_files.add(new_idx)
+                    self.kinetics_red_visible_files.add(new_idx)
+                    self.kinetics_green_visible_files.add(new_idx)
+                    self.moments_red_visible_files.add(new_idx)
+                    self.moments_green_visible_files.add(new_idx)
+                else:
+                    # Show error message for failed import
+                    pass
+            self.update_kinematics_file_buttons()
+            self.update_kinetics_file_buttons()
+            self.update_moments_file_buttons()
+            self.plot_data()
 
     def import_averages(self):
         data = PXDExporter.import_averages(self)
