@@ -39,10 +39,20 @@ class PXDExporter:
     @staticmethod
     def import_averages(parent=None):
         filename, _ = QFileDialog.getOpenFileName(parent, "Open PXD", "", "PXD Files (*.pxd)")
-        
+
         if not filename:
             return None
 
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+            return data
+        except Exception as e:
+            print(f"Error loading PXD file: {e}")
+            return None
+
+    @staticmethod
+    def import_averages_static(filename):
         try:
             with open(filename, 'r') as f:
                 data = json.load(f)

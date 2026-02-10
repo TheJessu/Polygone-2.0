@@ -503,7 +503,7 @@ class GaitAnalysisTab(QWidget):
                 title = f'{group} - Ankle Ab-Add Moment'
             elif group.lower() == 'ankle' and comp == 'z':
                 title = f'{group} - Ankle Rotation Moment'
-            plot_widget.ax.set_title(title)
+            plot_widget.ax.set_title(title, fontsize=10)
             plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
             if self.imported_averages and 'MOMENTS' in self.imported_averages:
                 if group in self.imported_averages['MOMENTS'] and comp in self.imported_averages['MOMENTS'][group]:
@@ -830,7 +830,7 @@ class GaitAnalysisTab(QWidget):
         for i, button in enumerate(self.kinematics_file_buttons):
             is_visible = False
             if self.kinematics_side_filter == "All":
-                is_visible = (i == self.kinematics_visible_file_index)
+                is_visible = (self.kinematics_visible_file_index is not None and i == self.kinematics_visible_file_index)
             elif self.kinematics_side_filter == "Red":
                 is_visible = (i in self.kinematics_red_visible_files)
             elif self.kinematics_side_filter == "Green":
@@ -856,7 +856,7 @@ class GaitAnalysisTab(QWidget):
         for i, button in enumerate(self.kinetics_file_buttons):
             is_visible = False
             if self.kinetics_side_filter == "All":
-                is_visible = (i == self.kinetics_visible_file_index)
+                is_visible = (self.kinetics_visible_file_index is not None and i == self.kinetics_visible_file_index)
             elif self.kinetics_side_filter == "Red":
                 is_visible = (i in self.kinetics_red_visible_files)
             elif self.kinetics_side_filter == "Green":
@@ -880,7 +880,10 @@ class GaitAnalysisTab(QWidget):
 
     def on_kinematics_file_button_clicked(self, idx):
         if self.kinematics_side_filter == "All":
-            self.kinematics_visible_file_index = idx
+            if self.kinematics_visible_file_index == idx:
+                self.kinematics_visible_file_index = None
+            else:
+                self.kinematics_visible_file_index = idx
         elif self.kinematics_side_filter == "Red":
             if idx in self.kinematics_red_visible_files:
                 self.kinematics_red_visible_files.remove(idx)
@@ -896,7 +899,10 @@ class GaitAnalysisTab(QWidget):
 
     def on_kinetics_file_button_clicked(self, idx):
         if self.kinetics_side_filter == "All":
-            self.kinetics_visible_file_index = idx
+            if self.kinetics_visible_file_index == idx:
+                self.kinetics_visible_file_index = None
+            else:
+                self.kinetics_visible_file_index = idx
         elif self.kinetics_side_filter == "Red":
             if idx in self.kinetics_red_visible_files:
                 self.kinetics_red_visible_files.remove(idx)
@@ -958,7 +964,7 @@ class GaitAnalysisTab(QWidget):
         for i, button in enumerate(self.moments_file_buttons):
             is_visible = False
             if self.moments_side_filter == "All":
-                is_visible = (i == self.moments_visible_file_index)
+                is_visible = (self.moments_visible_file_index is not None and i == self.moments_visible_file_index)
             elif self.moments_side_filter == "Red":
                 is_visible = (i in self.moments_red_visible_files)
             elif self.moments_side_filter == "Green":
@@ -982,7 +988,10 @@ class GaitAnalysisTab(QWidget):
 
     def on_moments_file_button_clicked(self, idx):
         if self.moments_side_filter == "All":
-            self.moments_visible_file_index = idx
+            if self.moments_visible_file_index == idx:
+                self.moments_visible_file_index = None
+            else:
+                self.moments_visible_file_index = idx
         elif self.moments_side_filter == "Red":
             if idx in self.moments_red_visible_files:
                 self.moments_red_visible_files.remove(idx)
@@ -1031,7 +1040,10 @@ class GaitAnalysisTab(QWidget):
             self.plot_data()
 
     def import_averages(self):
-        data = PXDExporter.import_averages(self)        
-        if data:
-            self.imported_averages = data
-            self.plot_data()
+        filename, _ = QFileDialog.getOpenFileName(self, "Open PXD", "", "PXD Files (*.pxd)")
+        if filename:
+            data = PXDExporter.import_averages_static(filename)
+            if data:
+                self.imported_averages = data
+                self.imported_pxd_filename = filename.split('/')[-1].split('\\')[-1]
+                self.plot_data()
