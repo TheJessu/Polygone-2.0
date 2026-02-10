@@ -69,7 +69,8 @@
       "links": [
         ["T10", "STRN"],
         ["STRN", "CLAV"],
-        ["CLAV", "C7"]
+        ["CLAV", "C7"],
+        ["C7", "T10"]
       ]
     },
 
@@ -80,7 +81,16 @@
         ["LTHAP", "LKNE"],
         ["LKNE", "LANK"],
         ["LANK", "LHEE"],
-        ["LANK", "LTOE"]
+        ["LANK", "LTOE"],
+        ["LTHAP", "LTHI"],
+        ["LTHAP", "LTHAD"],
+        ["LTHI", "LTHAD"],
+        ["LTHAD", "LKNM"],
+        ["LTHAD", "LTIAP"],
+        ["LTIAP", "LTIB"],
+        ["LTIAP", "LTIAD"],
+        ["LTIAD", "LTIB"],
+        ["LHEE", "LTOE"]
       ]
     },
 
@@ -91,7 +101,14 @@
         ["RTHAP", "RKNE"],
         ["RKNE", "RANK"],
         ["RANK", "RHEE"],
-        ["RANK", "RTOE"]
+        ["RANK", "RTOE"],
+        ["RTHAP", "RTHI"],
+        ["RTHAP", "RTHAD"],
+        ["RTHI", "RTHAD"],
+        ["RTIAP", "RTIB"],
+        ["RTIAP", "RTIAD"],
+        ["RTIAD", "RTIB"],
+        ["RHEE", "RTOE"]
       ]
     },
 
@@ -120,7 +137,10 @@
       "links": [
         ["C7", "LBHD"],
         ["C7", "RBHD"],
-        ["LBHD", "RBHD"]
+        ["LBHD", "RBHD"],
+        ["LBHD", "LFHD"],
+        ["RBHD", "RFHD"],
+        ["LFHD", "RFHD"]
       ]
     }
   },
