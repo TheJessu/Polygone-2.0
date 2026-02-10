@@ -139,16 +139,20 @@ class ForcesTab(QWidget):
         self.editable_values = editable_values
 
     def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
-        type_indices = [i for i, t in enumerate(marker_types) if t == 'FORCES']
+        type_indices = [i for i, t in enumerate(marker_types) if t in ['FORCES', 'ANGLES']]
         groups = set()
+        name_map = {'Hi': 'Hip', 'Kne': 'Knee', 'Ankl': 'Ankle'}
         for idx in type_indices:
             if idx < len(marker_labels) and marker_labels[idx]:
                 label = marker_labels[idx]
+                group = ""
                 if label.startswith('L') or label.startswith('R'):
-                    group = label[1:-len('FORCES')].lower().capitalize()
-                    groups.add(group)
+                    group = label[1:-len('FORCES')].lower().capitalize() if 'FORCES' in label else label[1:-len('ANGLES')].lower().capitalize()
                 else:
-                    group = label[:-len('FORCES')].lower().capitalize() if label.endswith('FORCES') else label.lower().capitalize()
+                    group = label[:-len('FORCES')].lower().capitalize() if label.endswith('FORCES') else (label[:-len('ANGLES')].lower().capitalize() if label.endswith('ANGLES') else label.lower().capitalize())
+
+                group = name_map.get(group, group)
+                if group:
                     groups.add(group)
 
         self.groups = sorted(list(groups))
@@ -162,7 +166,7 @@ class ForcesTab(QWidget):
         self.group_buttons.clear()
         self.group_visibility.clear()
 
-        grey_out_groups = ['Absankl', 'Ankle', 'Elbow', 'Shoulder', 'Thorax', 'Wrist']
+        grey_out_groups = ['Absankl', 'Elbow', 'Shoulder', 'Thorax', 'Wrist', 'Head', 'Neck', 'Pelvis', 'Spine', 'Footprogress']  # Example groups to grey out
         for group in self.groups:
             button = QPushButton(group)
             button.setCheckable(True)

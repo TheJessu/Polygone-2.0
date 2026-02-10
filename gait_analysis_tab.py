@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog, QComboBox, QFileDialog, QCheckBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog, QComboBox, QFileDialog, QCheckBox, QScrollArea
 from PyQt5.QtCore import pyqtSignal
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -94,8 +94,12 @@ class GaitAnalysisTab(QWidget):
         self.kinematics_tab_layout.addLayout(dropdown_layout)
         self.kinematics_file_buttons_layout = QHBoxLayout()
         self.kinematics_tab_layout.addLayout(self.kinematics_file_buttons_layout)
-        self.kinematics_layout = QGridLayout()
-        self.kinematics_tab_layout.addLayout(self.kinematics_layout)
+        self.kinematics_scroll_area = QScrollArea()
+        self.kinematics_scroll_area.setWidgetResizable(True)
+        self.kinematics_plot_container = QWidget()
+        self.kinematics_plot_layout = QGridLayout(self.kinematics_plot_container)
+        self.kinematics_scroll_area.setWidget(self.kinematics_plot_container)
+        self.kinematics_tab_layout.addWidget(self.kinematics_scroll_area)
         self.tab_widget.addTab(self.kinematics_tab, "Gait 1 Kinematics")
         self.kinematics_side_filter = "All"
         self.kinematics_file_buttons = []
@@ -116,8 +120,12 @@ class GaitAnalysisTab(QWidget):
         self.kinetics_tab_layout.addLayout(dropdown_layout)
         self.kinetics_file_buttons_layout = QHBoxLayout()
         self.kinetics_tab_layout.addLayout(self.kinetics_file_buttons_layout)
-        self.kinetics_layout = QGridLayout()
-        self.kinetics_tab_layout.addLayout(self.kinetics_layout)
+        self.kinetics_scroll_area = QScrollArea()
+        self.kinetics_scroll_area.setWidgetResizable(True)
+        self.kinetics_plot_container = QWidget()
+        self.kinetics_plot_layout = QGridLayout(self.kinetics_plot_container)
+        self.kinetics_scroll_area.setWidget(self.kinetics_plot_container)
+        self.kinetics_tab_layout.addWidget(self.kinetics_scroll_area)
         self.tab_widget.addTab(self.kinetics_tab, "Gait 1 Kinetics")
         self.kinetics_side_filter = "All"
         self.kinetics_file_buttons = []
@@ -138,8 +146,12 @@ class GaitAnalysisTab(QWidget):
         self.moments_tab_layout.addLayout(dropdown_layout)
         self.moments_file_buttons_layout = QHBoxLayout()
         self.moments_tab_layout.addLayout(self.moments_file_buttons_layout)
-        self.moments_layout = QGridLayout()
-        self.moments_tab_layout.addLayout(self.moments_layout)
+        self.moments_scroll_area = QScrollArea()
+        self.moments_scroll_area.setWidgetResizable(True)
+        self.moments_plot_container = QWidget()
+        self.moments_plot_layout = QGridLayout(self.moments_plot_container)
+        self.moments_scroll_area.setWidget(self.moments_plot_container)
+        self.moments_tab_layout.addWidget(self.moments_scroll_area)
         self.tab_widget.addTab(self.moments_tab, "Gait 1 Moments")
         self.moments_side_filter = "All"
         self.moments_file_buttons = []
@@ -178,7 +190,7 @@ class GaitAnalysisTab(QWidget):
                 plot_widget.ymax_double_clicked.connect(self.on_ymax_double_clicked)
                 plot_widget.title_double_clicked.connect(self.on_title_double_clicked)
                 plot_widget.line_clicked.connect(lambda key: self.on_line_clicked(key, 'kinematics'))
-                self.kinematics_layout.addWidget(plot_widget, row, col)
+                self.kinematics_plot_layout.addWidget(plot_widget, row, col)
                 self.kinematics_plots.append((plot_widget, group, comp))
                 col += 1
             row += 1
@@ -209,7 +221,7 @@ class GaitAnalysisTab(QWidget):
             plot_widget = GaitPlotWidget(self.gait_cycle_plotter, self.kinetics_tab)
             plot_widget.plot_double_clicked.connect(self.on_plot_double_clicked)
             plot_widget.line_clicked.connect(lambda key: self.on_line_clicked(key, 'kinetics'))
-            self.kinetics_layout.addWidget(plot_widget, row, col)
+            self.kinetics_plot_layout.addWidget(plot_widget, row, col)
             self.kinetics_plots.append((plot_widget, group, comp, plot_type, y_label, unit_factor[0] if unit_factor else 1))
 
     def setup_moments_plots(self):
@@ -226,7 +238,7 @@ class GaitAnalysisTab(QWidget):
                 plot_widget.ymax_double_clicked.connect(self.on_ymax_double_clicked)
                 plot_widget.title_double_clicked.connect(self.on_title_double_clicked)
                 plot_widget.line_clicked.connect(lambda key: self.on_line_clicked(key, 'moments'))
-                self.moments_layout.addWidget(plot_widget, row, col)
+                self.moments_plot_layout.addWidget(plot_widget, row, col)
                 self.moments_plots.append((plot_widget, group, comp))
                 col += 1
             row += 1
@@ -287,7 +299,7 @@ class GaitAnalysisTab(QWidget):
             elif group.lower() == 'footprogress':
                 title = f'{group} - {"Dorsi-Plantarflexion" if comp == "y" else "Foot Progression" if comp == "z" else comp.upper()}'
             plot_widget.ax.set_title(title, fontsize=10)
-            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=5, labelpad=-1)
+            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
             if self.main_visible:
                 if self.imported_averages and 'ANGLES' in self.imported_averages:
                     if group in self.imported_averages['ANGLES'] and comp in self.imported_averages['ANGLES'][group]:
@@ -402,7 +414,7 @@ class GaitAnalysisTab(QWidget):
             else:
                 title = f'{group} - {comp.upper()}'
             plot_widget.ax.set_title(title, fontsize=10)
-            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=5, labelpad=-1)
+            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
             if plot_type in ['ANGLES', 'MOMENTS']:
                 plot_widget.ax.set_ylabel('')
             else:
@@ -505,7 +517,7 @@ class GaitAnalysisTab(QWidget):
             elif group.lower() == 'ankle' and comp == 'z':
                 title = f'{group} - Ankle Rotation Moment'
             plot_widget.ax.set_title(title, fontsize=10)
-            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=5, labelpad=-1)
+            plot_widget.ax.set_xlabel('Gait Cycle (%)', fontsize=8, labelpad=-1)
             if self.imported_averages and 'MOMENTS' in self.imported_averages:
                 if group in self.imported_averages['MOMENTS'] and comp in self.imported_averages['MOMENTS'][group]:
                     avg = self.imported_averages['MOMENTS'][group][comp]

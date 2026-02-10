@@ -154,7 +154,7 @@ class MomentsTab(QWidget):
     def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
         self.body_mass = body_mass
         self.moments_plotter = GenericDataPlotter('MOMENTS', body_mass)
-        type_indices = [i for i, t in enumerate(marker_types) if t == 'MOMENTS']
+        type_indices = [i for i, t in enumerate(marker_types) if t in ['MOMENTS', 'ANGLES']]
         groups = set()
         name_map = {'Hi': 'Hip', 'Kne': 'Knee', 'Ankl': 'Ankle'}
         for idx in type_indices:
@@ -162,9 +162,9 @@ class MomentsTab(QWidget):
                 label = marker_labels[idx]
                 group = ""
                 if label.startswith('L') or label.startswith('R'):
-                    group = label[1:-len('MOMENTS')].lower().capitalize()
+                    group = label[1:-len('MOMENTS')].lower().capitalize() if 'MOMENTS' in label else label[1:-len('ANGLES')].lower().capitalize()
                 else:
-                    group = label[:-len('MOMENTS')].lower().capitalize() if label.endswith('MOMENTS') else label.lower().capitalize()
+                    group = label[:-len('MOMENTS')].lower().capitalize() if label.endswith('MOMENTS') else (label[:-len('ANGLES')].lower().capitalize() if label.endswith('ANGLES') else label.lower().capitalize())
                 
                 group = name_map.get(group, group)
                 if group:
@@ -181,11 +181,11 @@ class MomentsTab(QWidget):
         self.group_buttons.clear()
         self.group_visibility.clear()
 
-        grey_out_groups = ['Absankl', 'Ankle', 'Elbow', 'Shoulder', 'Thorax', 'Wrist']
+        grey_out_groups = ['Absankl', 'Elbow', 'Shoulder', 'Thorax', 'Wrist', 'Head', 'Neck', 'Pelvis', 'Spine', 'Footprogress']  # Example groups to grey out
         for group in self.groups:
             button = QPushButton(group)
             button.setCheckable(True)
-            default_visible = group in ['Hip', 'Knee', 'Ankle']
+            default_visible = group not in grey_out_groups
             button.setChecked(default_visible)
             button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
             self.group_buttons[group] = button
@@ -524,22 +524,7 @@ class MomentsTab(QWidget):
             else:
                 vline.set_visible(False)
 
-        if self.gait_cycles and (self.gait_cycles.get('left') or self.gait_cycles.get('right')):
-            for plot in self.plots:
-                if hasattr(plot, 'scrubber_lines'):
-                    for side, scrubber in plot.scrubber_lines.items():
-                        cycles = self.gait_cycles.get(side, [])
-                        percentage = 0
-                        is_in_cycle = False
-                        for start, end in cycles:
-                            if start <= frame_index < end:
-                                cycle_len = end - start
-                                if cycle_len > 0:
-                                    percentage = (frame_index - start) / cycle_len * 100
-                                is_in_cycle = True
-                                break
-                        scrubber.set_xdata([percentage])
-                        scrubber.set_visible(is_in_cycle)
+
 
         # Update highlighted line info if any
         if self.highlighted_line is not None:

@@ -152,7 +152,7 @@ class PowersTab(QWidget):
         self.editable_values = editable_values
 
     def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
-        type_indices = [i for i, t in enumerate(marker_types) if t == 'POWERS']
+        type_indices = [i for i, t in enumerate(marker_types) if t in ['POWERS', 'ANGLES']]
         groups = set()
         name_map = {'Hi': 'Hip', 'Kne': 'Knee', 'Ankl': 'Ankle'}
         for idx in type_indices:
@@ -160,9 +160,9 @@ class PowersTab(QWidget):
                 label = marker_labels[idx]
                 group = ""
                 if label.startswith('L') or label.startswith('R'):
-                    group = label[1:-len('POWERS')].lower().capitalize()
+                    group = label[1:-len('POWERS')].lower().capitalize() if 'POWERS' in label else label[1:-len('ANGLES')].lower().capitalize()
                 else:
-                    group = label[:-len('POWERS')].lower().capitalize() if label.endswith('POWERS') else label.lower().capitalize()
+                    group = label[:-len('POWERS')].lower().capitalize() if label.endswith('POWERS') else (label[:-len('ANGLES')].lower().capitalize() if label.endswith('ANGLES') else label.lower().capitalize())
 
                 group = name_map.get(group, group)
                 if group:
@@ -179,11 +179,11 @@ class PowersTab(QWidget):
         self.group_buttons.clear()
         self.group_visibility.clear()
 
-        grey_out_groups = ['Absankl', 'Ankle', 'Elbow', 'Shoulder', 'Thorax', 'Wrist']
+        grey_out_groups = ['Absankl', 'Elbow', 'Shoulder', 'Thorax', 'Wrist', 'Head', 'Neck', 'Pelvis', 'Spine', 'Footprogress', 'Groundreaction']  # Example groups to grey out
         for group in self.groups:
             button = QPushButton(group)
             button.setCheckable(True)
-            default_visible = group in ['Hip', 'Knee', 'Ankle']
+            default_visible = group not in grey_out_groups
             button.setChecked(default_visible)
             button.clicked.connect(lambda checked, g=group: self.toggle_group_visibility(g))
             self.group_buttons[group] = button
