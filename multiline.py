@@ -99,6 +99,28 @@ class MultilineImporter:
             for i in range(len(right_strikes) - 1):
                 gait_cycles['right'].append((right_strikes[i], right_strikes[i+1]))
 
+            # Extract ANALYSIS data
+            analysis_data = {}
+            try:
+                analysis_group = reader.get('ANALYSIS')
+                if analysis_group:
+                    names_param = analysis_group.get('NAMES')
+                    contexts_param = analysis_group.get('CONTEXTS')
+                    values_param = analysis_group.get('VALUES')
+                    
+                    if names_param and contexts_param and values_param:
+                        names = names_param.string_array
+                        contexts = contexts_param.string_array
+                        values = values_param.float_array
+                        
+                        analysis_data = {
+                            'names': [str(n).strip() for n in names],
+                            'contexts': [str(c).strip() for c in contexts],
+                            'values': values
+                        }
+            except Exception as e:
+                print(f"Error extracting ANALYSIS data: {e}")
+
             filename = file_path.split('/')[-1].split('\\')[-1]  # Get filename
             self.imported_files.append({
                 'filename': filename,
@@ -106,7 +128,8 @@ class MultilineImporter:
                 'marker_labels': marker_labels,
                 'marker_types': marker_types,
                 'gait_cycles': gait_cycles,
-                'body_mass': body_mass
+                'body_mass': body_mass,
+                'analysis_data': analysis_data
             })
             return True
         except Exception as e:

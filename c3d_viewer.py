@@ -115,6 +115,7 @@ class C3DViewer(QWidget):
         self.segments = [] # Store segment data for drawing lines
         self.body_mass = None  # Body mass from C3D file
         self.segment_indices = [] # Store precomputed indices for segments
+        self.analysis_data = {} # Store ANALYSIS group data
 
         # Initialize interactor and picker
         self.iren.Initialize()
@@ -326,6 +327,28 @@ class C3DViewer(QWidget):
             except Exception as e:
                 print(f"Error extracting events: {e}")
 
+            # Extract ANALYSIS data
+            self.analysis_data = {}
+            try:
+                analysis_group = reader.get('ANALYSIS')
+                if analysis_group:
+                    names_param = analysis_group.get('NAMES')
+                    contexts_param = analysis_group.get('CONTEXTS')
+                    values_param = analysis_group.get('VALUES')
+                    
+                    if names_param and contexts_param and values_param:
+                        names = names_param.string_array
+                        contexts = contexts_param.string_array
+                        values = values_param.float_array
+                        
+                        self.analysis_data = {
+                            'names': [str(n).strip() for n in names],
+                            'contexts': [str(c).strip() for c in contexts],
+                            'values': values
+                        }
+            except Exception as e:
+                print(f"Error extracting ANALYSIS data: {e}")
+
             # Extract force plate data
             self.force_plate_data = []
             self.force_data = []
@@ -506,6 +529,7 @@ class C3DViewer(QWidget):
         self.markers_data = None
         self.trajectory_update_counter = 0  # Reset counter
         self.selected_markers.clear()  # Clear selected markers
+        self.analysis_data = {}
         self.vtk_widget.GetRenderWindow().Render()
 
     def get_markers_data(self):
@@ -531,6 +555,10 @@ class C3DViewer(QWidget):
     def get_last_frame(self):
         """Get the last frame number from the C3D file."""
         return getattr(self, 'last_frame', 0)
+
+    def get_analysis_data(self):
+        """Get the extracted ANALYSIS data."""
+        return self.analysis_data
 
     def toggle_trajectories(self):
         """Toggle visibility of trajectory lines for selected markers."""

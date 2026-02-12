@@ -4,6 +4,7 @@ import matplotlib.gridspec as gridspec
 from PyQt5.QtWidgets import QFileDialog
 import numpy as np
 import math
+from PyQt5.QtCore import Qt
 
 class PDFExporter:
     def __init__(self):
@@ -49,6 +50,12 @@ class PDFExporter:
                     if fig:
                         pdf.savefig(fig, dpi=300)
                         plt.close(fig)
+
+            # Export Parameters Tab (Page 10)
+            fig_params = self._export_parameters_to_figure(gait_analysis_tab)
+            if fig_params:
+                pdf.savefig(fig_params, dpi=300)
+                plt.close(fig_params)
 
         # Restore original tab and side filters
         gait_analysis_tab.tab_widget.setCurrentIndex(current_index)
@@ -107,6 +114,59 @@ class PDFExporter:
                     used_c3d_files.add(file_data['filename'])
 
         return sorted(list(used_c3d_files)), used_pxd
+
+    def _export_parameters_to_figure(self, gait_analysis_tab):
+        """Creates a figure for the Parameters table."""
+        table_widget = gait_analysis_tab.parameters_table
+        rows = table_widget.rowCount()
+        cols = table_widget.columnCount()
+        
+        if rows == 0:
+            return None
+
+        # Create figure
+        fig = plt.figure(figsize=(11.69, 8.27)) # Landscape A4 roughly
+        ax = fig.add_subplot(111)
+        ax.axis('off')
+        fig.suptitle("Gait Parameters", fontsize=16, fontweight='bold')
+
+        # Prepare data for matplotlib table
+        cell_text = []
+        cell_colors = []
+        row_labels = [] # Not using row labels, putting everything in cells
+        col_labels = [table_widget.horizontalHeaderItem(i).text().replace('\n', ' ') for i in range(cols)]
+
+        for r in range(rows):
+            row_data = []
+            row_colors = []
+            is_header = False
+            # Check if it's a header row (span)
+            if table_widget.rowSpan(r, 0) > 1 or table_widget.columnSpan(r, 0) > 1:
+                item = table_widget.item(r, 0)
+                text = item.text() if item else ""
+                bg_color = item.background().color().name() if item else "#FFFFFF"
+                # For header rows, we'll just put the text in the first cell and empty in others, 
+                # but matplotlib table doesn't support spans easily. 
+                # We will just fill the row with the same color and text in first cell.
+                row_data = [text] + [""] * (cols - 1)
+                row_colors = [bg_color] * cols
+            else:
+                for c in range(cols):
+                    item = table_widget.item(r, c)
+                    text = item.text() if item else ""
+                    row_data.append(text)
+                    row_colors.append("#FFFFFF")
+            
+            cell_text.append(row_data)
+            cell_colors.append(row_colors)
+
+        # Create table
+        the_table = ax.table(cellText=cell_text, colLabels=col_labels, cellColours=cell_colors, loc='center', cellLoc='center')
+        the_table.auto_set_font_size(False)
+        the_table.set_fontsize(10)
+        the_table.scale(1, 1.5)
+        
+        return fig
 
     def _export_layout_to_figure(self, layout, title, used_c3d_files=None, used_pxd=None, side=None):
         rows = layout.rowCount()

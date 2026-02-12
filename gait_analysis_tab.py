@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog, QComboBox, QFileDialog, QCheckBox, QScrollArea
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QInputDialog, QComboBox, QFileDialog, QCheckBox, QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QIcon, QColor
 from PyQt5.QtWidgets import QStyle
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -52,6 +52,7 @@ class GaitAnalysisTab(QWidget):
         self.body_mass = None
         self.multiline_importer = MultilineImporter()
         self.imported_averages = None
+        self.analysis_data = {}
 
         self.red_colors = ['#A30000', '#FF0000', '#FF5C5C', '#E34234', '#F88379']
         self.green_colors = ['#008000', '#00D100', '#00FF00', '#004700', '#AFE1AF']
@@ -156,6 +157,16 @@ class GaitAnalysisTab(QWidget):
         self.moments_scroll_area.setWidget(self.moments_plot_container)
         self.moments_tab_layout.addWidget(self.moments_scroll_area)
         self.tab_widget.addTab(self.moments_tab, "Gait 1 Moments")
+
+        # Parameters Tab
+        self.parameters_tab = QWidget()
+        self.parameters_tab_layout = QVBoxLayout(self.parameters_tab)
+        self.parameters_table = QTableWidget()
+        self.parameters_tab_layout.addWidget(self.parameters_table)
+        self.tab_widget.addTab(self.parameters_tab, "Parameters")
+        self.setup_parameters_table()
+
+        # Moments filters
         self.moments_side_filter = "All"
         self.moments_file_buttons = []
         self.moments_visible_file_index = None
@@ -246,11 +257,21 @@ class GaitAnalysisTab(QWidget):
                 col += 1
             row += 1
 
-    def load_data(self, markers_data, marker_types, marker_labels, body_mass=None):
+    def setup_parameters_table(self):
+        columns = ["Cadence\n(Steps/Min)", "Walking Speed\n(m/s)", "Stride Length\n(m)", "Step Length\n(m)", "Single Support\n(s)", "Double Support\n(s)"]
+        self.parameters_table.setColumnCount(len(columns))
+        self.parameters_table.setHorizontalHeaderLabels(columns)
+        header = self.parameters_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        self.parameters_table.verticalHeader().setVisible(False)
+        self.parameters_table.setEditTriggers(QTableWidget.NoEditTriggers)
+
+    def load_data(self, markers_data, marker_types, marker_labels, body_mass=None, analysis_data=None):
         self.markers_data = markers_data
         self.marker_types = marker_types
         self.marker_labels = marker_labels
         self.body_mass = body_mass
+        self.analysis_data = analysis_data if analysis_data else {}
         self.plot_data()
 
     def set_gait_cycles(self, gait_cycles):
@@ -275,6 +296,7 @@ class GaitAnalysisTab(QWidget):
             return
 
         # Clear existing plots
+        self.update_parameters_table()
         for plot_widget, *_ in self.kinematics_plots:
             plot_widget.ax.clear()
         for plot_widget, *_ in self.kinetics_plots:
@@ -633,6 +655,79 @@ class GaitAnalysisTab(QWidget):
             plot_widget.figure.subplots_adjust(left=0.25, right=0.9, top=0.9, bottom=0.2)
             plot_widget.canvas.draw()
 
+    def update_parameters_table(self):
+        self.parameters_table.setRowCount(0)
+        
+        # Define columns mapping to ANALYSIS names
+        # Map display name to possible C3D parameter names
+        param_map = {
+            "Cadence\n(Steps/Min)": ["Cadence"],
+            "Walking Speed\n(m/s)": ["Walking Speed", "Speed"],
+            "Stride Length\n(m)": ["Stride Length"],
+            "Step Length\n(m)": ["Step Length"],
+            "Single Support\n(s)": ["Single Support"],
+            "Double Support\n(s)": ["Double Support"]
+        }
+        
+        sides = [("Red", "Left", self.red_colors[0]), ("Green", "Right", self.green_colors[0])]
+        
+        for side_name, context, color in sides:
+            # Add Header Row
+            row = self.parameters_table.rowCount()
+            self.parameters_table.insertRow(row)
+            header_item = QTableWidgetItem(side_name)
+            header_item.setBackground(QColor(color))
+            header_item.setForeground(QColor("white"))
+            header_item.setTextAlignment(Qt.AlignCenter)
+            self.parameters_table.setItem(row, 0, header_item)
+            self.parameters_table.setSpan(row, 0, 1, self.parameters_table.columnCount())
+
+            # Collect visible files
+            visible_files = []
+            
+            # Main file
+            if self.main_visible:
+                visible_files.append(("Main File", self.analysis_data))
+            
+            # Imported files
+            # Check visibility based on side filter logic from kinematics (assuming consistent visibility across tabs for simplicity or using kinematics filter)
+            # Using kinematics visibility logic as a base for "visible files"
+            for i, file_data in enumerate(self.multiline_importer.imported_files):
+                is_visible = False
+                if self.kinematics_side_filter == "All":
+                    is_visible = (self.kinematics_visible_file_index is not None and i == self.kinematics_visible_file_index)
+                elif self.kinematics_side_filter == "Red":
+                    is_visible = (i in self.kinematics_red_visible_files)
+                elif self.kinematics_side_filter == "Green":
+                    is_visible = (i in self.kinematics_green_visible_files)
+                
+                if is_visible:
+                    visible_files.append((file_data['filename'], file_data.get('analysis_data', {})))
+
+            for filename, analysis in visible_files:
+                if not analysis: continue
+                
+                row = self.parameters_table.rowCount()
+                self.parameters_table.insertRow(row)
+                
+                # We need to find values for this context
+                # analysis['names'], analysis['contexts'], analysis['values']
+                
+                for col, header_label in enumerate(self.parameters_table.horizontalHeaderItem(i).text() for i in range(self.parameters_table.columnCount())):
+                    target_names = param_map.get(header_label, [])
+                    value_str = ""
+                    for i, name in enumerate(analysis.get('names', [])):
+                        if name in target_names and analysis.get('contexts', [])[i] == context:
+                            val = analysis.get('values', [])[i]
+                            value_str = f"{val:.2f}"
+                            break
+                    
+                    item = QTableWidgetItem(value_str if col > 0 else f"{filename} - {value_str}" if col==0 and value_str else filename)
+                    if col == 0: item.setText(filename)
+                    else: item.setText(value_str)
+                    item.setTextAlignment(Qt.AlignCenter)
+                    self.parameters_table.setItem(row, col, item)
+
     def on_plot_double_clicked(self, plot_widget):
         # Simple zoom, but since fixed layout, maybe just ignore or implement basic zoom
         pass
@@ -728,6 +823,7 @@ class GaitAnalysisTab(QWidget):
         self.marker_types = None
         self.marker_labels = None
         self.gait_cycles = None
+        self.analysis_data = {}
         for plot_widget, *_ in self.kinematics_plots:
             plot_widget.ax.clear()
             plot_widget.canvas.draw()
@@ -737,6 +833,7 @@ class GaitAnalysisTab(QWidget):
         for plot_widget, *_ in self.moments_plots:
             plot_widget.ax.clear()
             plot_widget.canvas.draw()
+        self.parameters_table.setRowCount(0)
         self.vlines = []
 
     def on_kinematics_side_changed(self, side):
