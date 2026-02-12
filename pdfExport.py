@@ -28,9 +28,9 @@ class PDFExporter:
         current_moments_side = gait_analysis_tab.moments_side_filter
 
         tabs = [
-            ('kinematics', 0, gait_analysis_tab.kinematics_layout, 'kinematics_side_filter'),
-            ('kinetics', 1, gait_analysis_tab.kinetics_layout, 'kinetics_side_filter'),
-            ('moments', 2, gait_analysis_tab.moments_layout, 'moments_side_filter')
+            ('kinematics', 0, gait_analysis_tab.kinematics_plot_layout, 'kinematics_side_filter'),
+            ('kinetics', 1, gait_analysis_tab.kinetics_plot_layout, 'kinetics_side_filter'),
+            ('moments', 2, gait_analysis_tab.moments_plot_layout, 'moments_side_filter')
         ]
         sides = ['All', 'Red', 'Green']
 
@@ -125,7 +125,7 @@ class PDFExporter:
             return None
 
         # Create figure
-        fig = plt.figure(figsize=(11.69, 8.27)) # Landscape A4 roughly
+        fig = plt.figure(figsize=(8.27, 11.69)) # Portrait A4
         ax = fig.add_subplot(111)
         ax.axis('off')
         fig.suptitle("Gait Parameters", fontsize=16, fontweight='bold')
@@ -176,11 +176,8 @@ class PDFExporter:
             return None
 
         # Create a figure for the PDF page.
-        # Adjust size based on side: larger for 'All' pages
-        if side == 'All':
-            fig = plt.figure(figsize=(12, 16))
-        else:
-            fig = plt.figure(figsize=(10, 14))
+        # Use A4 Portrait (8.27 x 11.69 inches) for all pages
+        fig = plt.figure(figsize=(8.27, 11.69))
         fig.suptitle(title, fontsize=16, fontweight='bold')
 
         # Add text below the title if files were used
@@ -193,7 +190,9 @@ class PDFExporter:
             subtitle = '\n'.join(subtitle_lines)
             fig.text(0.5, 0.95, subtitle, ha='center', va='top', fontsize=10, wrap=True)
 
-        gs = gridspec.GridSpec(rows, cols, figure=fig, hspace=0.4, wspace=0.4)
+        # Use max(rows, 5) to ensure consistent plot sizing with Kinematics (which has 5 rows)
+        gs_rows = max(rows, 5)
+        gs = gridspec.GridSpec(gs_rows, cols, figure=fig, hspace=0.4, wspace=0.4)
 
         for r in range(rows):
             for c in range(cols):

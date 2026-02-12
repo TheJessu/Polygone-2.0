@@ -491,6 +491,8 @@ class GaitAnalysisTab(QWidget):
             if group.lower() == 'ankle' and comp == 'y' and plot_type == 'ANGLES':
                 for y in range(-50, 51, 10):
                     plot_widget.ax.axhline(y=y, color='grey', linestyle='-', linewidth=0.5)
+            plot_widget.ax.set_xticks([0, 50, 100])
+            plot_widget.ax.tick_params(axis='both', which='major', labelsize=8)
             plot_widget.add_editable_texts(ymin, ymax, title)
             plot_widget.canvas.draw()
             plot_widget.setVisible(True)
@@ -626,6 +628,8 @@ class GaitAnalysisTab(QWidget):
                 if ymin <= -step <= ymax:
                     plot_widget.ax.axhline(y=-step, color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 
+            plot_widget.ax.set_xticks([0, 50, 100])
+            plot_widget.ax.tick_params(axis='both', which='major', labelsize=8)
             plot_widget.add_editable_texts(ymin, ymax, title)
             plot_widget.canvas.draw()
             plot_widget.setVisible(True)
