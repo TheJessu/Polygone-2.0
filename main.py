@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
                 body_mass = self.c3d_viewer.get_body_mass()
                 self.data_plotter.load_data(markers_data, marker_types, marker_labels, angle_units, body_mass)
                 analysis_data = self.c3d_viewer.get_analysis_data()
-                self.gait_analysis_tab.load_data(markers_data, marker_types, marker_labels, body_mass, analysis_data)
+                self.gait_analysis_tab.load_data(markers_data, marker_types, marker_labels, body_mass, analysis_data, os.path.basename(file_path))
                 # Update timeline controls
                 if markers_data is not None:
                     self.total_frames = markers_data.shape[0]

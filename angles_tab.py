@@ -243,6 +243,7 @@ class AnglesTab(QWidget):
 
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', '', current_frame, component=component, plot_widget=plot_widget)
+                    plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=0.8, alpha=0.6)
                     plot_widget.ax.set_xlim(0, 100)
                 else:
                     self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component, plot_widget=plot_widget)

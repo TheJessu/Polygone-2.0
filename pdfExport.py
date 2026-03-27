@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.gridspec as gridspec
 from PyQt5.QtWidgets import QFileDialog
 import numpy as np
 import math
-from PyQt5.QtCore import Qt
+import os
 
 class PDFExporter:
     def __init__(self):
@@ -37,16 +38,16 @@ class PDFExporter:
         with PdfPages(filename) as pdf:
             for tab_name, tab_index, layout, side_attr in tabs:
                 for side in sides:
+                    # Set tab active before plotting so canvas has correct dimensions
+                    gait_analysis_tab.tab_widget.setCurrentIndex(tab_index)
                     # Set side filter
                     setattr(gait_analysis_tab, side_attr, side)
                     # Update plots
                     gait_analysis_tab.plot_data()
-                    # Set tab active
-                    gait_analysis_tab.tab_widget.setCurrentIndex(tab_index)
                     # Export page
                     title = f"Gait 1 {tab_name.capitalize()} - {side}"
-                    used_c3d_files, used_pxd = self._collect_used_files(gait_analysis_tab, tab_name, side)
-                    fig = self._export_layout_to_figure(layout, title, used_c3d_files, used_pxd, side)
+                    file_entries = self._collect_used_files(gait_analysis_tab, tab_name, side)
+                    fig = self._export_layout_to_figure(layout, title, file_entries)
                     if fig:
                         pdf.savefig(fig, dpi=300)
                         plt.close(fig)
@@ -65,134 +66,210 @@ class PDFExporter:
         gait_analysis_tab.plot_data()  # Restore plots
 
     def _collect_used_files(self, gait_analysis_tab, tab_name, side):
-        used_c3d_files = set()
-        used_pxd = None
+        """
+        Returns a list of file_entries, each a dict:
+          {'filename': str, 'lines': [{'color': str, 'linestyle': str}, ...]}
+        """
+        line_styles = gait_analysis_tab.line_styles
+        red_colors = gait_analysis_tab.red_colors
+        green_colors = gait_analysis_tab.green_colors
+        multiline = gait_analysis_tab.multiline_importer
+        file_entries = []
 
-        # Check if averages are imported
+        if tab_name == 'kinematics':
+            visible_idx = gait_analysis_tab.kinematics_visible_file_index
+            red_visible = list(gait_analysis_tab.kinematics_red_visible_files)
+            green_visible = list(gait_analysis_tab.kinematics_green_visible_files)
+        elif tab_name == 'kinetics':
+            visible_idx = gait_analysis_tab.kinetics_visible_file_index
+            red_visible = list(gait_analysis_tab.kinetics_red_visible_files)
+            green_visible = list(gait_analysis_tab.kinetics_green_visible_files)
+        elif tab_name == 'moments':
+            visible_idx = gait_analysis_tab.moments_visible_file_index
+            red_visible = list(gait_analysis_tab.moments_red_visible_files)
+            green_visible = list(gait_analysis_tab.moments_green_visible_files)
+        else:
+            visible_idx = None
+            red_visible = []
+            green_visible = []
+
+        if multiline.get_num_files() > 0:
+            if side == 'All':
+                if visible_idx is not None:
+                    fd = multiline.imported_files[visible_idx]
+                    ls = line_styles[visible_idx % len(line_styles)]
+                    file_entries.append({
+                        'filename': fd['filename'],
+                        'lines': [
+                            {'color': red_colors[0], 'linestyle': ls},
+                            {'color': green_colors[0], 'linestyle': ls},
+                        ]
+                    })
+            elif side == 'Red':
+                for list_idx, idx in enumerate(red_visible):
+                    if idx < multiline.get_num_files():
+                        fd = multiline.imported_files[idx]
+                        ls = line_styles[idx % len(line_styles)]
+                        color = red_colors[list_idx % len(red_colors)]
+                        file_entries.append({
+                            'filename': fd['filename'],
+                            'lines': [{'color': color, 'linestyle': ls}]
+                        })
+            elif side == 'Green':
+                for list_idx, idx in enumerate(green_visible):
+                    if idx < multiline.get_num_files():
+                        fd = multiline.imported_files[idx]
+                        ls = line_styles[idx % len(line_styles)]
+                        color = green_colors[list_idx % len(green_colors)]
+                        file_entries.append({
+                            'filename': fd['filename'],
+                            'lines': [{'color': color, 'linestyle': ls}]
+                        })
+
+        # PXD average shown as grey dashed
         if hasattr(gait_analysis_tab, 'imported_averages') and gait_analysis_tab.imported_averages:
             used_pxd = getattr(gait_analysis_tab, 'imported_pxd_filename', None)
+            if used_pxd:
+                file_entries.append({
+                    'filename': used_pxd,
+                    'lines': [{'color': 'grey', 'linestyle': '--'}]
+                })
 
-        # Check multiline files based on tab and side
-        if tab_name == 'kinematics':
-            if side == 'All':
-                if gait_analysis_tab.kinematics_visible_file_index is not None:
-                    file_data = gait_analysis_tab.multiline_importer.imported_files[gait_analysis_tab.kinematics_visible_file_index]
-                    used_c3d_files.add(file_data['filename'])
-            elif side == 'Red':
-                for idx in gait_analysis_tab.kinematics_red_visible_files:
-                    file_data = gait_analysis_tab.multiline_importer.imported_files[idx]
-                    used_c3d_files.add(file_data['filename'])
-            elif side == 'Green':
-                for idx in gait_analysis_tab.kinematics_green_visible_files:
-                    file_data = gait_analysis_tab.multiline_importer.imported_files[idx]
-                    used_c3d_files.add(file_data['filename'])
-        elif tab_name == 'kinetics':
-            if side == 'All':
-                if gait_analysis_tab.kinetics_visible_file_index is not None:
-                    file_data = gait_analysis_tab.multiline_importer.imported_files[gait_analysis_tab.kinetics_visible_file_index]
-                    used_c3d_files.add(file_data['filename'])
-            elif side == 'Red':
-                for idx in gait_analysis_tab.kinetics_red_visible_files:
-                    file_data = gait_analysis_tab.multiline_importer.imported_files[idx]
-                    used_c3d_files.add(file_data['filename'])
-            elif side == 'Green':
-                for idx in gait_analysis_tab.kinetics_green_visible_files:
-                    file_data = gait_analysis_tab.multiline_importer.imported_files[idx]
-                    used_c3d_files.add(file_data['filename'])
-        elif tab_name == 'moments':
-            if side == 'All':
-                if gait_analysis_tab.moments_visible_file_index is not None:
-                    file_data = gait_analysis_tab.multiline_importer.imported_files[gait_analysis_tab.moments_visible_file_index]
-                    used_c3d_files.add(file_data['filename'])
-            elif side == 'Red':
-                for idx in gait_analysis_tab.moments_red_visible_files:
-                    file_data = gait_analysis_tab.multiline_importer.imported_files[idx]
-                    used_c3d_files.add(file_data['filename'])
-            elif side == 'Green':
-                for idx in gait_analysis_tab.moments_green_visible_files:
-                    file_data = gait_analysis_tab.multiline_importer.imported_files[idx]
-                    used_c3d_files.add(file_data['filename'])
-
-        return sorted(list(used_c3d_files)), used_pxd
+        return file_entries
 
     def _export_parameters_to_figure(self, gait_analysis_tab):
         """Creates a figure for the Parameters table."""
         table_widget = gait_analysis_tab.parameters_table
         rows = table_widget.rowCount()
         cols = table_widget.columnCount()
-        
+
         if rows == 0:
             return None
 
-        # Create figure
-        fig = plt.figure(figsize=(8.27, 11.69)) # Portrait A4
+        fig = plt.figure(figsize=(8.27, 11.69))
         ax = fig.add_subplot(111)
         ax.axis('off')
         fig.suptitle("Gait Parameters", fontsize=16, fontweight='bold')
 
-        # Prepare data for matplotlib table
+        # Keep \n so units appear on a second line in the table header
+        col_labels = [
+            table_widget.horizontalHeaderItem(i).text()
+            for i in range(cols)
+        ]
+
+        # Resolve main file display name
+        main_name = gait_analysis_tab.main_filename if gait_analysis_tab.main_filename else "Main File"
+
         cell_text = []
         cell_colors = []
-        row_labels = [] # Not using row labels, putting everything in cells
-        col_labels = [table_widget.horizontalHeaderItem(i).text().replace('\n', ' ') for i in range(cols)]
+        # Map: table data-row index → (header_text, original_color) for section headers
+        header_rows = {}
 
         for r in range(rows):
             row_data = []
-            row_colors = []
-            is_header = False
-            # Check if it's a header row (span)
+            row_bg = []
             if table_widget.rowSpan(r, 0) > 1 or table_widget.columnSpan(r, 0) > 1:
                 item = table_widget.item(r, 0)
                 text = item.text() if item else ""
-                bg_color = item.background().color().name() if item else "#FFFFFF"
-                # For header rows, we'll just put the text in the first cell and empty in others, 
-                # but matplotlib table doesn't support spans easily. 
-                # We will just fill the row with the same color and text in first cell.
+                # Store original bg color to use as text color in PDF
+                orig_color = item.background().color().name() if item else "#000000"
                 row_data = [text] + [""] * (cols - 1)
-                row_colors = [bg_color] * cols
+                row_bg = ["#EEEEEE"] * cols  # light gray background instead of full color
+                header_rows[len(cell_text)] = orig_color  # data-row index → color
             else:
                 for c in range(cols):
                     item = table_widget.item(r, c)
                     text = item.text() if item else ""
+                    if c == 0 and text == "Main File":
+                        text = f"{main_name} (Main File)"
                     row_data.append(text)
-                    row_colors.append("#FFFFFF")
-            
-            cell_text.append(row_data)
-            cell_colors.append(row_colors)
+                    row_bg.append("#FFFFFF")
 
-        # Create table
-        the_table = ax.table(cellText=cell_text, colLabels=col_labels, cellColours=cell_colors, loc='center', cellLoc='center')
+            cell_text.append(row_data)
+            cell_colors.append(row_bg)
+
+        the_table = ax.table(
+            cellText=cell_text,
+            colLabels=col_labels,
+            cellColours=cell_colors,
+            loc='center',
+            cellLoc='center'
+        )
         the_table.auto_set_font_size(False)
-        the_table.set_fontsize(10)
-        the_table.scale(1, 1.5)
-        
+        the_table.set_fontsize(9)
+        # Scale: wider columns (1.1x), taller rows (2x) to fit 2-line headers
+        the_table.scale(1.1, 2.0)
+        the_table.auto_set_column_width(list(range(cols)))
+
+        # Style column header row (row 0): smaller font, bold
+        for c in range(cols):
+            cell = the_table[0, c]
+            cell.set_fontsize(8)
+            cell.get_text().set_fontweight('bold')
+            cell.get_text().set_multialignment('center')
+
+        # Style section header rows: colored text, bold, light gray background
+        for data_row_idx, orig_color in header_rows.items():
+            table_row = data_row_idx + 1  # +1 because row 0 is column header
+            for c in range(cols):
+                cell = the_table[table_row, c]
+                cell.set_facecolor("#EEEEEE")
+                if c == 0:
+                    cell.get_text().set_color(orig_color)
+                    cell.get_text().set_fontweight('bold')
+
         return fig
 
-    def _export_layout_to_figure(self, layout, title, used_c3d_files=None, used_pxd=None, side=None):
+    def _export_layout_to_figure(self, layout, title, file_entries=None):
         rows = layout.rowCount()
         cols = layout.columnCount()
 
         if rows == 0 or cols == 0:
             return None
 
-        # Create a figure for the PDF page.
-        # Use A4 Portrait (8.27 x 11.69 inches) for all pages
         fig = plt.figure(figsize=(8.27, 11.69))
-        fig.suptitle(title, fontsize=16, fontweight='bold')
+        fig.suptitle(title, fontsize=14, fontweight='bold', y=0.99)
 
-        # Add text below the title if files were used
-        subtitle_lines = []
-        if used_c3d_files:
-            subtitle_lines.append(f"C3D Files: {', '.join(used_c3d_files)}")
-        if used_pxd:
-            subtitle_lines.append(f"Average PXD: {used_pxd}")
-        if subtitle_lines:
-            subtitle = '\n'.join(subtitle_lines)
-            fig.text(0.5, 0.95, subtitle, ha='center', va='top', fontsize=10, wrap=True)
+        # --- Draw all legend entries on a single horizontal line below the title ---
+        line_len = 0.05      # width of each line sample in figure coords
+        line_gap = 0.006     # gap between consecutive samples within one entry
+        entry_gap = 0.025    # gap between separate file entries
+        text_gap = 0.008     # gap between last line sample and filename text
+        char_width = 0.007   # approximate figure-width per character at fontsize 7.5
+        legend_y = 0.963     # vertical position of the legend line
 
-        # Use max(rows, 5) to ensure consistent plot sizing with Kinematics (which has 5 rows)
+        x = 0.05
+        for entry in (file_entries or []):
+            for line_info in entry['lines']:
+                ln = mlines.Line2D(
+                    [x, x + line_len],
+                    [legend_y, legend_y],
+                    color=line_info['color'],
+                    linestyle=line_info['linestyle'],
+                    linewidth=1.5,
+                    transform=fig.transFigure,
+                    figure=fig
+                )
+                fig.add_artist(ln)
+                x += line_len + line_gap
+            label = os.path.basename(entry['filename'])
+            fig.text(x + text_gap, legend_y, label,
+                     fontsize=7.5, va='center', ha='left',
+                     transform=fig.transFigure)
+            x += text_gap + len(label) * char_width + entry_gap
+
+        # GridSpec: legend is one fixed-height line, give the rest to plots
+        legend_height = 0.03  # one row of legend
+        gs_top = legend_y + legend_height * 0.5 - legend_height - 0.005
+        gs_top = 0.955  # fixed: just below the legend line
+
         gs_rows = max(rows, 5)
-        gs = gridspec.GridSpec(gs_rows, cols, figure=fig, hspace=0.4, wspace=0.4)
+        gs = gridspec.GridSpec(
+            gs_rows, cols, figure=fig,
+            hspace=0.3, wspace=0.25,
+            top=gs_top, bottom=0.02,
+            left=0.04, right=0.99
+        )
 
         for r in range(rows):
             for c in range(cols):
@@ -201,7 +278,6 @@ class PDFExporter:
                     plot_widget = item.widget()
                     if hasattr(plot_widget, 'canvas'):
                         try:
-                            # Get the content of the canvas as a numpy array
                             canvas_width, canvas_height = plot_widget.canvas.get_width_height()
                             buffer = plot_widget.canvas.tostring_rgb()
                             buffer_size = len(buffer)
@@ -215,16 +291,14 @@ class PDFExporter:
                                 raise ValueError(f"Calculated size {width}x{height} = {width*height}, but num_pixels {num_pixels}")
                             img_data = np.frombuffer(buffer, dtype=np.uint8).reshape((height, width, 3))
 
-                            # Create a new subplot in the figure and show the image
                             ax = fig.add_subplot(gs[r, c])
                             ax.imshow(img_data)
-                            ax.axis('off') # Don't show axes for the image container
+                            ax.axis('off')
                         except Exception as e:
                             print(f"Error exporting plot: {e}")
                             ax = fig.add_subplot(gs[r, c])
                             ax.set_visible(False)
                     else:
-                        # Create empty subplot to maintain grid position
                         ax = fig.add_subplot(gs[r, c])
                         ax.set_visible(False)
 
