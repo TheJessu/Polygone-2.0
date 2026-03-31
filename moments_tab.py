@@ -261,7 +261,7 @@ class MomentsTab(QWidget):
 
                     if use_gait_cycle:
                         self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', '', current_frame, component=component, body_mass=self.body_mass, plot_widget=plot_widget)
-                        plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=0.8, alpha=0.6)
+                        plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=2, alpha=0.6)
                         plot_widget.ax.set_xlim(0, 100)
                     else:
                         self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component, plot_widget=plot_widget)
@@ -388,7 +388,7 @@ class MomentsTab(QWidget):
 
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'MOMENTS', 'Moment (Nm/kg)', current_frame, component=component, body_mass=self.body_mass, plot_widget=plot_widget)
-                    plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=0.8, alpha=0.6)
+                    plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=2, alpha=0.6)
                     plot_widget.ax.set_xlim(0, 100)
                 else:
                     self.moments_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)

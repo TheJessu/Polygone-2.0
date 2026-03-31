@@ -227,7 +227,7 @@ class ForcesTab(QWidget):
 
                     if use_gait_cycle:
                         self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'FORCES', 'Force (N)', current_frame, component=component)
-                        plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=0.8, alpha=0.6)
+                        plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=2, alpha=0.6)
                     else:
                         self.forces_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'N', component)
                         if plot_current_frame is not None:
@@ -266,7 +266,7 @@ class ForcesTab(QWidget):
 
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'FORCES', '', current_frame, component=component)
-                    plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=0.8, alpha=0.6)
+                    plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=2, alpha=0.6)
                 else:
                     self.forces_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component)
                     if plot_current_frame is not None:

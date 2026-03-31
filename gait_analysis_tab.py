@@ -32,6 +32,7 @@ class PlotWidget(EditablePlotWidget):
     def __init__(self, gait_cycle_plotter, parent=None):
         super().__init__(parent)
         self.gait_cycle_plotter = gait_cycle_plotter
+        self.scrubber_lines = {}  # side to scrubber line
         self.canvas.setFixedSize(200, 200)
         self.canvas.mpl_connect('pick_event', self.on_line_pick)
 
@@ -286,12 +287,30 @@ class GaitAnalysisTab(QWidget):
 
     def set_current_frame(self, frame_index):
         self.current_frame = frame_index
-        # Update vlines only for kinematics plots
-        for vline in self.vlines:
-            if vline:
-                # Remove old vline
-                vline.remove()
-        self.vlines = []
+
+        # Update scrubbers in gait cycle plots
+        if self.gait_cycles and (self.gait_cycles.get('left') or self.gait_cycles.get('right')):
+            all_plot_widgets = (
+                [pw for pw, *_ in self.kinematics_plots] +
+                [pw for pw, *_ in self.kinetics_plots] +
+                [pw for pw, *_ in self.moments_plots]
+            )
+            for plot_widget in all_plot_widgets:
+                if hasattr(plot_widget, 'scrubber_lines'):
+                    for side, scrubber in plot_widget.scrubber_lines.items():
+                        cycles = self.gait_cycles.get(side, [])
+                        percentage = 0
+                        is_in_cycle = False
+                        for start, end in cycles:
+                            if start <= frame_index < end:
+                                cycle_len = end - start
+                                if cycle_len > 0:
+                                    percentage = (frame_index - start) / cycle_len * 100
+                                is_in_cycle = True
+                                break
+                        scrubber.set_xdata([percentage])
+                        scrubber.set_visible(is_in_cycle)
+                    plot_widget.canvas.draw()
 
     def plot_data(self):
         if self.markers_data is None or not self.gait_cycles:
@@ -301,10 +320,13 @@ class GaitAnalysisTab(QWidget):
         self.update_parameters_table()
         for plot_widget, *_ in self.kinematics_plots:
             plot_widget.ax.clear()
+            plot_widget.scrubber_lines = {}
         for plot_widget, *_ in self.kinetics_plots:
             plot_widget.ax.clear()
+            plot_widget.scrubber_lines = {}
         for plot_widget, *_ in self.moments_plots:
             plot_widget.ax.clear()
+            plot_widget.scrubber_lines = {}
         self.vlines = []
         self.gait_cycle_plotter.lines = {}
 
@@ -337,7 +359,7 @@ class GaitAnalysisTab(QWidget):
                         plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
                         plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)                
 
-                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter, key_suffix="_main")
+                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'ANGLES', '', self.current_frame, component=comp, side_filter=self.kinematics_side_filter, key_suffix="_main", plot_widget=plot_widget)
 
             # Plot multiline data
             if self.multiline_importer.get_num_files() > 0:
@@ -459,7 +481,7 @@ class GaitAnalysisTab(QWidget):
                         x = np.linspace(0, 100, len(mean))
                         plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
                         plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)
-                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.kinetics_side_filter, key_suffix="_main")
+                self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, plot_type, y_label, self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.kinetics_side_filter, key_suffix="_main", plot_widget=plot_widget)
 
             # Check for edited values
             plot_key = f"{plot_type}_{group}_{comp}"
@@ -563,7 +585,7 @@ class GaitAnalysisTab(QWidget):
                     x = np.linspace(0, 100, len(mean))
                     plot_widget.ax.fill_between(x, mean - std, mean + std, color='grey', alpha=0.3)
                     plot_widget.ax.plot(x, mean, color='grey', linestyle='--', linewidth=1)                
-            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', '', self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.moments_side_filter, key_suffix="_main")
+            self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, self.markers_data, self.marker_labels, self.marker_types, group, self.gait_cycles, 'MOMENTS', '', self.current_frame, component=comp, body_mass=self.body_mass, side_filter=self.moments_side_filter, key_suffix="_main", plot_widget=plot_widget)
 
             # Set default y-limits for moments
             if group.lower() == 'hip':
