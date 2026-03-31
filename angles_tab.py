@@ -56,6 +56,7 @@ class AnglesTab(QWidget):
         self.angles_plotter = GenericDataPlotter('ANGLES')
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
+        self.foot_off_pcts = {}
         self.frame_range = None
 
         self.layout = QVBoxLayout(self)
@@ -140,6 +141,9 @@ class AnglesTab(QWidget):
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
 
+    def set_foot_off_pcts(self, pcts):
+        self.foot_off_pcts = pcts
+
     def set_editable_values(self, editable_values):
         self.editable_values = editable_values
 
@@ -202,7 +206,7 @@ class AnglesTab(QWidget):
             plot.scrubber_lines = {}
 
         selected_component = self.dropdown.currentText()
-        desired_order = ['Spine', 'Pelvis', 'Hip', 'Knee', 'Footprogress', 'Absankl', 'Ankle', 'Elbow', 'Shoulder', 'Thorax', 'Wrist']
+        desired_order = ['Spine', 'Pelvis', 'Hip', 'Knee', 'Ankle', 'Footprogress', 'Absankl', 'Elbow', 'Shoulder', 'Thorax', 'Wrist']
         visible_groups = [g for g in self.groups if self.group_visibility.get(g, True)]
         groups = sorted(visible_groups, key=lambda g: (0 if g in desired_order else 1, desired_order.index(g) if g in desired_order else 0))
         use_gait_cycle = self.gait_cycles and (self.gait_cycles['left'] or self.gait_cycles['right'])
@@ -217,19 +221,19 @@ class AnglesTab(QWidget):
         for group in groups:
             for component in components_to_plot:
                 plot_widget = self.add_plot(row, col)
-                title = f'{group} - {component.upper()}'
+                title = f'{group} {component.upper()}'
                 if group.lower() == 'spine':
-                    title = f'{group} - {"Trunk Sway" if component == "x" else "Trunk Tilt" if component == "y" else "Trunk Rotation"}'
+                    title = 'Trunk Sway' if component == 'x' else 'Trunk Tilt' if component == 'y' else 'Trunk Rotation'
                 elif group.lower() == 'pelvis':
-                    title = f'{group} - {"Pelvic Obliquity" if component == "x" else "Pelvic Tilt" if component == "y" else "Pelvic Rotation"}'
+                    title = 'Pelvic Obliquity' if component == 'x' else 'Pelvic Tilt' if component == 'y' else 'Pelvic Rotation'
                 elif group.lower() == 'hip':
-                    title = f'{group} - {"Hip Ab-Adduction" if component == "x" else "Hip Flexion-Extension" if component == "y" else "Hip Rotation"}'
+                    title = 'Hip Ab-Adduction' if component == 'x' else 'Hip Flexion-Extension' if component == 'y' else 'Hip Rotation'
                 elif group.lower() == 'knee':
-                    title = f'{group} - {"Knee Flexion-Extension" if component == "y" else "Knee Rotation" if component == "z" else "Knee Valg/Varus"}'
+                    title = 'Knee Flexion-Extension' if component == 'y' else 'Knee Rotation' if component == 'z' else 'Knee Valg/Varus'
                 elif group.lower() == 'footprogress':
-                    title = f'{group} - {" Foot Dorsi-Plantarflexion" if component == "y" else "Foot Progression" if component == "z" else component.upper()}'
+                    title = 'Foot Dorsi-Plantarflexion' if component == 'y' else 'Foot Progression' if component == 'z' else component.upper()
                 elif group.lower() == 'ankle':
-                    title = f'{group} - {"Ankle Valg/Varus" if component == "x" else "Dorsi-Plantarflexion" if component == "y" else component.upper()}'
+                    title = 'Ankle Valg/Varus' if component == 'x' else 'Dorsi-Plantarflexion' if component == 'y' else component.upper()
                 plot_widget.ax.set_xlabel('Frame' if not use_gait_cycle else 'Gait Cycle (%)', fontsize=8, labelpad=-1)
                 
                 if use_gait_cycle and self.imported_averages:
@@ -243,7 +247,9 @@ class AnglesTab(QWidget):
 
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'ANGLES', '', current_frame, component=component, plot_widget=plot_widget)
-                    plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=2, alpha=0.6)
+                    for pct, fo_color in [(self.foot_off_pcts.get('left'), 'red'), (self.foot_off_pcts.get('right'), 'green')]:
+                        if pct is not None:
+                            plot_widget.ax.axvline(x=pct, color=fo_color, linestyle='--', linewidth=2, alpha=0.6)
                     plot_widget.ax.set_xlim(0, 100)
                 else:
                     self.angles_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, 'degrees', component, plot_widget=plot_widget)
@@ -382,13 +388,15 @@ class AnglesTab(QWidget):
         if self.zoomed_plot:
             # Zoom out
             self.plot_layout.removeWidget(self.zoomed_plot)
-            self.zoomed_plot.canvas.setFixedSize(200, 200)
+            self.zoomed_plot.canvas.setMinimumSize(200, 200)
+            self.zoomed_plot.canvas.setMaximumSize(16777215, 16777215)
             self.zoomed_plot.canvas.draw()
             for p in self.plots:
                 pos = p.property("grid_pos")
                 if pos:
                     self.plot_layout.addWidget(p, pos[0], pos[1])
-                p.canvas.setFixedSize(200, 200)
+                p.canvas.setMinimumSize(200, 200)
+                p.canvas.setMaximumSize(16777215, 16777215)
                 p.canvas.draw()
                 p.show()
             self.zoomed_plot = None

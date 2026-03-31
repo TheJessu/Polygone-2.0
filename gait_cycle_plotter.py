@@ -68,7 +68,7 @@ class GaitCyclePlotter:
                     all_right_cycles_norm.append(interp_data)
 
         x_axis_norm = np.linspace(0, 100, 101)
-        if (side_filter == "All" or side_filter == "Red") and all_left_cycles_norm:
+        if (side_filter == "All" or side_filter == "Left") and all_left_cycles_norm:
             mean_left = np.mean(all_left_cycles_norm, axis=0)
             std_left = np.std(all_left_cycles_norm, axis=0)
             line_color = color if color else 'red'
@@ -77,7 +77,7 @@ class GaitCyclePlotter:
             self.lines[key] = (line, key, 'Mean Left', mean_left, line_color)
             ax.fill_between(x_axis_norm, mean_left - std_left, mean_left + std_left, color=line_color, alpha=0.2)
 
-        if (side_filter == "All" or side_filter == "Green") and all_right_cycles_norm:
+        if (side_filter == "All" or side_filter == "Right") and all_right_cycles_norm:
             mean_right = np.mean(all_right_cycles_norm, axis=0)
             std_right = np.std(all_right_cycles_norm, axis=0)
             line_color = color if color else 'green'

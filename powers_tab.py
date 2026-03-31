@@ -61,6 +61,7 @@ class PowersTab(QWidget):
         self.powers_plotter = GenericDataPlotter('POWERS')
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
+        self.foot_off_pcts = {}
         self.frame_range = None
 
         self.layout = QVBoxLayout(self)
@@ -147,6 +148,9 @@ class PowersTab(QWidget):
             
     def set_gait_cycles(self, gait_cycles):
         self.gait_cycles = gait_cycles
+
+    def set_foot_off_pcts(self, pcts):
+        self.foot_off_pcts = pcts
 
     def set_editable_values(self, editable_values):
         self.editable_values = editable_values
@@ -257,7 +261,9 @@ class PowersTab(QWidget):
                 # Plot data
                 if use_gait_cycle:
                     self.gait_cycle_plotter.plot_gait_cycle_data(plot_widget.ax, markers_data, marker_labels, marker_types, group, self.gait_cycles, 'POWERS', 'Power (W/kg)', current_frame, component=component, plot_widget=plot_widget)
-                    plot_widget.ax.axvline(x=60, color='grey', linestyle='--', linewidth=2, alpha=0.6)
+                    for pct, fo_color in [(self.foot_off_pcts.get('left'), 'red'), (self.foot_off_pcts.get('right'), 'green')]:
+                        if pct is not None:
+                            plot_widget.ax.axvline(x=pct, color=fo_color, linestyle='--', linewidth=2, alpha=0.6)
                 else:
                     self.powers_plotter.plot_data(plot_widget.ax, markers_data, marker_labels, marker_types, current_frame, group, frame_range, component=component, plot_widget=plot_widget)
                     if plot_current_frame is not None:
@@ -340,13 +346,15 @@ class PowersTab(QWidget):
         if self.zoomed_plot:
             # Zoom out
             self.plot_layout.removeWidget(self.zoomed_plot)
-            self.zoomed_plot.canvas.setFixedSize(200, 200)
+            self.zoomed_plot.canvas.setMinimumSize(200, 200)
+            self.zoomed_plot.canvas.setMaximumSize(16777215, 16777215)
             self.zoomed_plot.canvas.draw()
             for p in self.plots:
                 pos = p.property("grid_pos")
                 if pos:
                     self.plot_layout.addWidget(p, pos[0], pos[1])
-                p.canvas.setFixedSize(200, 200)
+                p.canvas.setMinimumSize(200, 200)
+                p.canvas.setMaximumSize(16777215, 16777215)
                 p.canvas.draw()
                 p.show()
             self.zoomed_plot = None

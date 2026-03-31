@@ -99,6 +99,23 @@ class MultilineImporter:
             for i in range(len(right_strikes) - 1):
                 gait_cycles['right'].append((right_strikes[i], right_strikes[i+1]))
 
+            # Calculate foot-off percentages from first gait cycle of each side
+            fo_frames = {
+                'left': sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'left' and e.get('type') == 'off']),
+                'right': sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'right' and e.get('type') == 'off'])
+            }
+            foot_off_pcts = {}
+            for side in ['left', 'right']:
+                cycles = gait_cycles.get(side, [])
+                fos = fo_frames.get(side, [])
+                if cycles and fos:
+                    start, end = cycles[0]
+                    cycle_len = end - start
+                    for fo in fos:
+                        if start <= fo < end and cycle_len > 0:
+                            foot_off_pcts[side] = (fo - start) / cycle_len * 100
+                            break
+
             # Extract ANALYSIS data
             analysis_data = {}
             try:
@@ -128,6 +145,7 @@ class MultilineImporter:
                 'marker_labels': marker_labels,
                 'marker_types': marker_types,
                 'gait_cycles': gait_cycles,
+                'foot_off_pcts': foot_off_pcts,
                 'body_mass': body_mass,
                 'analysis_data': analysis_data
             })

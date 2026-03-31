@@ -754,14 +754,14 @@ class C3DViewer(QWidget):
 
 
     def set_front_view(self):
-        """Set the camera to front view (looking along Y-axis from negative Y)."""
+        """Set the camera to front view (looking along Y-axis from positive Y)."""
         if self.markers_data is not None:
             bounds = self.ren.ComputeVisiblePropBounds()
             center = [(bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2, (bounds[4] + bounds[5]) / 2]
             distance = max(bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]) * 2
 
             camera = self.ren.GetActiveCamera()
-            camera.SetPosition(center[0], center[1] - distance, center[2])  # Look from negative Y
+            camera.SetPosition(center[0], center[1] + distance, center[2])  # Look from positive Y
             camera.SetFocalPoint(center[0], center[1], center[2])
             camera.SetViewUp(0, 0, 1)  # Z up
 

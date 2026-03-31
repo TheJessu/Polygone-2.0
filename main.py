@@ -59,15 +59,15 @@ class MainWindow(QMainWindow):
 
         # Create data plotter tab
         self.data_plotter = DataPlotter()
-        self.right_tabs.addTab(self.data_plotter, "Data Plots")
+        self.right_tabs.addTab(self.data_plotter, "Gait Analysis")
 
         # Create gait analysis tab
         self.gait_analysis_tab = GaitAnalysisTab()
-        self.right_tabs.addTab(self.gait_analysis_tab, "Gait Analysis")
+        self.right_tabs.addTab(self.gait_analysis_tab, "PDF Export")
 
         # Create average tab
         self.average_tab = AverageTab()
-        self.right_tabs.addTab(self.average_tab, "Average")
+        self.right_tabs.addTab(self.average_tab, "Averages Calculator")
 
         self.right_tabs.currentChanged.connect(self.on_tab_changed)
 
@@ -157,6 +157,23 @@ class MainWindow(QMainWindow):
                 for i in range(len(right_strikes) - 1):
                     gait_cycles['right'].append((right_strikes[i], right_strikes[i+1]))
                 self.gait_analysis_tab.set_gait_cycles(gait_cycles)
+                # Compute foot-off percentages for main file and pass to gait analysis tab
+                fo_frames = {
+                    'left': sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'left' and e.get('type') == 'off']),
+                    'right': sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'right' and e.get('type') == 'off'])
+                }
+                foot_off_pcts = {}
+                for side in ['left', 'right']:
+                    cycles = gait_cycles.get(side, [])
+                    fos = fo_frames.get(side, [])
+                    if cycles and fos:
+                        start, end = cycles[0]
+                        cycle_len = end - start
+                        for fo in fos:
+                            if start <= fo < end and cycle_len > 0:
+                                foot_off_pcts[side] = (fo - start) / cycle_len * 100
+                                break
+                self.gait_analysis_tab.set_foot_off_pcts(foot_off_pcts)
                 self.gait_analysis_tab.set_editable_values(self.data_plotter.editable_values)
                 self.status_bar.showMessage(f"Loaded C3D file: {file_path}")
             elif file_path.lower().endswith(('.avi', '.mp4')):

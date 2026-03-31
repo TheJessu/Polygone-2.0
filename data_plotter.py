@@ -94,7 +94,26 @@ class DataPlotter(QWidget):
         for i in range(len(right_strikes) - 1):
             self.gait_cycles['right'].append((right_strikes[i], right_strikes[i+1]))
 
+        # Compute foot-off percentages from first gait cycle of each side
+        fo_frames = {
+            'left': sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'left' and e.get('type') == 'off']),
+            'right': sorted([int(e['time'] * frame_rate) - first_frame for e in events_data if e.get('foot') == 'right' and e.get('type') == 'off'])
+        }
+        foot_off_pcts = {}
+        for side in ['left', 'right']:
+            cycles = self.gait_cycles.get(side, [])
+            fos = fo_frames.get(side, [])
+            if cycles and fos:
+                start, end = cycles[0]
+                cycle_len = end - start
+                for fo in fos:
+                    if start <= fo < end and cycle_len > 0:
+                        foot_off_pcts[side] = (fo - start) / cycle_len * 100
+                        break
+
         for _, config in self.plot_types_config.items():
+            if hasattr(config['tab'], 'set_foot_off_pcts'):
+                config['tab'].set_foot_off_pcts(foot_off_pcts)
             config['tab'].set_gait_cycles(self.gait_cycles)
 
         self.plot_data()

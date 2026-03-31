@@ -50,6 +50,7 @@ class ForcesTab(QWidget):
         self.forces_plotter = GenericDataPlotter('FORCES')
         self.gait_cycle_plotter = GaitCyclePlotter()
         self.gait_cycles = None
+        self.foot_off_pcts = {}
         self.frame_range = None
 
         self.layout = QVBoxLayout(self)

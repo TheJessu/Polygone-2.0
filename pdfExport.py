@@ -33,7 +33,7 @@ class PDFExporter:
             ('kinetics', 1, gait_analysis_tab.kinetics_plot_layout, 'kinetics_side_filter'),
             ('moments', 2, gait_analysis_tab.moments_plot_layout, 'moments_side_filter')
         ]
-        sides = ['All', 'Red', 'Green']
+        sides = ['All', 'Left', 'Right']
 
         with PdfPages(filename) as pdf:
             for tab_name, tab_index, layout, side_attr in tabs:
@@ -105,7 +105,7 @@ class PDFExporter:
                             {'color': green_colors[0], 'linestyle': ls},
                         ]
                     })
-            elif side == 'Red':
+            elif side == 'Left':
                 for list_idx, idx in enumerate(red_visible):
                     if idx < multiline.get_num_files():
                         fd = multiline.imported_files[idx]
@@ -115,7 +115,7 @@ class PDFExporter:
                             'filename': fd['filename'],
                             'lines': [{'color': color, 'linestyle': ls}]
                         })
-            elif side == 'Green':
+            elif side == 'Right':
                 for list_idx, idx in enumerate(green_visible):
                     if idx < multiline.get_num_files():
                         fd = multiline.imported_files[idx]
@@ -263,10 +263,10 @@ class PDFExporter:
         gs_top = legend_y + legend_height * 0.5 - legend_height - 0.005
         gs_top = 0.955  # fixed: just below the legend line
 
-        gs_rows = max(rows, 5)
+        gs_rows = rows
         gs = gridspec.GridSpec(
             gs_rows, cols, figure=fig,
-            hspace=0.3, wspace=0.25,
+            hspace=0.15, wspace=0.15,
             top=gs_top, bottom=0.02,
             left=0.04, right=0.99
         )
